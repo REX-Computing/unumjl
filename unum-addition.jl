@@ -2,13 +2,12 @@
 #Performs addition with unums.  Requires two unums to have the same
 #environment signature.  Also included here is subtraction.
 
-#unary add is do nothing at all.
-+(x::Unum) = x
-
-#unary subtract is just flip the flag.
-function -(x::Unum)
-  unum(x, x.flags $ SIGN_MASK)
-end
+#instead of making unary plus "do nothing at all", we will have it "firewall"
+#the variable by creating a 'safe copy' of it.
++(x::Unum) = unum(x)
+#unary minus uses the shorthand pseudoconstructor, where all the values are the
+#same but the flags may be altered.
+-(x::Unum) = unum(x, x.flags $ UNUM_SIGN_MASK)
 
 #binary add - let's do things this way.
 function +(a::Unum, b::Unum)

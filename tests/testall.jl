@@ -10,7 +10,7 @@ include("test-helpers.jl")
 #testing helper functions
 #include("unum-test-int64op.jl")
 #include("unum-test-helpers.jl")
-#include("unum-test-convert.jl")
+include("unit-convert.jl")
 #include("unum-test-properties.jl")
 
 #mathematics testing
