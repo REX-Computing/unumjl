@@ -48,7 +48,7 @@ __fp_props = {
 }
 
 #a generator that makes float conversion functions, to DRY production of conversions
-function __u2fgenerator(T::Type)
+function __u_to_f_generator(T::Type)
   #grab and/or calculate things from the properties dictionary.
   fp = __fp_props[T]
   I = fp.intequiv            #the integer type of the same width as the Float64
@@ -58,6 +58,7 @@ function __u2fgenerator(T::Type)
   _ebias = 2 ^ (_esize - 1) - 1   #exponent bias (= _emax)
   _emin = -(_ebias) + 1           #minimum exponent
 
+  #generates an anonymous function that releases a floating point for an unum
   function(x::Unum)
     #DEAL with Infs, NaNs, and subnormals.
 
@@ -90,23 +91,19 @@ function __u2fgenerator(T::Type)
 end
 
 #create the generator functions (so that we don't trigger the compiler every time)
-__convu216 = __u2fgenerator(Float16)
-__convu232 = __u2fgenerator(Float32)
-__convu264 = __u2fgenerator(Float64)
+__u_to_16f = __u_to_f_generator(Float16)
+__u_to_32f = __u_to_f_generator(Float32)
+__u_to_64f = __u_to_f_generator(Float64)
 
 #bind these to the convert for multiple dispatch purposes.
-function convert(::Type{Float16}, x::Unum)
-  __convu216(x)
-end
-function convert(::Type{Float32}, x::Unum)
-  __convu232(x)
-end
-function convert(::Type{Float64}, x::Unum)
-  __convu264(x)
-end
+convert(::Type{Float16}, x::Unum) = __u_to_16f(x)
+convert(::Type{Float32}, x::Unum) = __u_to_32f(x)
+convert(::Type{Float64}, x::Unum) = __u_to_64f(x)
 
-function __convf2u(ESS,FSS,x)
-  fp = __fp_props[typeof(x)]
+#helper function to convert from different floating point types.
+function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
+  #retrieve the floating point properties of the type to convert from.
+  fp = __fp_props[T]
   #convert the floating point x to its integer equivalent
   I = fp.intequiv            #the integer type of the same width as the Float64
   _esize = fp.esize       #how many bits in the exponent
@@ -131,14 +128,8 @@ function __convf2u(ESS,FSS,x)
 end
 
 #bind to convert for multiple dispatch
-function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float16)
-  __convf2u(ESS, FSS, x)
-end
-function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float32)
-  __convf2u(ESS, FSS, x)
-end
-function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float64)
-  __convf2u(ESS, FSS, x)
-end
+convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float16) = __f_to_u(ESS, FSS, x, Float16)
+convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float32) = __f_to_u(ESS, FSS, x, Float32)
+convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float64) = __f_to_u(ESS, FSS, x, Float64)
 
 export convert

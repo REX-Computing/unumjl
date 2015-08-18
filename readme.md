@@ -23,4 +23,4 @@ BB...BB (1)CC...CC AD E...E F...F <G,H>
 The most notable difference is that the sign bit and the uncertainty bit are
 stored as the 0th and 1st lsb in the "C" value.  Secondly, sections B, C, E, and F
 are in multiples of 8 bits.  Thirdly, section C is aligned against the left of
-the word.
+the word.  This makes floating point multiplication emulation MUCH easier.
