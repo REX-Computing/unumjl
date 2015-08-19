@@ -38,14 +38,3 @@ function maxubits(T::Type)
   end
 end
 export maxubits
-
-#flag masks
-const SIGN_MASK = uint16(0b10)
-const UBIT_MASK = uint16(0b1)
-
-export SIGN_MASK
-export UBIT_MASK
-
-function max_fsize(FSS)
-  return 2^FSS
-end

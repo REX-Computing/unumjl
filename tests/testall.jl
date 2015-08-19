@@ -5,12 +5,11 @@ using Unums
 ## UNIT TESTING
 using Base.Test
 
-include("test-helpers.jl")
+include("unit-int64op.jl")
+include("unit-helpers.jl")
 
 #testing helper functions
-#include("unum-test-int64op.jl")
-#include("unum-test-helpers.jl")
-include("unit-convert.jl")
+#include("unit-convert.jl")
 #include("unum-test-properties.jl")
 
 #mathematics testing

@@ -1,5 +1,16 @@
 #test-helpers.jl
 
+#test __frac_trim(frac, fsize) - this is a function solely used in the
+#constructor. __frac_trim takes a dump of bits (frac) in superint
+#and trims it down to size according to (fsize).  NB.  fsize the variable
+#represents the actual number of fraction bits *minus one*.  outputs
+#the new superint, the fsize (as potentially modified), and a ubit.
+
+#in a 64-bit single width superint.  Trim for fsize = 0, i.e. down to 1 bit.
+@test Unums.__frac_trim(nobits,  uint16(0)) == (nobits, 0, 0)
+@test Unums.__frac_trim(allbits, uint16(0)) == (msb1  , 0, Unums.UNUM_UBIT_MASK)
+
+
 #test encoding and decoding exponents
 #remember, esize is the size of the exponent *minus one*.
 
