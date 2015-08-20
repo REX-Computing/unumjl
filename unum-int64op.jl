@@ -13,7 +13,7 @@ const f16 = uint16(0xFFFF)
 
 #note in version 0.4, this will need to change to Union{}
 SuperInt = Union(Uint64, Array{Uint64,1})
-
+GeneralInt = Union(SuperInt, Integer)
 
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
 #assume there is one cell, if no value has been passed.
@@ -22,16 +22,20 @@ function fillbits(n::Integer, cells::Integer = 1)
   if cells == 1
     return mask(n)
   end
-
+  #generate the cells.
   if n == ((cells << 6)) || (-n == (cells << 6))
+    #check to see if we're asking to fill the entire set of cells
     [f64 for i=1:cells]
   elseif n > 0
+    #cells filled from the right to the left
     lowlimit = n >> 6
     [[f64 for i=1:lowlimit], mask(n % 64), [z64 for i=lowlimit+2:cells]]
   elseif n < 0
+    #cells filled from the left to the right
     lowlimit = (-n) >> 6
     [[z64 for i=lowlimit + 2:cells], mask(n%64), [f64 for i=1:lowlimit]]
   else
+    #empty cells
     zeros(Uint64, cells)
   end
 end
@@ -40,10 +44,15 @@ end
 function bitof(x::Integer, bit)
   return x & (one(x) << bit)
 end
+function bitof(x::Array{Uint64,1}, bit)
+  cell = (bit >> 6) + 1
+  offset = bit % 64
+  bitof(x[cell], offset)
+end
 
 #lsbmsb: returns the lsb and msb of an integer, process is O(N) in
 #the worst case, but O(~0.70N) (Uint16), or O(~0.80N) (Uint64) for randoms
-function lsbmsb(x::Integer)
+function lsbmsb(x::GeneralInt)
   #finds the lsb and msb of an unsigned int
   bitsize = sizeof(x) * 8
   l = lsb(x, bitsize)
@@ -52,10 +61,10 @@ function lsbmsb(x::Integer)
 end
 
 #just the lsb.
-function lsb(x::Integer)
+function lsb(x::GeneralInt)
   lsb(x, sizeof(x) * 8)
 end
-function lsb(x::Integer, n::Integer)
+function lsb(x::GeneralInt, n::Integer)
   for(i = 0:n - 1)
     if (bitof(x, i) != 0)
       return uint16(i)
@@ -65,10 +74,10 @@ function lsb(x::Integer, n::Integer)
 end
 
 #just the msb.
-function msb(x::Integer)
+function msb(x::GeneralInt)
   msb(x, sizeof(x) * 8)
 end
-function msb(x::Integer, n::Integer)
+function msb(x::GeneralInt, n::Integer)
   for (i = n-1:-1:0)
     if (bitof(x, i) != 0)
       return uint16(i)

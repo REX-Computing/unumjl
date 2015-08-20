@@ -14,11 +14,12 @@
 @test Unums.__frac_trim(allbits, uint16(1)) == (0xC000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
 #in this case we have a distant uncertain-causing bit and also a trailing zero.  The trim should
 #not move to 0, and the ubit should be flagged.
-@test Unums.__frac_trim(0x8010_0000_0000_0000, uint16(1)) == (msb1, 1, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim(0x8010_0000_0000_0000, uint16(0)) == (msb1, 0, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim(0x8010_0000_0000_0000, uint16(3)) == (msb1, 3, Unums.UNUM_UBIT_MASK)
 
-#now testing for 'sending' full-length superints.
-@test Unums.__frac_trim(nobits,  uint16(63)) == (nobits,   0, 0)
-#@test Unums.__frac_trim(allbits, uint16(63)) == (allbits, 63, 0)
+@test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, uint16(61)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
+@test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, uint16(63)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
+@test Unums.__frac_trim(allbits, uint16(63)) == (allbits, 63, 0)
 
 #test encoding and decoding exponents
 #remember, esize is the size of the exponent *minus one*.

@@ -20,6 +20,10 @@ nobits  = uint64(0x0000_0000_0000_0000)
 @test Unums.lsbmsb(msb8) == (56,63)
 @test Unums.lsbmsb(lsb6) == (0, 5)
 @test Unums.lsbmsb(0b0001111000) == (3,6)
+#test lsbmsb on a superint array
+@test Unums.lsbmsb([0x00FF_0000_0000_0000, nobits]) == (48, 55)
+@test Unums.lsbmsb([nobits, 0x0000_0000_0000_F00F]) == (64, 79)
+@test Unums.lsbmsb([nobits, nobits]) == (128, 0)
 
 #test mask generation
 @test Unums.mask(1) == lsb1
