@@ -9,7 +9,16 @@
 #in a 64-bit single width superint.  Trim for fsize = 0, i.e. down to 1 bit.
 @test Unums.__frac_trim(nobits,  uint16(0)) == (nobits, 0, 0)
 @test Unums.__frac_trim(allbits, uint16(0)) == (msb1  , 0, Unums.UNUM_UBIT_MASK)
+#Trim for fsize = 1, i.e. down to two bits.
+@test Unums.__frac_trim(nobits,  uint16(1)) == (nobits, 0, 0) #note this is the same as above
+@test Unums.__frac_trim(allbits, uint16(1)) == (0xC000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
+#in this case we have a distant uncertain-causing bit and also a trailing zero.  The trim should
+#not move to 0, and the ubit should be flagged.
+@test Unums.__frac_trim(0x8010_0000_0000_0000, uint16(1)) == (msb1, 1, Unums.UNUM_UBIT_MASK)
 
+#now testing for 'sending' full-length superints.
+@test Unums.__frac_trim(nobits,  uint16(63)) == (nobits,   0, 0)
+#@test Unums.__frac_trim(allbits, uint16(63)) == (allbits, 63, 0)
 
 #test encoding and decoding exponents
 #remember, esize is the size of the exponent *minus one*.
@@ -48,7 +57,6 @@
 @test (3, 1) == Unums.encode_exp(-7)
 @test (3, 13) == Unums.encode_exp(5)
 
-println("hi mom")
 #comprehensive checking of all exponents in the range -2^-6..2^6
 
 for e = -1000:1000

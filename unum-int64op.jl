@@ -1,6 +1,6 @@
 #unum-int64op.jl
 #various int64 operations that could be helpful across the unum implementation.
-#SuperInt is an array 
+#SuperInt is an array
 
 #various helpful numbers
 const z64 = zero(Uint64)
@@ -14,27 +14,26 @@ const f16 = uint16(0xFFFF)
 #note in version 0.4, this will need to change to Union{}
 SuperInt = Union(Uint64, Array{Uint64,1})
 
+
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
-function fillbits(n::Integer, cells = 0)
-  cells = (cells == 0) ? ((abs(n) - 1) >> 6) + 1 : cells
-  if n == 0
-    res = zero(Uint64)
-  elseif n > 0
-    if cells == 1
-      res = (n == 64) ? uint64(-1) : mask(n % 64)
-    else
-      res = ones(Uint64, cells) * uint64(-1)
-      res[cells] = (n % 64 == 0) ? uint64(-1) : mask(n % 64)
-    end
-  else
-    if cells == 1
-      res = (n == 64) ? uint64(-1) : mask(n % 64)
-    else
-      res = ones(Uint64, cells) * uint64(-1)
-      res[1] = (n % 64 == 0) ? uint64(-1) : mask(n % 64)
-    end
+#assume there is one cell, if no value has been passed.
+function fillbits(n::Integer, cells::Integer = 1)
+  #kick it to the mask function if there's only one cell.
+  if cells == 1
+    return mask(n)
   end
-  res
+
+  if n == ((cells << 6)) || (-n == (cells << 6))
+    [f64 for i=1:cells]
+  elseif n > 0
+    lowlimit = n >> 6
+    [[f64 for i=1:lowlimit], mask(n % 64), [z64 for i=lowlimit+2:cells]]
+  elseif n < 0
+    lowlimit = (-n) >> 6
+    [[z64 for i=lowlimit + 2:cells], mask(n%64), [f64 for i=1:lowlimit]]
+  else
+    zeros(Uint64, cells)
+  end
 end
 
 #bitof: extracts the bit at (0-indexed) location, using bit masking
@@ -47,7 +46,9 @@ end
 function lsbmsb(x::Integer)
   #finds the lsb and msb of an unsigned int
   bitsize = sizeof(x) * 8
-  (lsb(x, bitsize), msb(x, bitsize))
+  l = lsb(x, bitsize)
+  #if we find that l is maximal, then we know immediately that the number is blank.
+  (l == bitsize) ? (l, 0) : (l, msb(x, bitsize))
 end
 
 #just the lsb.
@@ -60,7 +61,7 @@ function lsb(x::Integer, n::Integer)
       return uint16(i)
     end
   end
-  return 0
+  return n
 end
 
 #just the msb.

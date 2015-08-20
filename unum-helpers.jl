@@ -21,8 +21,8 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   ubit = ([low_mask & frac] == zeros(Uint64, length(frac))) ? 0 : UNUM_UBIT_MASK
   #mask out the low bits and save that as the fraction.
   frac &= high_mask
-  #we may need to trim the fraction further, in whic case we alter fsize
-  fsize = (ubit == 0) ? fsize = (frac.length << 6) - lsb(frac) : fsize
+  #we may need to trim the fraction further, in which case we alter fsize
+  fsize = (ubit == 0) ? fsize = (length(frac) << 6) - lsb(frac) : fsize
   (frac, fsize, ubit)
 end
 
