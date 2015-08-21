@@ -1,6 +1,26 @@
 #unum-unum.jl
 
+#1) for release versions, this will be set to 'false'
+#2) is there a better way of doing this?
+__UNUM_DEV = true
+function __unum_development_environment()
+  global __UNUM_DEV = true
+end
+function __unum_release_environment()
+  global __UNUM_DEV = false
+end
+function __unum_isdev()
+  __UNUM_DEV
+end
 #contains information about the unum type and some basic helper functions.
+
+function __check_block(ESS, FSS, fsize, esize, fraction, exponent)
+  fsize < (1 << FSS)                    || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
+  esize < (1 << ESS)                    || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
+  exponent < (1 << (esize + 1))         || throw(ArgumentError("exponent $(exponent) too big for esize $(esize)"))
+  length(fraction) == __frac_words(FSS) || throw(ArgumentError("size mismatch between supplied fraction array $(length(fraction)) and expected $(__frac_words(ESS))"))
+end
+
 
 immutable Unum{ESS, FSS} <: Real
   fsize::Uint16
@@ -28,27 +48,19 @@ immutable Unum{ESS, FSS} <: Real
 
   function Unum(fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64)
     #check to make sure fsize is within FSS, esize within ESS
+    if (__unum_isdev())
+      __check_block(ESS, FSS, fsize, esize, fraction, exponent)
+    end
 
-    ##TEMPORARY CHECK BLOCK
-    if (fsize >= 1 << FSS)
-      println(STDERR, "$(fsize) too big for $(FSS)")
-      throw(TypeError)
+    #because fraction could be assigned an existing array, we should do a safe copy.
+    if (__frac_words(ESS) == 1)
+      temp_fraction = fraction
+    else
+      temp_fraction = zeros(Uint64, length(fraction))
+      temp_fraction[:] = fraction
     end
-    if (esize >= 1 << ESS)
-      println(STDERR, "$(esize) too big for $(ESS)")
-      throw(TypeError)
-    end
-    if (exponent >= (1 << esize))
-      println(STDERR, "$(exponent) too big for $(esize)")
-      throw(TypeError)
-    end
-    if (length(frac) != fracwords(FSS))
-      println(STDERR, "size mismatch between supplied fraction array $(length(frac)) and expected $(fracwords(ESS))")
-      throw(TypeError)
-    end
-    ##END TEMPORARY CHECK BLOCK
 
-    new(fsize, esize, flags, fraction, exponent)
+    new(fsize, esize, flags, temp_fraction, exponent)
   end
 end
 
@@ -57,22 +69,7 @@ end
 #that relays the environment signature for the desired unum.
 function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64)
   #checks to make sure everything is safe.
-  if (fsize >= 1 << FSS)
-    println(STDERR, "$(fsize) too big for $(FSS)")
-    throw(TypeError)
-  end
-  if (esize >= 1 << ESS)
-    println(STDERR, "$(esize) too big for $(ESS)")
-    throw(TypeError)
-  end
-  if (exponent >= (1 << esize))
-    println(STDERR, "$(exponent) too big for $(esize)")
-    throw(TypeError)
-  end
-  if (length(frac) != fracwords(FSS))
-    println(STDERR, "size mismatch between supplied fraction array $(length(frac)) and expected $(fracwords(FSS))")
-    throw(TypeError)
-  end
+  __check_block(ESS, FSS, fsize, esize, fraction, exponent)
 
   #mask out values outside of the flag range.
   flags &= UNUM_FLAG_MASK
@@ -99,7 +96,7 @@ unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}, subflags::Uint16) = Unum{ESS,FSS}(x.fsize
 
 #an "easy" constructor which is safe, and takes an unbiased exponent value, and
 #a superint value
-function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::Uint16, exponent::Int16, fraction::SuperInt)
+function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::Uint16, fraction::SuperInt, exponent::Integer)
   #decode the exponent
   (esize, exponent) = encode_exp(exponent)
   #match the length of fraction to FSS, set the ubit if there's trimming that
@@ -107,9 +104,13 @@ function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::Uint16, exponent::Int1
   (fraction, ubit) = __frac_match(fraction, FSS)
   #let's be lazy about the fsize.  The safe unum pseudoconstructor will
   #handle trimming that down.
-  fsize = uint16(min(length(fraction) * 64, (1 << (FSS + 1)) - 1))
+  fsize = max_fsize(FSS)
   unum(Unum{ESS,FSS}, fsize, esize, flags, fraction, exponent)
 end
+
+export unum
+export unum_unsafe
+export unum_easy
 
 #masks for the unum flags variable.
 const UNUM_SIGN_MASK = uint16(0x0002)

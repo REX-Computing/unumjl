@@ -7,6 +7,7 @@ using Base.Test
 
 include("unit-int64op.jl")
 include("unit-helpers.jl")
+include("unit-unum.jl")
 
 #testing helper functions
 #include("unit-convert.jl")

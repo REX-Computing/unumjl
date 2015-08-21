@@ -22,7 +22,7 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   #this needs to be in an array because that will collapse to the appropriate
   #one-dimensional array in the array case and collapse to a one-element array
   #in the single case, so that matches with the zeros() directive.
-  ubit = ([low_mask & frac] == zeros(Uint64, l)) ? 0 : UNUM_UBIT_MASK
+  ubit = ([low_mask & frac] == zeros(Uint64, l)) ? z16 : UNUM_UBIT_MASK
   #mask out the low bits and save that as the fraction.
   frac &= high_mask
   #we may need to trim the fraction further, in which case we alter fsize.
@@ -45,12 +45,12 @@ function __frac_match(frac::SuperInt, fss::Integer)
     res = temp_frac
   else
     #mirror the previous process
-    temp_frac = frac[flength - cells + 1:flength]
+    temp_frac = [frac][flength - cells + 1:flength]
 
     #demote from array to integer if cells is one
     (cells == 1) && (temp_frac = temp_frac[1])
 
-    ubit = (frac[1:flength - cells] == zeros(Uint64, flength - cells)) ? 0 : UNUM_UBIT_MASK
+    ubit = ([frac][1:flength - cells] == zeros(Uint64, flength - cells)) ? 0 : UNUM_UBIT_MASK
     if (ubit == 0)
       (res, __, ubit) = __frac_trim(temp_frac, max_fsize(fss))
     else
@@ -67,7 +67,6 @@ __frac_words(fss::Integer) = fss < 6 ? 1 : (1 << (fss - 6))
 
 ################################################################################
 # EXPONENT ENCODING AND DECODING
-
 #encodes an exponent as a biased 2-tuple (esize, exponent)
 #remember msb is zero-indexed, but outputs a zero for the zero value
 function encode_exp(unbiasedexp::Integer)
