@@ -54,7 +54,7 @@ end
 #the worst case, but O(~0.70N) (Uint16), or O(~0.80N) (Uint64) for randoms
 function lsbmsb(x::GeneralInt)
   #finds the lsb and msb of an unsigned int
-  bitsize = sizeof(x) * 8
+  bitsize = sizeof(x) << 3
   l = lsb(x, bitsize)
   #if we find that l is maximal, then we know immediately that the number is blank.
   (l == bitsize) ? (l, 0) : (l, msb(x, bitsize))
@@ -62,7 +62,7 @@ end
 
 #just the lsb.
 function lsb(x::GeneralInt)
-  lsb(x, sizeof(x) * 8)
+  lsb(x, sizeof(x) << 3)
 end
 function lsb(x::GeneralInt, n::Integer)
   for(i = 0:n - 1)
@@ -75,7 +75,7 @@ end
 
 #just the msb.
 function msb(x::GeneralInt)
-  msb(x, sizeof(x) * 8)
+  msb(x, sizeof(x) << 3)
 end
 function msb(x::GeneralInt, n::Integer)
   for (i = n-1:-1:0)
@@ -89,12 +89,12 @@ end
 #generates a mask of a certain number of bits on the right, or left if negative
 function mask(bits::Integer)
   if bits >= 0
-    (bits == 64) ? uint64(-1) : uint64(2^bits - 1)
+    (bits == 64) ? uint64(-1) : uint64((1 << bits) - 1)
   else
     uint64(~mask(64 + bits))
   end
 end
 #does the same, except with a unit range.
 function mask(range::UnitRange)
-  uint64(2^(range.stop + 1) - 2^(range.start))
+  uint64((1 << (range.stop + 1)) - (1 << (range.start)))
 end

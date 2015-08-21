@@ -31,6 +31,9 @@
 @test Unums.__frac_trim([allbits, allbits, allbits], uint16(63)) == ([nobits, nobits, allbits], 63, Unums.UNUM_UBIT_MASK)
 @test Unums.__frac_trim([allbits, allbits, allbits], uint16(191)) == ([allbits, allbits, allbits,], 191, 0)
 
+#make sure we can't try to trim something to more bits than it has.
+@test_throws ArgumentError Unums.__frac_trim(nobits, uint16(64))
+
 #testing the frac_match, which expands or contracts a SuperInt to match the fss, and throws
 #the ubit flag if it makes sense.
 

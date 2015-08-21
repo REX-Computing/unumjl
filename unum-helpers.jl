@@ -10,20 +10,24 @@
 #in the case that it's exact and some zeros can be trimmed, and whether or not
 #ubit needs to be thrown (were there values cast out by fsize)?
 function __frac_trim(frac::SuperInt, fsize::Uint16)
+  l = length(frac)
+  #drop an error if the superint can't accomodate fsize.
+  (fsize >= (l << 6)) && throw(ArgumentError("fraction array must accomodate fsize value for __frac_trim"))
+
   #create the fsize mask.
-  high_mask = fillbits(-(fsize + 1), length(frac))  #remember, the real fsize is fsize + 1
+  high_mask = fillbits(-(fsize + 1), l)  #remember, the real fsize is fsize + 1
   low_mask = ~high_mask
   #do we need to set decide if we need to set the ubit
   #mask out the high bits and check to see if what remains is zero.
   #this needs to be in an array because that will collapse to the appropriate
   #one-dimensional array in the array case and collapse to a one-element array
   #in the single case, so that matches with the zeros() directive.
-  ubit = ([low_mask & frac] == zeros(Uint64, length(frac))) ? 0 : UNUM_UBIT_MASK
+  ubit = ([low_mask & frac] == zeros(Uint64, l)) ? 0 : UNUM_UBIT_MASK
   #mask out the low bits and save that as the fraction.
   frac &= high_mask
   #we may need to trim the fraction further, in which case we alter fsize.
   #also take the "zero" case and make sure we represent at least one digit.
-  fsize = (ubit == 0) ? fsize = uint16(max(0, (length(frac) << 6) - lsb(frac) - 1)): fsize
+  fsize = (ubit == 0) ? fsize = uint16(max(0, (l << 6) - lsb(frac) - 1)): fsize
   (frac, fsize, ubit)
 end
 
@@ -68,7 +72,7 @@ __frac_words(fss::Integer) = fss < 6 ? 1 : (1 << (fss - 6))
 #remember msb is zero-indexed, but outputs a zero for the zero value
 function encode_exp(unbiasedexp::Integer)
   esize = (unbiasedexp == 0) ? z16 : uint16(msb(abs(unbiasedexp)) + 1)
-  (esize, uint64(unbiasedexp + 2^esize))
+  (esize, uint64(unbiasedexp + 1 << esize))
 end
 #the inverse operation is finding the unbiased exponent of an Unum.
 decode_exp(esize::Uint16, exponent::Uint64) = int(exponent) - (1 << esize)
