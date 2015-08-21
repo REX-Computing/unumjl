@@ -11,7 +11,7 @@
 #ubit needs to be thrown (were there values cast out by fsize)?
 function __frac_trim(frac::SuperInt, fsize::Uint16)
   #create the fsize mask.
-  high_mask = fillbits(-(fsize + 1))  #remember, the real fsize is fsize + 1
+  high_mask = fillbits(-(fsize + 1), length(frac))  #remember, the real fsize is fsize + 1
   low_mask = ~high_mask
   #do we need to set decide if we need to set the ubit
   #mask out the high bits and check to see if what remains is zero.
@@ -31,26 +31,30 @@ end
 #process of trimming to fraction.
 function __frac_match(frac::SuperInt, fss::Integer)
   flength = length(frac)
-  words = __frac_words(fss)
+  cells = __frac_words(fss)
+  temp_frac = zeros(Uint64, cells)
+  ubit = zero(Uint16)
   #create an appropriate superint
-  resultfrac = zeros(Uint64, words)
-  if (flength < words)
+  if (flength < cells)
     #fill the remainder of resultfrac with data from frac
-    resultfrac[words - flength + 1:words] = frac
-    #trim it if necessary.
-    (frac, __, ubit) = __frac_trim(frac, max_fsize(fss))
+    temp_frac[cells - flength + 1:cells] = frac
+    res = temp_frac
   else
     #mirror the previous process
-    resultfrac = frac[flength - words + 1:flength]
-    ubit = (frac[1:flength - words] == zeros(Uint64, flength - words)) ? 0 : UNUM_UBIT_MASK
+    temp_frac = frac[flength - cells + 1:flength]
+
+    #demote from array to integer if cells is one
+    (cells == 1) && (temp_frac = temp_frac[1])
+
+    ubit = (frac[1:flength - cells] == zeros(Uint64, flength - cells)) ? 0 : UNUM_UBIT_MASK
     if (ubit == 0)
-      (frac, __, ubit) = __frac_trim(frac, max_fsize(fss))
+      (res, __, ubit) = __frac_trim(temp_frac, max_fsize(fss))
     else
-      #match the
-      (frac, __, ___) = __frac_trim(frac, max_fsize(fss))
+      #trim more, but only for masking purposes.
+      (res, __, ___) = __frac_trim(temp_frac, max_fsize(fss))
     end
   end
-  (frac, ubit)
+  (res, ubit)
 end
 
 #calculates how many words of fraction are necessary to support a certain fss
@@ -69,4 +73,4 @@ end
 #the inverse operation is finding the unbiased exponent of an Unum.
 decode_exp(esize::Uint16, exponent::Uint64) = int(exponent) - (1 << esize)
 #maxfsize returns the the maximum fraction size for a given FSS.
-max_fsize(FSS) = (1 << (FSS + 1)) - 1
+max_fsize(FSS) = uint16((1 << FSS) - 1)

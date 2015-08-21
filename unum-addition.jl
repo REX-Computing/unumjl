@@ -306,7 +306,7 @@ function __do_subtraction{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _b
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
 
-#an add_ordered procedure for when you don't just have just a single uint64
+#an add_ordered procedure for when you don't just have j.ust a single uint64
 function __add_ordered_poly{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 end
 
