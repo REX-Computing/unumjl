@@ -18,7 +18,7 @@ function __check_block(ESS, FSS, fsize, esize, fraction, exponent)
   fsize < (1 << FSS)                    || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
   esize < (1 << ESS)                    || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
   exponent < (1 << (esize + 1))         || throw(ArgumentError("exponent $(exponent) too big for esize $(esize)"))
-  length(fraction) == __frac_words(FSS) || throw(ArgumentError("size mismatch between supplied fraction array $(length(fraction)) and expected $(__frac_words(ESS))"))
+  length(fraction) == __frac_cells(FSS) || throw(ArgumentError("size mismatch between supplied fraction array $(length(fraction)) and expected $(__frac_cells(ESS))"))
 end
 
 
@@ -53,7 +53,7 @@ immutable Unum{ESS, FSS} <: Real
     end
 
     #because fraction could be assigned an existing array, we should do a safe copy.
-    if (__frac_words(ESS) == 1)
+    if (__frac_cells(ESS) == 1)
       temp_fraction = fraction
     else
       temp_fraction = zeros(Uint64, length(fraction))

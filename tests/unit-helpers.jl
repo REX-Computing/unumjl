@@ -113,12 +113,12 @@ end
 @test Unums.max_fsize(7) == 127
 @test Unums.max_fsize(8) == 255
 
-@test Unums.__frac_words(0) == 1
-@test Unums.__frac_words(1) == 1
-@test Unums.__frac_words(2) == 1
-@test Unums.__frac_words(3) == 1
-@test Unums.__frac_words(4) == 1
-@test Unums.__frac_words(5) == 1
-@test Unums.__frac_words(6) == 1
-@test Unums.__frac_words(7) == 2
-@test Unums.__frac_words(8) == 4
+@test Unums.__frac_cells(0) == 1
+@test Unums.__frac_cells(1) == 1
+@test Unums.__frac_cells(2) == 1
+@test Unums.__frac_cells(3) == 1
+@test Unums.__frac_cells(4) == 1
+@test Unums.__frac_cells(5) == 1
+@test Unums.__frac_cells(6) == 1
+@test Unums.__frac_cells(7) == 2
+@test Unums.__frac_cells(8) == 4

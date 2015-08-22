@@ -22,10 +22,10 @@ include("unum-ubound.jl")
 #functions that operate on the unum type itself, and friends.
 include("unum-typefunctions.jl")
 
-#include("unum-onezero.jl")
-#include("unum-convert.jl")
-#include("unum-properties.jl")
-#include("unum-oddsandends.jl")
+include("unum-constants.jl")
+include("unum-properties.jl")
+include("unum-convert.jl")
+include("unum-oddsandends.jl")
 #some math stuff
 #include("unum-addition.jl")
 #include("unum-multiplication.jl")

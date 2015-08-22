@@ -5,12 +5,15 @@ using Unums
 ## UNIT TESTING
 using Base.Test
 
+#integer operations and helpers for the type constructor
 include("unit-int64op.jl")
 include("unit-helpers.jl")
+
+#type constructors
 include("unit-unum.jl")
 
 #testing helper functions
-#include("unit-convert.jl")
+include("unit-convert.jl")
 #include("unum-test-properties.jl")
 
 #mathematics testing

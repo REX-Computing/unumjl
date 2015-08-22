@@ -35,7 +35,7 @@ end
 #process of trimming to fraction.
 function __frac_match(frac::SuperInt, fss::Integer)
   flength = length(frac)
-  cells = __frac_words(fss)
+  cells = __frac_cells(fss)
   temp_frac = zeros(Uint64, cells)
   ubit = zero(Uint16)
   #create an appropriate superint
@@ -62,8 +62,7 @@ function __frac_match(frac::SuperInt, fss::Integer)
 end
 
 #calculates how many words of fraction are necessary to support a certain fss
-__frac_words(fss::Integer) = fss < 6 ? 1 : (1 << (fss - 6))
-
+__frac_cells(fss::Integer) = fss < 6 ? 1 : (1 << (fss - 6))
 
 ################################################################################
 # EXPONENT ENCODING AND DECODING

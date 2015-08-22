@@ -1,10 +1,11 @@
 file                    unit test               status
+----                    ---------               ------
 unum-int64op.jl         unit-int64op.jl         complete
 unum-helpers.jl         unit-helpers.jl         complete
-unum-unum.jl            unit-unum.jl            needs unit tests
+unum-unum.jl            unit-unum.jl            add more unit tests
 unum-ubound.jl                                  needs unit tests
 unum-typefunctions.jl                           needs unit tests
-unum-onezero.jl                                 needs unit tests
+unum-constants.jl                               needs more constants added
 unum-convert.jl         unit-convert.jl         unit tests incomplete
 unum-properties.jl      <unum-test-properties>  incomplete, recategorize
 <unum-oddsandends.jl>                           needs to be recategorized

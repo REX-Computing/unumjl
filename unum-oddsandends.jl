@@ -4,13 +4,15 @@
 #literally calculate the value of the Unum.  Please don't use this for Infs and NaNs
 
 function calculate(x::Unum)
+  sign = (x.flags & UNUM_SIGN_MASK != 0) ? -1 : 1
   #the sub`normal case
   if (x.exponent == 0)
-    2.0^(x.exponent - 2.0^(x.esize) + 1) * (big(x.fraction) / 2.0^64)
+    2.0^(x.exponent - 2.0^(x.esize) + 1) * sign * (big(x.fraction) / 2.0^64)
   else #the normalcase
-    2.0^(x.exponent - 2.0^(x.esize)) * (1 + big(x.fraction) / 2.0^64)
+    2.0^(x.exponent - 2.0^(x.esize)) * sign * (1 + big(x.fraction) / 2.0^64)
   end
 end
+export calculate
 
 #sorts two unums by magnitude (distance from zero), and throws in the calculated
 #exponents, while we're at it.

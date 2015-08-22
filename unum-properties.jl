@@ -117,9 +117,6 @@ export nextulp
 export prevulp
 
 #NaN's and Inf's (plural'd abbreviations take apostrophes!)
-function nan{ESS,FSS}(::Type{Unum{ESS,FSS}})
-  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), uint16(0b1), fillbits(-2^FSS), mask(2^ESS))
-end
 function nan(x::Unum)
   ess = esizesize(x)
   fss = fsizesize(x)
@@ -127,24 +124,6 @@ function nan(x::Unum)
 end
 function nan!{ESS,FSS}(::Type{Unum{ESS,FSS}}) #for when you just need the noisy NaN
   Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), uint16(0b11), fillbits(-2^FSS), mask(2^ESS))
-end
-
-function pinf{ESS,FSS}(::Type{Unum{ESS,FSS}})
-  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), uint16(0b0), fillbits(-2^FSS), mask(2^ESS))
-end
-function pinf(x::Unum)
-  ess = esizesize(x)
-  fss = fsizesize(x)
-  Unum{ess,fss}(uint16(2^fss - 1), uint16(2^ess-1), uint16(0b0), fillbits(-2^fss), mask(2^ess))
-end
-
-function ninf{ESS,FSS}(::Type{Unum{ESS,FSS}})
-  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), SIGN_MASK, fillbits(-2^FSS), mask(2^ESS))
-end
-function ninf(x::Unum)
-  ess = esizesize(x)
-  fss = fsizesize(x)
-  Unum{ess,fss}(uint16(2^fss - 1), uint16(2^ess-1), SIGN_MASK, fillbits(-2^fss), mask(2^ess))
 end
 
 function almostpinf{ESS,FSS}(::Type{Unum{ESS,FSS}})
@@ -176,17 +155,17 @@ function fwords{ESS,FSS}(::Type{Unum{ESS,FSS}})
   (2 << (fsize - 6)) + 1
 end
 function isnan(x::Unum)
-  (x.fsize == 2^fsizesize(x) - 1) && (x.esize == 2^esizesize(x) - 1) && (x.flags == 0b1) && (x.fraction == fillbits(-2^fsizesize(x))) && (x.exponent == mask(2^esizesize(x)))
+  fss = fsizesize(x)
+  ess = esizesize(x)
+  (x.fsize == (1 << fss - 1)) && (x.esize == (1 << ess - 1)) && (x.flags == 0b1) && (x.fraction == fillbits(-(1 << fss))) && (x.exponent == mask(1 << ess))
 end
 function isfinite(x::Unum)
   (x.fraction != fillbits(-2^fsizesize(x))) || (x.exponent != mask(2^esizesize(x)))
 end
-function ispinf(x::Unum)
-  (x.fraction == fillbits(-2^fsizesize(x)) && (x.exponent == mask(2^esizesize(x))) && (x.flags & SIGN_MASK == 0))
-end
-function isninf(x::Unum)
-  (x.fraction == fillbits(-2^fsizesize(x)) && (x.exponent == mask(2^esizesize(x))) && (x.flags & SIGN_MASK != 0))
-end
+
+ispinf(x::Unum) = (x.flags & UNUM_SIGN_MASK == 0) && (x.exponent == mask(1 << esizesize(x))) && (x.fraction == fillbits(-(1 << fsizesize(x))))
+isninf(x::Unum) = (x.flags & UNUM_SIGN_MASK != 0) && (x.exponent == mask(1 << esizesize(x))) && (x.fraction == fillbits(-(1 << fsizesize(x))))
+
 function issubnormal(x::Unum)
   x.exponent == 0
 end

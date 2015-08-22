@@ -5,14 +5,10 @@
 #bitof - retrieves single bits from an int64, zero indexed.
 
 #integer to unum
-@test [convert(Float16, convert(Unum{3,6},i)) for i=-50:50] == [float16(i) for i = -50:50]
-@test [convert(Float32, convert(Unum{3,6},i)) for i=-50:50] == [float32(i) for i = -50:50]
-@test [convert(Float64, convert(Unum{3,6},i)) for i=-50:50] == [float64(i) for i = -50:50]
-#repeat the same, with realllly large unums
-@test [convert(Float16, convert(Unum{5,9},i)) for i=-50:50] == [float16(i) for i = -50:50]
-@test [convert(Float32, convert(Unum{5,9},i)) for i=-50:50] == [float32(i) for i = -50:50]
-@test [convert(Float64, convert(Unum{5,9},i)) for i=-50:50] == [float64(i) for i = -50:50]
-#denormal unums
+
+@test [calculate(convert(Unum{3,6},i)) for i=-50:50] == [BigFloat(i) for i = -50:50]
+
+#subnormal unums
 #at lower resolution than the float
 #at equal resolution to the float
 #at higher resolution to the float
@@ -35,22 +31,27 @@
 #end
 
 #float to unum
+#test that the general conversion works for normal floating points in the {4,6} environment
 
-#stress test both-ways conversions with random floats.
-#scales = [100, 1, 1/100]
-#rtypes = [Float16, Float32, Float64] #note that Float16 will hit small subnormals in these scales.
-#rtypes = [Float32, Float64]
-#for s in scales
-#  for T in rtypes
-#    for idx = 1:100
-      #pick a normally distributed, random number and convert to float.
-#      test = convert(T, randn() * s)
-      #convert the test subject to a wide unum.
-#      utest = convert(Unum{4,6}, test)
-      #convert back to floating point.
-#      testres = convert(T, utest)
-      #make sure we got it right.
-#      @test (test == testres)
-#    end
-#  end
-#end
+seed = randn(100)
+f16a = [BigFloat(float16(seed[i])) for i = 1:100]
+f32a = [BigFloat(float32(seed[i])) for i = 1:100]
+f64a = [BigFloat(float64(seed[i])) for i = 1:100]
+c16a = [calculate(convert(Unum{4,6}, float16(seed[i]))) for i = 1:100]
+c32a = [calculate(convert(Unum{4,6}, float32(seed[i]))) for i = 1:100]
+c64a = [calculate(convert(Unum{4,6}, float64(seed[i]))) for i = 1:100]
+@test f16a == c16a
+@test f32a == c32a
+@test f64a == c64a
+
+#test that NaNs convert.
+@test isnan(convert(Unum{4,6}, NaN16))
+@test isnan(convert(Unum{4,6}, NaN32))
+@test isnan(convert(Unum{4,6}, NaN))
+#and positive and negative Infs
+@test ispinf(convert(Unum{4,6}, Inf16))
+@test ispinf(convert(Unum{4,6}, Inf32))
+@test ispinf(convert(Unum{4,6}, Inf))
+@test isninf(convert(Unum{4,6}, -Inf16))
+@test isninf(convert(Unum{4,6}, -Inf32))
+@test isninf(convert(Unum{4,6}, -Inf))
