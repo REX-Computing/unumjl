@@ -55,3 +55,17 @@ c64a = [calculate(convert(Unum{4,6}, float64(seed[i]))) for i = 1:100]
 @test isninf(convert(Unum{4,6}, -Inf16))
 @test isninf(convert(Unum{4,6}, -Inf32))
 @test isninf(convert(Unum{4,6}, -Inf))
+#test that zero converts correctly
+@test iszero(convert(Unum{4,6}, zero(Float16)))
+@test iszero(convert(Unum{4,6}, zero(Float32)))
+@test iszero(convert(Unum{4,6}, zero(Float64)))
+
+#test some subnormal numbers.
+f16sn = reinterpret(Float16, one(Uint16))
+@test calculate(convert(Unum{4,6}, f16sn)) == BigFloat(f16sn)
+f32sn = reinterpret(Float32, one(Uint32))
+@test calculate(convert(Unum{4,6}, f32sn)) == BigFloat(f32sn)
+f64sn = reinterpret(Float64, one(Uint64))
+@test calculate(convert(Unum{4,6}, f64sn)) == BigFloat(f64sn)
+
+#test pushing into a unum's subnormal range.

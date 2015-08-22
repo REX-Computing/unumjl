@@ -99,6 +99,11 @@ end
 #convert(::Type{Float32}, x::Unum) = __u_to_32f(x)
 #convert(::Type{Float64}, x::Unum) = __u_to_64f(x)
 
+#for some reason we need a shim that provides issubnormal support to Float16
+import Base.issubnormal
+issubnormal(x::Float16) = (x != 0) && ((reinterpret(Uint16, x) & 0x7c00) == 0)
+export issubnormal
+
 #helper function to convert from different floating point types.
 function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   #retrieve the floating point properties of the type to convert from.
@@ -117,15 +122,28 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   _emin = -(_ebias) + 1           #minimum exponent
 
   ibits = uint64(reinterpret(I, x)[1])
+
+  fraction = ibits & mask(_fsize) << (64 - _fsize)
+  #make some changes to the data for subnormal numbers.
+  (x == 0) && return zero(Unum{ESS,FSS})
+
   #grab the sign
   flags = (ibits & (one(I) << (_esize + _fsize))) != 0 ? UNUM_SIGN_MASK : z16
   #grab the exponent part
   biased_exp::Int16 = ibits & mask(_fsize:(_fsize + _esize - 1)) >> _fsize
+  #generate the unbiased exponent and remember to take frac_move into account.
   unbiased_exp::Int16 = biased_exp - _ebias + ((biased_exp == 0) ? 1 : 0)
+
+  if issubnormal(x)
+    #keeping in mind that the fraction bits are now left-aligned, calculate
+    #how much further we have to push the fraction bits.
+    frac_move::Int16 = 64 - msb(fraction)
+    fraction = fraction << frac_move
+    unbiased_exp -= frac_move
+  end
 
   (esize, exponent) = encode_exp(unbiased_exp)
   #grab the fraction part
-  fraction = ibits & mask(_fsize) << (64 - _fsize)
 
   unum(Unum{ESS,FSS}, _fsize, esize, flags, fraction, exponent)
 end

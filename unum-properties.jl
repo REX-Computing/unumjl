@@ -179,24 +179,24 @@ function iszeroish(x::Unum)
 end
 function iszero(x::Unum)
   fwords = length(x.fraction)
-  (x.fraction == ((fwords == 1) ? z64 : zeros(fwords))) && (x.exponent == z64) && ((x.flags & UBIT_MASK) == 0)
+  (x.fraction == ((fwords == 1) ? z64 : zeros(fwords))) && (x.exponent == z64) && ((x.flags & UNUM_UBIT_MASK) == 0)
 end
 function isinfinitesimal(x::Unum)
   fwords = length(x.fraction)
-  (x.fraction == ((fwords == 1) ? z64 : zeros(fwords))) && (x.exponent == z64) && ((x.flags & UBIT_MASK) != 0)
+  (x.fraction == ((fwords == 1) ? z64 : zeros(fwords))) && (x.exponent == z64) && ((x.flags & UNUM_UBIT_MASK) != 0)
 end
 function isalmostinf(x::Unum)
   fwords = length(x.fraction)
-  (x.fraction == fillbits(-(2^fsizesize(x) - 1))) && (x.exponent == mask(2^esizesize(x))) && ((x.flags & UBIT_MASK) != 0)
+  (x.fraction == fillbits(-(2^fsizesize(x) - 1))) && (x.exponent == mask(2^esizesize(x))) && ((x.flags & UNUM_UBIT_MASK) != 0)
 end
 function isalmostpinf(x::Unum)
-  isalmostinf(x) && (x.flags == UBIT_MASK)
+  isalmostinf(x) && (x.flags == UNUM_UBIT_MASK)
 end
 function isalmostninf(x::Unum)
-  isalmostinf(x) && (x.flags == (UBIT_MASK | SIGN_MASK))
+  isalmostinf(x) && (x.flags == (UNUM_UBIT_MASK | UNUM_SIGN_MASK))
 end
 function isulp(x::Unum)
-  ((x.flags & UBIT_MASK) != 0)
+  ((x.flags & UNUM_UBIT_MASK) != 0)
 end
 export isnan
 export isfinite
