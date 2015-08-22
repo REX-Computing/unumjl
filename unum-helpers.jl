@@ -76,3 +76,5 @@ end
 decode_exp(esize::Uint16, exponent::Uint64) = int(exponent) - (1 << esize)
 #maxfsize returns the the maximum fraction size for a given FSS.
 max_fsize(FSS) = uint16((1 << FSS) - 1)
+max_exponent(ESS) = (1 << (1 << ESS - 1) - 1)
+min_exponent(ESS) = -(1 << (1 << ESS - 1) - 1)

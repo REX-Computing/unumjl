@@ -87,6 +87,17 @@
 @test (3, 1) == Unums.encode_exp(-7)
 @test (3, 13) == Unums.encode_exp(5)
 
+@test Unums.max_exponent(0) == 0
+@test Unums.min_exponent(0) == 0
+@test Unums.max_exponent(1) == 1
+@test Unums.min_exponent(1) == -1
+@test Unums.max_exponent(2) == 7
+@test Unums.min_exponent(2) == -7
+@test Unums.max_exponent(3) == 127
+@test Unums.min_exponent(3) == -127
+@test Unums.max_exponent(4) == 32767
+@test Unums.min_exponent(4) == -32767
+
 #comprehensive checking of all exponents in the range -1000..1000
 
 for e = -1000:1000

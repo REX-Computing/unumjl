@@ -8,6 +8,11 @@
 
 @test [calculate(convert(Unum{3,6},i)) for i=-50:50] == [BigFloat(i) for i = -50:50]
 
+@test isalmostinf(mmr(Unum{0,0}))
+
+@test isalmostinf(convert(Unum{0,0}, 2))
+@test isalmostinf(convert(Unum{1,1}, 8))
+
 #subnormal unums
 #at lower resolution than the float
 #at equal resolution to the float
@@ -68,4 +73,26 @@ f32sn = reinterpret(Float32, one(Uint32))
 f64sn = reinterpret(Float64, one(Uint64))
 @test calculate(convert(Unum{4,6}, f64sn)) == BigFloat(f64sn)
 
-#test pushing into a unum's subnormal range.
+#test pushing exact into a unum's subnormal range.
+justsubnormal(ess) = reinterpret(Float64,(Unums.min_exponent(ess) + 1022) << 52)
+smallsubnormal(ess, fss) = reinterpret(Float64,(Unums.min_exponent(ess) - Unums.max_fsize(fss) + 1022) << 52)
+pastsubnormal(ess, fss) = reinterpret(Float64,(Unums.min_exponent(ess) - Unums.max_fsize(fss) + 1021) << 52)
+@test calculate(convert(Unum{0,0}, justsubnormal(0))) == BigFloat(justsubnormal(0))
+@test calculate(convert(Unum{1,1}, justsubnormal(1))) == BigFloat(justsubnormal(1))
+@test calculate(convert(Unum{2,2}, justsubnormal(2))) == BigFloat(justsubnormal(2))
+@test calculate(convert(Unum{3,3}, justsubnormal(3))) == BigFloat(justsubnormal(3))
+@test calculate(convert(Unum{0,0}, smallsubnormal(0,0))) == BigFloat(smallsubnormal(0,0))
+@test calculate(convert(Unum{1,1}, smallsubnormal(1,1))) == BigFloat(smallsubnormal(1,1))
+@test calculate(convert(Unum{2,2}, smallsubnormal(2,2))) == BigFloat(smallsubnormal(2,2))
+@test calculate(convert(Unum{3,3}, smallsubnormal(3,3))) == BigFloat(smallsubnormal(3,3))
+@test isinfinitesimal(convert(Unum{0,0}, pastsubnormal(0,0)))
+@test isinfinitesimal(convert(Unum{1,1}, pastsubnormal(1,1)))
+@test isinfinitesimal(convert(Unum{2,2}, pastsubnormal(2,2)))
+@test isinfinitesimal(convert(Unum{3,3}, pastsubnormal(3,3)))
+tinyfloat = reinterpret(Float64, o64)
+@test isinfinitesimal(convert(Unum{0,0}, tinyfloat))
+@test isinfinitesimal(convert(Unum{1,1}, tinyfloat))
+@test isinfinitesimal(convert(Unum{2,2}, tinyfloat))
+@test isinfinitesimal(convert(Unum{3,3}, tinyfloat))
+@test isalmostinf(convert(Unum{0,0}, 2.2))
+@test isalmostinf(convert(Unum{1,1}, 8.2))

@@ -203,6 +203,7 @@ export isfinite
 export ispinf
 export isninf
 export issubnormal
+export isinfinitesimal
 export isalmostinf
 export isalmostpinf
 export isalmostninf

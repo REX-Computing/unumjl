@@ -39,3 +39,18 @@ ninf{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = unum_unsafe(inf(T), UNUM_SIGN_MASK)
 export inf
 export pinf
 export ninf
+
+#mmr and ssn - more than maxreal and smallsubnormal
+function mmr{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
+  esize = uint16(1 << ESS - 1)
+  fsize = uint16(1 << FSS - 1)
+  max_exp = uint64(1 << (esize + 1) - 1)
+  Unum{ESS,FSS}(fsize, esize, signmask | UNUM_UBIT_MASK, fillbits(1 - (1 << FSS), __frac_cells(FSS)), max_exp)
+end
+function ssn{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
+  esize = uint16(1 << ESS - 1)
+  fsize = uint16(1 << FSS - 1)
+  Unum{ESS,FSS}(fsize, esize, signmask | UNUM_UBIT_MASK, zeros(Uint64,__frac_cells(FSS)), z64)
+end
+export mmr
+export ssn

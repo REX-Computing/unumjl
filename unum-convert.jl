@@ -24,7 +24,7 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
   #find the msb of x, this will tell us how much to move things
   msbx = msb(x)
   #do a check to see if we should release almost_infinite
-  (msbx > (1 << (1 << ESS + 1))) && unum_unsafe(maxreal(Unum{ESS,FSS}), UNUM_SIGN_MASK)
+  (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS})
 
   #move it over.  One bit should spill over the side.
   frac = x << (64 - msbx)
@@ -118,7 +118,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   _esize = fp.esize               #how many bits in the exponent
   _fsize = fp.fsize               #how many bits in the fraction
   _bits = _esize + _fsize + 1     #how many total bits
-  _ebias = 2 ^ (_esize - 1) - 1   #exponent bias (= _emax)
+  _ebias = 1 << (_esize - 1) - 1   #exponent bias (= _emax)
   _emin = -(_ebias) + 1           #minimum exponent
 
   ibits = uint64(reinterpret(I, x)[1])
@@ -142,10 +142,32 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
     unbiased_exp -= frac_move
   end
 
-  (esize, exponent) = encode_exp(unbiased_exp)
   #grab the fraction part
 
-  unum(Unum{ESS,FSS}, _fsize, esize, flags, fraction, exponent)
+  #check to see if the exponent is too low.
+  if (unbiased_exp < min_exponent(ESS))
+    #right shift the fraction by the requisite amount.
+    shift = min_exponent(ESS) - unbiased_exp
+    #make sure we don't have any bits in the shifted segment.
+    #first, are there more bits in the shift than the width?
+    if (shift > 64)
+      ((fraction != 0) || ((shift > 65) && (unbiased_exp != 0))) && (flags |= UNUM_UBIT_MASK)
+    else
+      ((fraction & mask(shift)) == 0) || (flags |= UNUM_UBIT_MASK)
+    end
+    #shift fraction by the amount.
+    fraction = fraction >> shift
+    #punch in the one
+    fraction |= ((biased_exp == 0) ? 0 : t64 >> (shift - 1))
+    #set to subnormal settings.
+    esize = uint16((1 << ESS) - 1)
+    exponent = z64
+  elseif (unbiased_exp > max_exponent(ESS))
+    return mmr(Unum{ESS,FSS})
+  else
+    (esize, exponent) = encode_exp(unbiased_exp)
+  end
+  unum(Unum{ESS,FSS}, min(_fsize, max_fsize(FSS)), esize, flags, fraction, exponent)
 end
 
 #bind to convert for multiple dispatch
