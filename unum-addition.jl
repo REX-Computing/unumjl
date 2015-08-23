@@ -3,66 +3,57 @@
 #environment signature.  Also included here is subtraction.
 
 #instead of making unary plus "do nothing at all", we will have it "firewall"
-#the variable by creating a 'safe copy' of it.
-+(x::Unum) = unum(x)
+#the variable by creating a copy of it.  Use the "unsafe" constructor to save
+#on checking since we know the source unum is valid.
++(x::Unum) = unum_unsafe(x)
 #unary minus uses the shorthand pseudoconstructor, where all the values are the
 #same but the flags may be altered.
--(x::Unum) = unum(x, x.flags $ UNUM_SIGN_MASK)
+-(x::Unum) = unum_unsafe(x, x.flags $ UNUM_SIGN_MASK)
 
-#binary add - let's do things this way.
+#binary add performs a series of checks to find faster solutions followed by
+#passing to either the 'addition' or 'subtraction' algorithms.  Two separate
+#algorithms are necessary because of the zero-symmetrical nature of the unum
+#floating point spec.
 function +(a::Unum, b::Unum)
   #some basic gating checks before we do any crazy operations.
   #one, is either one zero?
-  if (iszero(a))
-    return b
-  end
-  if (iszero(b))
-    return a
-  end
+  iszero(a) && return b
+  iszero(b) && return a
   #do a nan check
-  if (isnan(a) || isnan(b))
-    return nan(typeof(a))
-  end
-  #do infinite checks
+  (isnan(a) || isnan(b)) && return nan(typeof(a))
+
+  #infinities plus anything is NaN if opposite infinity. (checking for operand a)
   if (ispinf(a))
-    if (isninf(b))
-      return nan(typeof(a))
-    else
-      return pinf(typeof(a))
-    end
-  elseif (isninf(a))
-    if (ispinf(b))
-      return nan(typeof(a))
-    else
-      return ninf(typeof(a))
-    end
-  end
-  if (ispinf(b))
+    (isninf(b)) && return nan(typeof(a))
     return pinf(typeof(a))
-  elseif (isninf(b))
+  elseif (isninf(a))
+    (ispinf(b)) && return nan(typeof(a))
     return ninf(typeof(a))
   end
 
+  #infinities b (infinity a is ruled out) plus anything is b3
+  (ispinf(b)) && return pinf(typeof(a))
+  (isninf(b)) && return ninf(typeof(a))
+
+  #sort a and b and then add them using the gateway operation.
   __add_ordered(magsort(a,b)...)
 end
 
 #subtraction - merely flip the bit first and then roll with it.
 function -(a::Unum, b::Unum)
-  #check equality and return zero if equal.
+  #check equality and return zero if equal.  It may not be the fastest to
+  #create a new object before subtracting, but for now we won't optimize this.
   a + -b
 end
 
-#a function that calculates the maximum scratchpad size...
-#this is the maximum exponential difference plus the maximal floating point
-#difference.
+##########################TODO:  Implement integers by converting upwards first.
 
 #performs a carried add on an unsigned integer array.
-function __carried_add(carry, v1, v2)
-  res = v1 .+ v2
-  #check to see if we need a carry.
-  if last(res) < last(v1)
-    carry += 1
-  end
+function __carried_add(carry::Uint64, v1::SuperInt, v2::SuperInt)
+  #first perform a direct sum on the integer arrays
+  res = v1 + v2
+  #check to see if we need a carry.  Note last() can operate on scalar values
+  (last(res) < last(v1)) && (carry += 1)
   #iterate downward from the most significant word
   for idx = length(v1):-1:2
     #if it looks like it's lower than it should be, then make it okay.
@@ -76,56 +67,84 @@ function __carried_add(carry, v1, v2)
 end
 
 #returns a (SuperInt, int, bool) triplet:  (value, shift, falloff)
-function __shift_after_add(carry, value)
-  shift = msb(carry)
-  falloff = (value & mask(shift) != 0)
-  value = value >> shift
-  value |= carry << (64 - shift)
+function __shift_after_add(carry::Uint64, value::SuperInt)
+  #check if we have to do nothing.
+  (carry == 0) && return (value, 0, false)
+  #cache the length of value
+  l = length(value)
+  #calculate how far we have to shift.
+  shift = msb(carry) + 1
+  #did we lose values off the end of the number?
+  falloff = (value & fillbits(shift, l)) != superzero(l)
+  #shift the value over
+  value = rsh(value, shift)
+  #copy the carry over.
+  if (l > 1)
+    value[l] |= carry << (64 - shift)
+  else
+    value |= carry << (64-shift)
+  end
   (value, shift, falloff)
 end
 
+################################################################################
+## GATEWAY OPERATION
+
 #an addition operation where a and b are ordered such that mag(a) > mag(b)
 function __add_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
-  a_ulp = a.flags & UBIT_MASK != 0
-  b_ulp = b.flags & UBIT_MASK != 0
   a_neg = isnegative(a)
   b_neg = isnegative(b)
 
   if (b_neg != a_neg)
-    __sub_ordered(a, b, _aexp, _bexp)
-  elseif (a_ulp || b_ulp)
-
-    #do a check to see if either one of our guys is almostinfinite.
-    #note that we don't need to countercheck if the other is infinite,
-    #because that check is done earlier.
-
-    isalmostinf(a) && return a
-
-    exact_a = Unum{ESS,FSS}(a.fsize, a.esize, a.flags & (~UBIT_MASK), a.fraction, a.exponent)
-    exact_b = Unum{ESS,FSS}(b.fsize, b.esize, b.flags & (~UBIT_MASK), b.fraction, b.exponent)
-
-    #find the min and max additions to be performed.
-    max_a = (a_ulp) ? nextunum(a) : exact_a
-    max_b = (b_ulp) ? nextunum(b) : exact_b
-
-    _maexp = decode_exp(a)
-    _mbexp = decode_exp(b)
-
-    #find the high and low bounds.
-    far_result = max_a + max_b
-    near_result = exact_a + exact_b
-
-    if a_neg
-      ubound_resolve(open_ubound(far_result, near_result))
-    else
-      ubound_resolve(open_ubound(near_result, far_result))
-    end
+    __diff_ordered(a, b, _aexp, _bexp)
   else
-    __do_addition(a, b, _aexp, _bexp)
+    __sum_ordered(a, b, _aexp, _bexp)
   end
 end
 
-function __do_addition{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp)
+################################################################################
+## SUM ALGORITHM
+
+function __sum_ordered(a, b, _aexp, _bexp)
+  #add two values, where a has a greater magnitude than b.  Both operands have
+  #matching signs, either positive or negative.  At this stage, they may both
+  #be ULPs.
+  if (isulp(a) || isulp(b))
+    __sum_ulp(a, b, _aexp, _bexp)
+  else
+    __sum_exact(a, b, _aexp, _bexp)
+  end
+end
+
+function __sum_ulp(a, b, _aexp, _bexp)
+  #this code is assuredly wrong.
+  isalmostinf(a) && return a
+
+  exact_a = Unum{ESS,FSS}(a.fsize, a.esize, a.flags & (~UBIT_MASK), a.fraction, a.exponent)
+  exact_b = Unum{ESS,FSS}(b.fsize, b.esize, b.flags & (~UBIT_MASK), b.fraction, b.exponent)
+
+  #find the min and max additions to be performed.
+  max_a = (a_ulp) ? nextunum(a) : exact_a
+  max_b = (b_ulp) ? nextunum(b) : exact_b
+
+  #we may have to re-decode these because these might have changed.
+  _maexp = decode_exp(a)
+  _mbexp = decode_exp(b)
+
+  #find the high and low bounds.  Pass this to a subsidiary function (recursion!)
+  far_result = max_a + max_b
+  near_result = exact_a + exact_b
+
+  if a_neg
+    ubound_resolve(open_ubound(far_result, near_result))
+  else
+    ubound_resolve(open_ubound(near_result, far_result))
+  end
+end
+
+function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp)
+  #calculate the exact sum between two unums.  You may pass this function a unum
+  #with a ubit, but it will calculate the sum as if it didn't have the ubit there
 
   #check for deviations due to subnormality.
   a_dev = issubnormal(a) ? 1 : 0
@@ -174,6 +193,9 @@ function __do_addition{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _be
 
   Unum{ESS,FSS}(fsize, esize, flags, scratchpad, exponent)
 end
+
+################################################################################
+## DIFFERENCE ALGORITHM
 
 function __sub_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #an ordered subtraction.  a has a higher magnitude than b.  The final direction
@@ -304,12 +326,4 @@ function __do_subtraction{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _b
   end
   fraction = scratchpad << shift
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
-end
-
-#an add_ordered procedure for when you don't just have j.ust a single uint64
-function __add_ordered_poly{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-end
-
-#an add_ordered procedure for when you don't just have just a single uint64
-function __sub_ordered_poly{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 end

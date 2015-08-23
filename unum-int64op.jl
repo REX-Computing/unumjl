@@ -15,6 +15,9 @@ const f16 = uint16(0xFFFF)
 SuperInt = Union(Uint64, Array{Uint64,1})
 GeneralInt = Union(SuperInt, Integer)
 
+#generates a superint zero for a given superint length
+superzero(l::Integer) = ((l == 1) ? z64 : zeros(Uint64, l))
+
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
 #assume there is one cell, if no value has been passed.
 function fillbits(n::Integer, cells::Integer = 1)
@@ -97,4 +100,45 @@ end
 #does the same, except with a unit range.
 function mask(range::UnitRange)
   uint64((1 << (range.stop + 1)) - (1 << (range.start)))
+end
+
+#iterative leftshift and rightshift operations on Array SuperInts
+function lsh(a::SuperInt,b::Integer)
+  (typeof(a) == Uint64) && return a << b
+  #calculate how many cells apart our two ints shall be.
+  celldiff = b >> 6
+  #calculate how much we have to shift
+  shift = b % 64
+  #as a courtesy, generate a new array so we don't clobber the old one.
+  l = length(a)
+  res = zeros(Uint64, l)
+  for (idx = l:-1:2)
+    (idx - celldiff < 2) && break
+    #leftshift it.
+    res[idx] = a[idx - celldiff] << shift
+    res[idx] |= a[idx - celldiff - 1] >> (64 - shift)
+  end
+  #then leftshift the last one.
+  res[1 + celldiff] = a[1] << shift
+  res
+end
+
+function rsh(a::SuperInt, b::Integer)
+  (typeof(a) == Uint64) && return a >> b
+  #how many cells apart is our shift
+  celldiff = (b >> 6)
+  #and how many slots we need to shift
+  shift = b % 64
+  #as a courtesy, generate a new array so we don't clobber the old one.
+  l = length(a)
+  res = zeros(Uint64, l)
+  for (idx = 1:l - 1)
+    (idx + celldiff + 1> l) && break
+    #rightshift it.
+    res[idx] = a[idx + celldiff] >> shift
+    res[idx] |= a[idx + celldiff + 1] << (64 - shift)
+  end
+  #complete the last one
+  res[l - celldiff] = a[l] >> shift
+  res
 end

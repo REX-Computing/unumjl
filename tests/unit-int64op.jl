@@ -57,3 +57,12 @@ nobits  = uint64(0x0000_0000_0000_0000)
 #test three cells
 @test Unums.fillbits(65,3) == [allbits, lsb1, nobits]
 @test Unums.fillbits(-65,3) == [nobits, msb1, allbits]
+
+#test leftshifts and rightshifts on multi-arrays
+@test Unums.lsh(allbits, 4) == 0xFFFF_FFFF_FFFF_FFF0
+@test Unums.rsh(allbits, 4) == 0x0FFF_FFFF_FFFF_FFFF
+@test Unums.lsh([allbits, allbits],4) == [0xFFFF_FFFF_FFFF_FFF0, allbits]
+@test Unums.rsh([allbits, allbits],4) == [allbits, 0x0FFF_FFFF_FFFF_FFFF]
+#test really long distance leftshifts and rightshifts
+@test Unums.lsh([allbits, allbits, allbits, allbits], 68) == [nobits, 0xFFFF_FFFF_FFFF_FFF0, allbits, allbits]
+@test Unums.rsh([allbits, allbits, allbits, allbits], 68) == [allbits, allbits, 0x0FFF_FFFF_FFFF_FFFF, nobits]
