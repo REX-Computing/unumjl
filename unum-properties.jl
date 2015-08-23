@@ -146,6 +146,8 @@ export almostpinf
 export almostninf
 export almostinf
 
+decode_exp(x::Unum) = decode_exp(x.esize, x.exponent)
+export decode_exp
 
 #a couple of testing conditions
 import Base.isnan

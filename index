@@ -6,7 +6,7 @@ unum-unum.jl            unit-unum.jl            add more unit tests
 unum-ubound.jl                                  needs unit tests
 unum-typefunctions.jl                           needs unit tests
 unum-constants.jl                               needs more constants added
-unum-convert.jl         unit-convert.jl         unit tests incomplete
+unum-convert.jl         unit-convert.jl         almost done, needs double-cell conversions
 unum-properties.jl      <unum-test-properties>  incomplete, recategorize
 <unum-oddsandends.jl>                           needs to be recategorized
 unum-addition.jl                                needs rewrite

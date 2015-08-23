@@ -2,8 +2,8 @@
 #implements conversions between unums and ints, floats.
 import Base.convert
 
-#PROMOTIONS
-#defined promoted versions of this thing.
+##################################################################
+## INTEGER TO UNUM
 
 #CONVERSIONS - INTEGER -> UNUM
 function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
@@ -32,6 +32,9 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
   unum_easy(Unum{ESS,FSS}, flags, frac, msbx)
 end
 
+##################################################################
+## FLOATING POINT CONVERSIONS
+
 #create a type for floating point properties
 immutable FProp
   intequiv::Type
@@ -46,58 +49,9 @@ __fp_props = {
   Float64 => FProp(Uint64, uint16(11), uint16(52))
 }
 
-#a generator that makes float conversion functions, to DRY production of conversions
-function __u_to_f_generator(T::Type)
-  #grab and/or calculate things from the properties dictionary.
-  fp = __fp_props[T]
-  I = fp.intequiv            #the integer type of the same width as the Float64
-  _esize = fp.esize       #how many bits in the exponent
-  _fsize = fp.fsize       #how many bits in the fraction
-  _bits = _esize + _fsize + 1     #how many total bits
-  _ebias = 2 ^ (_esize - 1) - 1   #exponent bias (= _emax)
-  _emin = -(_ebias) + 1           #minimum exponent
 
-  #generates an anonymous function that releases a floating point for an unum
-  function(x::Unum)
-    #DEAL with Infs, NaNs, and subnormals.
-
-    #check subnormals.  Is the entire exponent zero?
-    #if (issubnormal(x))
-      #is the entire fraction zero?  Then drop a zero down.
-    #  if (isfraczero(x))
-    #    return zero(T)
-    #  end
-    #  return zero(T)
-    #end
-
-    #create a dummy value that will hold our result.
-#    res = zero(I)
-    #first, transfer the sign bit over.
-#    res |= (convert(I, x.flags) & convert(I, 2)) << (_bits - 2)
-    #next, transfer the exponent
-#    unbiased_exp = int(first(x.exponent)) - (2 ^ x.esize)
-    #check to see that unbiased_exp is within appropriate bounds for Float32
-#    if (unbiased_exp < _emin) || (unbiased_exp > _ebias)
-      #throw an error
-#      throw(TypeError)
-#    end
-    #calculate the rebiased exponent and push it into the result.
-#    res |= convert(I, unbiased_exp + _ebias) << _fsize
-    #finally, transfer the fraction bits.
-#    res |= convert(I, last(x.fraction) & mask(x.fsize + 1 > _bits ? -_bits : -(x.fsize + 1)) >> (64 - _fsize))
-#    reinterpret(T,res)[1]
-  end
-end
-
-#create the generator functions (so that we don't trigger the compiler every time)
-#__u_to_16f = __u_to_f_generator(Float16)
-#__u_to_32f = __u_to_f_generator(Float32)
-#__u_to_64f = __u_to_f_generator(Float64)
-
-#bind these to the convert for multiple dispatch purposes.
-#convert(::Type{Float16}, x::Unum) = __u_to_16f(x)
-#convert(::Type{Float32}, x::Unum) = __u_to_32f(x)
-#convert(::Type{Float64}, x::Unum) = __u_to_64f(x)
+##################################################################
+## FLOATS TO UNUM
 
 #for some reason we need a shim that provides issubnormal support to Float16
 import Base.issubnormal
@@ -174,5 +128,68 @@ end
 convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float16) = __f_to_u(ESS, FSS, x, Float16)
 convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float32) = __f_to_u(ESS, FSS, x, Float32)
 convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float64) = __f_to_u(ESS, FSS, x, Float64)
+
+##################################################################
+## UNUMS TO FLOAT
+
+#a generator that makes float conversion functions, to DRY production of conversions
+function __u_to_f_generator(T::Type)
+  #grab and/or calculate things from the properties dictionary.
+  fp = __fp_props[T]
+  I = fp.intequiv            #the integer type of the same width as the Float64
+  _esize = fp.esize       #how many bits in the exponent
+  _fsize = fp.fsize       #how many bits in the fraction
+  _bits = _esize + _fsize + 1     #how many total bits
+  _ebias = 2 ^ (_esize - 1) - 1   #exponent bias (= _emax)
+  _emin = -(_ebias) + 1           #minimum exponent
+
+  #generates an anonymous function that releases a floating point for an unum
+  function(x::Unum)
+    #DEAL with Infs, NaNs, and subnormals.
+    isnan(x) && return nan(T)
+    ispinf(x) && return inf(T)
+    isninf(x) && return -inf(T)
+    iszero(x) && return zero(T)
+
+    #create a dummy value that will hold our result.
+    res = zero(I)
+    #first, transfer the sign bit over.
+    res |= (convert(I, x.flags) & convert(I, 2)) << (_bits - 2)
+
+    #check to see if the unum is subnormal
+    if issubnormal(x)
+      #measure the msb significant bit of x.fraction and we'll move the exponent to that.
+      shift = length(x.fraction) << 6 - msb(x.fraction)
+      #shift the fraction over
+      fraction = x.fraction << shift
+      unbiased_exp = min_exponent(esizesize(x)) -shift
+    else
+      #next, transfer the exponent
+      fraction = x.fraction
+      unbiased_exp = decode_exp(x)
+    end
+
+    #check to see that unbiased_exp is within appropriate bounds for Float32
+    (unbiased_exp > _ebias) && return inf(T) * ((x.flags & UNUM_SIGN_MASK == 0) ? 1 : -1)
+    (unbiased_exp < _emin) && return zero(T) * ((x.flags & UNUM_SIGN_MASK == 0) ? 1 : -1)
+
+    #calculate the rebiased exponent and push it into the result.
+    res |= convert(I, unbiased_exp + _ebias) << _fsize
+
+    #finally, transfer the fraction bits.
+    res |= convert(I, last(fraction) & mask(x.fsize + 1 > _bits ? -_bits : -(x.fsize + 1)) >> (64 - _fsize))
+    reinterpret(T,res)[1]
+  end
+end
+
+#create the generator functions
+__u_to_16f = __u_to_f_generator(Float16)
+__u_to_32f = __u_to_f_generator(Float32)
+__u_to_64f = __u_to_f_generator(Float64)
+
+#bind these to the convert for multiple dispatch purposes.
+convert(::Type{Float16}, x::Unum) = __u_to_16f(x)
+convert(::Type{Float32}, x::Unum) = __u_to_32f(x)
+convert(::Type{Float64}, x::Unum) = __u_to_64f(x)
 
 export convert
