@@ -42,20 +42,12 @@ import Unums.o16
 @test (2, [~o64,f64,f64,f64]) == Unums.__carried_add(o64, [f64, f64, f64, f64], [f64, f64, f64, f64]) #with a passthru carry
 
 #__shift_after_add(carry, value) - resolves the result of a carry operation, and reports shift amt, and falloff.
-@test Unums.__shift_after_add(uint64(0), t64) == (0x8000_0000_0000_0000, 0, false)
-@test Unums.__shift_after_add(uint64(1), t64) == (0x8000_0000_0000_0000, 0, false)
 @test Unums.__shift_after_add(uint64(2), t64) == (0x4000_0000_0000_0000, 1, false)
 @test Unums.__shift_after_add(uint64(3), t64) == (0xC000_0000_0000_0000, 1, false)
-@test Unums.__shift_after_add(uint64(0), o64) == (0x0000_0000_0000_0001, 0, false)
-@test Unums.__shift_after_add(uint64(1), o64) == (0x0000_0000_0000_0001, 0, false)
 @test Unums.__shift_after_add(uint64(2), o64) == (0x0000_0000_0000_0000, 1, true)
 @test Unums.__shift_after_add(uint64(3), o64) == (0x8000_0000_0000_0000, 1, true)
-@test Unums.__shift_after_add(uint64(0), [z64,t64]) == ([z64, 0x8000_0000_0000_0000], 0, false)
-@test Unums.__shift_after_add(uint64(1), [z64,t64]) == ([z64, 0x8000_0000_0000_0000], 0, false)
 @test Unums.__shift_after_add(uint64(2), [z64,t64]) == ([z64, 0x4000_0000_0000_0000], 1, false)
 @test Unums.__shift_after_add(uint64(3), [z64,t64]) == ([z64, 0xC000_0000_0000_0000], 1, false)
-@test Unums.__shift_after_add(uint64(0), [o64,z64]) == ([o64, z64], 0, false)
-@test Unums.__shift_after_add(uint64(1), [o64,z64]) == ([o64, z64], 0, false)
 @test Unums.__shift_after_add(uint64(2), [o64,z64]) == ([z64, z64], 1, true)
 @test Unums.__shift_after_add(uint64(3), [o64,z64]) == ([z64, t64], 1, true)
 
@@ -89,15 +81,19 @@ tbig = Unum{4,7}(uint16(127), o16, z16, [f64, f64], uint64(0b10))
 tsma = Unum{4,7}(uint16(127), o16, z16, [o64, z64], uint64(0b10))
 ttot = Unum{4,7}(z16        , o16, z16, [z64, z64], uint64(0b11))
 @test Unums.__sum_exact(tbig, tsma, decode_exp(tbig), decode_exp(tsma)) == ttot
+#don't forget to write a test case where we add a 'strange subnormal' to a 'normal' float.
+@test false
 
 ##############################################
 ## tests discovered by continuous testing.
 
-#x1:  0 1100101 01101001000011110001101100100101000000111000101100110 0 0110 110011
-#x2:  0 1100101 01101001000011110001101100100101000000111000101100110 0 0110 110011
-
-#x1:  0 11111 1011101011010111000000101000101011010000100111100010 0 0100 110010
-#x2:  0 11111 1011101011010111000000101000101011010000100111100010 0 0100 110010
+#25 august 2015:  Both of these unums seem to add up to "almostinf" despite being nowhere near the maximum size limit.
+ctt1 = Unum{4,6}(uint16(0b110011), uint16(0b0110), z16, uint64(0b01101001000011110001110011101100100101000000111000101100110_00000000000), uint64(0b1100101))
+ctt2 = Unum{4,6}(uint16(0b110010), uint16(0b0100), z16, uint64(0b1011101011010111000000101000101011010000100111100010_000000000000), uint64(0b11111))
+println("----")
+println(bits(ctt1, " "))
+println(bits(Unums.__sum_exact(ctt1, ctt1, decode_exp(ctt1), decode_exp(ctt1))))
+#@test !isalmostinf(Unums.__sum_exact(ctt1, ctt1, decode_exp(ctt1), decode_exp(ctt1)))
 
 #println(calculate(wsml))
 #wsm2 = Unum{4,6}(z16,    0x000F, z16, 0x8000_0000_0000_0000, z64)

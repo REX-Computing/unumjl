@@ -68,8 +68,6 @@ end
 
 #returns a (SuperInt, int, bool) triplet:  (value, shift, falloff)
 function __shift_after_add(carry::Uint64, value::SuperInt)
-  #check if we have to do nothing.
-  (carry == 0) && return (value, 0, false)
   #cache the length of value
   l = length(value)
   #calculate how far we have to shift.
@@ -85,6 +83,28 @@ function __shift_after_add(carry::Uint64, value::SuperInt)
     value |= carry << (64 - shift)
   end
   (value, shift, falloff)
+end
+
+function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt)
+  #run a difference engine across an array of 64-bit integers
+  #"carry" will usually be one, but there are other possibilities (e.g. zero)
+
+  #first perform a direct difference on the integer arrays
+  res = v1 - v2
+  #iterate downward from the most significant cell.  Sneakily, this loop
+  #does not execute if we have a singleton SuperInt
+  for idx = 1:length(v1) - 1
+    #if it looks like it's higher than it should be....
+    if res[idx] > v1[idx]
+      #we don't need to worry about carries because at most we can be
+      #FFF...FFF + FFF...FFF = 1FFF...FFFE
+      res[idx + 1] -= 1
+    end
+  end
+
+  #check to see if we need a carry.  Note last() can operate on scalar values
+  (last(res) > last(v1)) && (carry -= 1)
+  (carry, res)
 end
 
 ################################################################################
@@ -170,34 +190,41 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
 
   (carry, scratchpad) = __carried_add(carry, a.fraction, scratchpad)
   flags = a.flags & UNUM_SIGN_MASK
-
+  
   #handle the carry bit (which may be up to three? or more).
   if (carry == 0)
     fsize = __frac_length(scratchpad, l)
-    exponent = a.exponent
+
+    #don't use encode_exp because that might do strange things to subnormals.
+    #just pass through esize, exponent from the a value.
     esize = a.esize
+    exponent = a.exponent
   elseif (carry == 1)
     #esize is unchanged.  May have to alter fsize.
     fsize = __frac_length(scratchpad, l)
-    exponent = a.exponent + a_dev #promote it if we happened to have been subnormal.
-    #trim based on the total amount of bits that are okay.
-    esize = a.esize
-  else
-    (scratchpad, shift, checkme) = __shift_after_add(carry, scratchpad)
 
-    flags
+    (esize, exponent) = encode_exp(_aexp + a_dev) #promote the exponent if we
+    #happened to have started as a subnormal.
+  else
+    (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad)
+
+    #check to see if _shift_after_add wants us to decare us a ubit.
+    is_ubit && (flags &= UNUM_UBIT_MASK)
 
     #check for overflows.
-    ((a.exponent + shift) >= 1 << ESS) && return almostinf(a)
+    _nexp = _aexp + shift
+
+    (_nexp > max_exponent(ESS)) && return almostinf(a)
 
     fsize = __frac_length(scratchpad)
-    (esize, exponent) = encode_exp(_aexp + shift)
+    (esize, exponent) = encode_exp(_nexp)
   end
 
-  #check for the quieter way of getting an overflow.
-  if (fsize == 1 << FSS - 1) && (esize == 1 << ESS - 1) && (scratchpad == fillbits(-(1 << FSS))) && (exponent == (1 << ESS))
-    return almostinf(a)
-  end
+  #another way to get overflow is: by adding just enough bits to exactly
+  #make the binary value for infinity.  This should, instead, yield almostinf.
+  #if (fsize == )
+  #  return almostinf(a)
+  #end
 
   Unum{ESS,FSS}(fsize, esize, flags, scratchpad, exponent)
 end
@@ -293,10 +320,9 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #(bit_offset > max_fsize(FSS) + 1 - b_dev) &&
   #return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, a.fraction, a.exponent)
 
+  scratchpad = rsh(b.fraction, bit_offset)
 
-
-  scratchpad = b.fraction >> bit_offset
-
+  ##FIGURE THIS OUT.
   #push the phantom bit from b (1-b_dev), unless it matches the size of a
   scratchpad |= (bit_offset == 0) ? 0 : (1 - b_dev) << (64 - bit_offset)
 
