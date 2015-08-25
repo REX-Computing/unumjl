@@ -19,6 +19,19 @@ GI16 = Union(Uint16, Int16)
 #generates a superint zero for a given superint length
 superzero(l::Integer) = ((l == 1) ? z64 : zeros(Uint64, l))
 
+#generates a mask of a certain number of bits on the right, or left if negative
+function mask(bits::Integer)
+  if bits >= 0
+    (bits == 64) ? uint64(-1) : uint64((1 << bits) - 1)
+  else
+    uint64(~mask(64 + bits))
+  end
+end
+#does the same, except with a unit range.
+function mask(range::UnitRange)
+  uint64((1 << (range.stop + 1)) - (1 << (range.start)))
+end
+
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
 #assume there is one cell, if no value has been passed.
 function fillbits(n::Integer, cells::Integer = 1)
@@ -26,6 +39,7 @@ function fillbits(n::Integer, cells::Integer = 1)
   if cells == 1
     return mask(n)
   end
+  lowlimit::Uint16 = 0
   #generate the cells.
   if n == ((cells << 6)) || (-n == (cells << 6))
     #check to see if we're asking to fill the entire set of cells
@@ -62,6 +76,7 @@ end
               #0000   0001   0010   0011 0100 0101 0110 0111 1000 ...
 __clz_array=[0x0004,0x0003,0x0002,0x0002, o16, o16, o16, o16, z16,z16,z16,z16,z16,z16,z16,z16]
 function clz(n::Uint64)
+  (n == 0) && return 64
   res::Uint16 = 0
   #use the binary search method
   (n & 0xFFFF_FFFF_0000_0000 == 0) && (n <<= 32; res += 0x0020)
@@ -94,6 +109,7 @@ end
               #0000  0001 0010 0011   0100 0101 0110 0111    1000  1001 1010 1011   1100  1101 1110 1111
 __ctz_array=[0x0004, z16, o16, z16, 0x0002, z16, o16, z16, 0x0003, z16, o16, z16, 0x0002, z16, o16, z16]
 function ctz(n::Uint64)
+  (n == 0) && return 64
   res::Uint16 = 0
   (n & 0x0000_0000_FFFF_FFFF == 0) && (n >>= 32; res += 0x0020)
   (n & 0x0000_0000_0000_FFFF == 0) && (n >>= 16; res += 0x0010)
@@ -125,59 +141,7 @@ function ctz(n::Array{Uint64, 1})
   res
 end
 
-export clz
-export ctz
-
-GeneralInt = Union(Integer, SuperInt)
-
-#lsbmsb: returns the lsb and msb of an integer, process is O(N) in
-#the worst case, but O(~0.70N) (Uint16), or O(~0.80N) (Uint64) for randoms
-function lsbmsb(x::GeneralInt)
-  #finds the lsb and msb of an unsigned int
-  bitsize = sizeof(x) << 3
-  l = lsb(x, bitsize)
-  #if we find that l is maximal, then we know immediately that the number is blank.
-  (l == bitsize) ? (l, 0) : (l, msb(x, bitsize))
-end
-
-#just the lsb.
-function lsb(x::GeneralInt)
-  lsb(x, sizeof(x) << 3)
-end
-function lsb(x::GeneralInt, n::Integer)
-  for(i = 0:n - 1)
-    if (bitof(x, i) != 0)
-      return uint16(i)
-    end
-  end
-  return n
-end
-
-#just the msb.
-function msb(x::GeneralInt)
-  msb(x, sizeof(x) << 3)
-end
-function msb(x::GeneralInt, n::Integer)
-  for (i = n-1:-1:0)
-    if (bitof(x, i) != 0)
-      return uint16(i)
-    end
-  end
-  return 0
-end
-
-#generates a mask of a certain number of bits on the right, or left if negative
-function mask(bits::Integer)
-  if bits >= 0
-    (bits == 64) ? uint64(-1) : uint64((1 << bits) - 1)
-  else
-    uint64(~mask(64 + bits))
-  end
-end
-#does the same, except with a unit range.
-function mask(range::UnitRange)
-  uint64((1 << (range.stop + 1)) - (1 << (range.start)))
-end
+export clz, ctz
 
 #iterative leftshift and rightshift operations on Array SuperInts
 function lsh(a::SuperInt,b::Integer)
@@ -219,3 +183,4 @@ function rsh(a::SuperInt, b::Integer)
   res[l - celldiff] = a[l] >> shift
   res
 end
+export lsh, rsh

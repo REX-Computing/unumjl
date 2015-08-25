@@ -115,3 +115,4 @@ f64a = [float64(seed[i]) for i = 1:100]
 @test zero(Float64) == convert(Float64, zero(Unum{4,6}))
 #test that subnormals convert correctly
 @test 0.5 == convert(Float64, Unum{0,0}(z16, z16, z16, t64, z64))
+#test converting *to* a subnormal float.

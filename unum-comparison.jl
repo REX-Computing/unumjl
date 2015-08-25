@@ -20,8 +20,8 @@ function ==(a::Unum, b::Unum)
     #moreover, at least one of them
     (a.exponent != 0) && (b.exponent != 0) && return false
     #now we do a fairly complicated test
-    ashift = (a.exponent == 0) ? 63 - msb(a.fraction) : 0
-    bshift = (b.exponent == 0) ? 63 - msb(b.fraction) : 0
+    ashift = (a.exponent == 0) ? clz(a.fraction) + 1 : 0
+    bshift = (b.exponent == 0) ? clz(b.fraction) + 1 : 0
     #check to make sure we have compatible shifts
     ((_aexp - ashift) != (_bexp - bshift)) && return false
     #then shift and compare.

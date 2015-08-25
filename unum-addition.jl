@@ -73,7 +73,7 @@ function __shift_after_add(carry::Uint64, value::SuperInt)
   #cache the length of value
   l = length(value)
   #calculate how far we have to shift.
-  shift = msb(carry)
+  shift = 64 - clz(carry) - 1
   #did we lose values off the end of the number?
   falloff = (value & fillbits(shift, l)) != superzero(l)
   #shift the value over
@@ -82,7 +82,7 @@ function __shift_after_add(carry::Uint64, value::SuperInt)
   if (l > 1)
     value[l] |= carry << (64 - shift)
   else
-    value |= carry << (64-shift)
+    value |= carry << (64 - shift)
   end
   (value, shift, falloff)
 end
@@ -146,6 +146,7 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   #calculate the exact sum between two unums.  You may pass this function a unum
   #with a ubit, but it will calculate the sum as if it didn't have the ubit there
 
+  l = length(a.fraction)
   #check for deviations due to subnormality.
   a_dev = issubnormal(a) ? 1 : 0
   b_dev = issubnormal(b) ? 1 : 0
@@ -158,10 +159,10 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   (bit_offset > max_fsize(FSS) + 1 - b_dev) && return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, a.fraction, a.exponent)
 
   #generate the scratchpad by moving b.
-  scratchpad = b.fraction >> bit_offset
+  scratchpad = rsh(b.fraction, bit_offset)
 
   #don't forget b's phantom bit (1-b_dev) so it's zero if we are subnormal
-  scratchpad |= (bit_offset == 0) ? 0 : (1 - b_dev) << (64 - bit_offset)
+  scratchpad |= (bit_offset == 0) ? 0 : (1 - b_dev) << ((l << 6) - bit_offset)
 
   #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
   #b's phantom bit if they are overlapping.
@@ -172,30 +173,29 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
 
   #handle the carry bit (which may be up to three? or more).
   if (carry == 0)
-    fsize = (scratchpad == 0) ? z16 : uint16(63 - lsb(scratchpad))
+    fsize = __frac_length(scratchpad, l)
     exponent = a.exponent
     esize = a.esize
   elseif (carry == 1)
     #esize is unchanged.  May have to alter fsize.
-    fsize = (scratchpad == 0) ? z16 : uint16(63 - lsb(scratchpad))
+    fsize = __frac_length(scratchpad, l)
     exponent = a.exponent + a_dev #promote it if we happened to have been subnormal.
     #trim based on the total amount of bits that are okay.
-
     esize = a.esize
   else
     (scratchpad, shift, checkme) = __shift_after_add(carry, scratchpad)
 
-    flags 
+    flags
 
     #check for overflows.
-    (a.exponent + shift) >= 2^ESS && return almostinf(a)
+    ((a.exponent + shift) >= 1 << ESS) && return almostinf(a)
 
-    fsize = uint16(scratchpad == 0 ? 0 : 63 - lsb(scratchpad))
+    fsize = __frac_length(scratchpad)
     (esize, exponent) = encode_exp(_aexp + shift)
   end
 
   #check for the quieter way of getting an overflow.
-  if (fsize == 2^FSS - 1) && (esize == 2^ESS - 1) && (scratchpad == fillbits(-(2 ^ FSS))) && (exponent == (2^ESS))
+  if (fsize == 1 << FSS - 1) && (esize == 1 << ESS - 1) && (scratchpad == fillbits(-(1 << FSS))) && (exponent == (1 << ESS))
     return almostinf(a)
   end
 

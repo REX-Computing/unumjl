@@ -5,6 +5,12 @@
 ###########################################################
 #Utility functions
 
+#literally grab the fraction length of a superlength.  No assumptions are made
+#about the validity of the trailing bits...  pass l to make it faster.
+function __frac_length(frac::SuperInt, l::Integer = length(frac))
+  uint16(max(0, (l << 6) - ctz(frac) - 1))
+end
+
 #fractrim:  Takes a superint value and returns a triplet: (fraction, fsize, ubit)
 #this triplet represents the fraction SuperInt trimmed to fsize, a new fsize,
 #in the case that it's exact and some zeros can be trimmed, and whether or not
@@ -27,7 +33,7 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   frac &= high_mask
   #we may need to trim the fraction further, in which case we alter fsize.
   #also take the "zero" case and make sure we represent at least one digit.
-  fsize = (ubit == 0) ? fsize = uint16(max(0, (l << 6) - lsb(frac) - 1)): fsize
+  fsize = (ubit == 0) ? fsize = __frac_length(frac, l) : fsize
   (frac, fsize, ubit)
 end
 
@@ -69,7 +75,7 @@ __frac_cells(fss::Integer) = fss < 6 ? 1 : (1 << (fss - 6))
 #encodes an exponent as a biased 2-tuple (esize, exponent)
 #remember msb is zero-indexed, but outputs a zero for the zero value
 function encode_exp(unbiasedexp::Integer)
-  esize = (unbiasedexp == 0) ? z16 : uint16(msb(abs(unbiasedexp)) + 1)
+  esize = (unbiasedexp == 0) ? z16 : uint16(64 - clz(uint64(abs(unbiasedexp))))
   (esize, uint64(unbiasedexp + 1 << esize))
 end
 #the inverse operation is finding the unbiased exponent of an Unum.

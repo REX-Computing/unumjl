@@ -22,7 +22,7 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
   end
 
   #find the msb of x, this will tell us how much to move things
-  msbx = msb(x)
+  msbx = 63 - clz(x)
   #do a check to see if we should release almost_infinite
   (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS})
 
@@ -91,7 +91,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   if issubnormal(x)
     #keeping in mind that the fraction bits are now left-aligned, calculate
     #how much further we have to push the fraction bits.
-    frac_move::Int16 = 64 - msb(fraction)
+    frac_move::Int16 = clz(fraction) + 1
     fraction = fraction << frac_move
     unbiased_exp -= frac_move
   end
@@ -159,10 +159,11 @@ function __u_to_f_generator(T::Type)
     #check to see if the unum is subnormal
     if issubnormal(x)
       #measure the msb significant bit of x.fraction and we'll move the exponent to that.
-      shift = length(x.fraction) << 6 - msb(x.fraction)
+      shift::Uint16 = clz(x.fraction) + 1
       #shift the fraction over
       fraction = x.fraction << shift
-      unbiased_exp = min_exponent(esizesize(x)) -shift
+      #remember, subnormal exponents have +1 to their 'actual' exponent.
+      unbiased_exp = decode_exp(x) - shift + 1
     else
       #next, transfer the exponent
       fraction = x.fraction

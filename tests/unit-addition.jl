@@ -51,6 +51,7 @@ import Unums.z16
 @test Unums.__shift_after_add(uint64(3), o64) == (0x8000_0000_0000_0000, 1, true)
 @test Unums.__shift_after_add(uint64(0), [z64,t64]) == ([z64, 0x8000_0000_0000_0000], 0, false)
 @test Unums.__shift_after_add(uint64(1), [z64,t64]) == ([z64, 0x8000_0000_0000_0000], 0, false)
+println("----")
 @test Unums.__shift_after_add(uint64(2), [z64,t64]) == ([z64, 0x4000_0000_0000_0000], 1, false)
 @test Unums.__shift_after_add(uint64(3), [z64,t64]) == ([z64, 0xC000_0000_0000_0000], 1, false)
 @test Unums.__shift_after_add(uint64(0), [o64,z64]) == ([o64, z64], 0, false)
