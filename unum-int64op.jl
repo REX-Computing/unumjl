@@ -13,7 +13,8 @@ const f16 = uint16(0xFFFF)
 
 #note in version 0.4, this will need to change to Union{}
 SuperInt = Union(Uint64, Array{Uint64,1})
-GeneralInt = Union(SuperInt, Integer)
+#general 16-bit integers
+GI16 = Union(Uint16, Int16)
 
 #generates a superint zero for a given superint length
 superzero(l::Integer) = ((l == 1) ? z64 : zeros(Uint64, l))
@@ -52,6 +53,82 @@ function bitof(x::Array{Uint64,1}, bit)
   offset = bit % 64
   bitof(x[cell], offset)
 end
+
+#rebuild "least significant bit" and "most significant bit" as clz/ctz to make
+#conversion to assembler more straightforward.  These are very accelerated
+#binary search modules, but even these should be changed in future revs.
+
+#a 16-element lookup array to speed up clz in the last few sections.
+              #0000   0001   0010   0011 0100 0101 0110 0111 1000 ...
+__clz_array=[0x0004,0x0003,0x0002,0x0002, o16, o16, o16, o16, z16,z16,z16,z16,z16,z16,z16,z16]
+function clz(n::Uint64)
+  res::Uint16 = 0
+  #use the binary search method
+  (n & 0xFFFF_FFFF_0000_0000 == 0) && (n <<= 32; res += 0x0020)
+  (n & 0xFFFF_0000_0000_0000 == 0) && (n <<= 16; res += 0x0010)
+  (n & 0xFF00_0000_0000_0000 == 0) && (n <<= 8;  res += 0x0008)
+  (n & 0xF000_0000_0000_0000 == 0) && (n <<= 4;  res += 0x0004)
+  res + __clz_array[(n >> 60) + 1]
+end
+
+function clz(n::GI16)
+  res::Uint16 = 0
+  (n & 0xFF00 == 0) && (n <<= 8;  res += 0x0008)
+  (n & 0xF000 == 0) && (n <<= 4;  res += 0x0004)
+  res += __clz_array[(n >> 12) + 1]
+end
+#for when it's a superint (that's not a straight Uint64)
+
+function clz(n::Array{Uint64, 1})
+  #iterate down the array starting from the most significant cell
+  res::Uint16 = 0
+  for idx = length(n):-1:1
+    #kick it to the previous clz function
+    (n[idx] != 0) && return res + clz(n[idx])
+    res += 0x0040
+  end
+  res
+end
+
+#a 16-element lookup array to speed up ctz in the last few sections.
+              #0000  0001 0010 0011   0100 0101 0110 0111    1000  1001 1010 1011   1100  1101 1110 1111
+__ctz_array=[0x0004, z16, o16, z16, 0x0002, z16, o16, z16, 0x0003, z16, o16, z16, 0x0002, z16, o16, z16]
+function ctz(n::Uint64)
+  res::Uint16 = 0
+  (n & 0x0000_0000_FFFF_FFFF == 0) && (n >>= 32; res += 0x0020)
+  (n & 0x0000_0000_0000_FFFF == 0) && (n >>= 16; res += 0x0010)
+  (n & 0x0000_0000_0000_00FF == 0) && (n >>= 8;  res += 0x0008)
+  (n & 0x0000_0000_0000_000F == 0) && (n >>= 4;  res += 0x0004)
+  #unlike clz, ctz doesn't consume bits as it gets pushed around.  Let's mask
+  #out all digits we didn't shift over.
+  n &= 0x0000_0000_0000_000F
+  res + __ctz_array[n + 1]
+end
+
+function ctz(n::GI16)
+  res::Uint16 = 0
+  (n & 0x00FF == 0) && (n >>= 8;  res += 0x0008)
+  (n & 0x000F == 0) && (n >>= 4;  res += 0x0004)
+  n &= 0x000F
+  res + __ctz_array[n + 1]
+end
+
+#for when it's a superint (that's not a straight Uint64)
+function ctz(n::Array{Uint64, 1})
+  #iterate down the array starting from the most significant cell
+  res::Uint16 = 0
+  for idx = 1:length(n)
+    #kick it to the previous clz function
+    (n[idx] != 0) && return res + ctz(n[idx])
+    res += 0x0040
+  end
+  res
+end
+
+export clz
+export ctz
+
+GeneralInt = Union(Integer, SuperInt)
 
 #lsbmsb: returns the lsb and msb of an integer, process is O(N) in
 #the worst case, but O(~0.70N) (Uint16), or O(~0.80N) (Uint64) for randoms

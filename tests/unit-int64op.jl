@@ -15,15 +15,26 @@ nobits  = uint64(0x0000_0000_0000_0000)
 @test Unums.bitof(allbits, 63) == msb1
 @test Unums.bitof(nobits, 63) == nobits
 
-#test lsbmsb
-@test Unums.lsbmsb(allbits) == (0,63)
-@test Unums.lsbmsb(msb8) == (56,63)
-@test Unums.lsbmsb(lsb6) == (0, 5)
-@test Unums.lsbmsb(0b0001111000) == (3,6)
-#test lsbmsb on a superint array
-@test Unums.lsbmsb([0x00FF_0000_0000_0000, nobits]) == (48, 55)
-@test Unums.lsbmsb([nobits, 0x0000_0000_0000_F00F]) == (64, 79)
-@test Unums.lsbmsb([nobits, nobits]) == (128, 0)
+#test clz
+@test clz(allbits) == 0
+@test clz(nobits) == 64
+@test clz(msb8) == 0
+@test clz(lsb6) == 58
+@test clz(uint64(0b0001111000)) == 57
+@test clz(uint16(0b0001111000)) == 9
+@test clz([0x00FF_0000_0000_0000, nobits]) == 72
+@test clz([nobits, 0x0000_0000_0000_F00F]) == 48
+@test clz([nobits, nobits]) == 128
+#test ctz
+@test ctz(allbits) == 0
+@test ctz(nobits) == 64
+@test ctz(msb8) == 56
+@test ctz(lsb6) == 0
+@test ctz(uint64(0b0001111000)) == 3
+@test ctz(uint16(0b0001111000)) == 3
+@test ctz([0x00FF_0000_0000_0000, nobits]) == 48
+@test ctz([nobits, 0x0000_0000_0000_F00F]) == 64
+@test ctz([nobits, nobits]) == 128
 
 #test mask generation
 @test Unums.mask(1) == lsb1
