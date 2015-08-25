@@ -7,6 +7,7 @@ import Unums.o64
 import Unums.t64
 import Unums.f64
 import Unums.z16
+import Unums.o16
 
 ################################################################################
 ## TESTING HELPER functions
@@ -83,6 +84,20 @@ wtny = Unum{4,6}(0x000F, z16, z16, 0x0001_0000_0000_0000, z64)
 @test wone == whlf + whlf
 @test wone == wsml + wsml
 @test wone == wsml + whlf
+#two-cell arithmetic, with one hell of a carry.
+tbig = Unum{4,7}(uint16(127), o16, z16, [f64, f64], uint64(0b10))
+tsma = Unum{4,7}(uint16(127), o16, z16, [o64, z64], uint64(0b10))
+ttot = Unum{4,7}(z16        , o16, z16, [z64, z64], uint64(0b11))
+@test Unums.__sum_exact(tbig, tsma, decode_exp(tbig), decode_exp(tsma)) == ttot
+
+##############################################
+## tests discovered by continuous testing.
+
+#x1:  0 1100101 01101001000011110001101100100101000000111000101100110 0 0110 110011
+#x2:  0 1100101 01101001000011110001101100100101000000111000101100110 0 0110 110011
+
+#x1:  0 11111 1011101011010111000000101000101011010000100111100010 0 0100 110010
+#x2:  0 11111 1011101011010111000000101000101011010000100111100010 0 0100 110010
 
 #println(calculate(wsml))
 #wsm2 = Unum{4,6}(z16,    0x000F, z16, 0x8000_0000_0000_0000, z64)

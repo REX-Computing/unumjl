@@ -136,7 +136,7 @@ end
 function almostinf(x::Unum)
   ess = esizesize(x)
   fss = fsizesize(x)
-  Unum{ess,fss}(uint16(2^fss - 1), uint16(2^ess-1), x.flags | UBIT_MASK, fillbits(-(2^fss-1)), mask(2^ess))
+  Unum{ess,fss}(uint16(2^fss - 1), uint16(2^ess-1), x.flags | UNUM_UBIT_MASK, fillbits(-(2^fss-1)), mask(2^ess))
 end
 export nan
 export nan!
