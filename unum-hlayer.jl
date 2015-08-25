@@ -28,8 +28,8 @@ end
 export bits
 
 import Base.show
-function show(io::IO, value::Unum)
+#function show(io::IO, value::Unum)
   #for now, just punt to describe.  Eventually we'll make a decimal converter.
-  print(io, "$describe(value)")
-end
+#  print(io, "$describe(value)")
+#end
 export show

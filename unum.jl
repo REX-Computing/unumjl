@@ -24,13 +24,13 @@ include("unum-typefunctions.jl")
 
 include("unum-constants.jl")
 include("unum-properties.jl")
+include("unum-comparison.jl")
 include("unum-convert.jl")
 include("unum-oddsandends.jl")
 #some math stuff
 include("unum-addition.jl")
 #include("unum-multiplication.jl")
 #include("unum-division.jl")
-#include("unum-comparison.jl")
 
 #h-layer stuff (human)
 include("unum-hlayer.jl")

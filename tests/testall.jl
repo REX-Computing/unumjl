@@ -16,6 +16,9 @@ include("unit-unum.jl")
 include("unit-convert.jl")
 #include("unum-test-properties.jl")
 
+#comparison testing
+include("unit-comparison.jl")
+
 #mathematics testing
 #include("unum-test-addition.jl")
 #include("unum-test-multiplication.jl")

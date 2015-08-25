@@ -73,7 +73,7 @@ function __shift_after_add(carry::Uint64, value::SuperInt)
   #cache the length of value
   l = length(value)
   #calculate how far we have to shift.
-  shift = msb(carry) + 1
+  shift = msb(carry)
   #did we lose values off the end of the number?
   falloff = (value & fillbits(shift, l)) != superzero(l)
   #shift the value over
@@ -152,6 +152,11 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
 
   #calculate the bit offset.
   bit_offset = (_aexp + a_dev) - (_bexp + b_dev)
+
+  #check to see if the offset is too big, just copy A with the unum bit flipped on, but also
+  #make sure that the fraction is thrown all the way to the right.
+  (bit_offset > max_fsize(FSS) + 1 - b_dev) && return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, a.fraction, a.exponent)
+
   #generate the scratchpad by moving b.
   scratchpad = b.fraction >> bit_offset
 
@@ -160,16 +165,19 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
 
   #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
   #b's phantom bit if they are overlapping.
-  carry = (1 - a_dev) + ((bit_offset == 0) ? (1 - b_dev) : 0)
+  carry::Uint64 = (1 - a_dev) + ((bit_offset == 0) ? (1 - b_dev) : 0)
 
   (carry, scratchpad) = __carried_add(carry, a.fraction, scratchpad)
-
-  flags = a.flags & SIGN_MASK
+  flags = a.flags & UNUM_SIGN_MASK
 
   #handle the carry bit (which may be up to three? or more).
-  if (carry == 1)
+  if (carry == 0)
+    fsize = (scratchpad == 0) ? z16 : uint16(63 - lsb(scratchpad))
+    exponent = a.exponent
+    esize = a.esize
+  elseif (carry == 1)
     #esize is unchanged.  May have to alter fsize.
-    fsize = (lsb(scratchpad) == 0) ? uint16(0) : uint16(63 - lsb(scratchpad))
+    fsize = (scratchpad == 0) ? z16 : uint16(63 - lsb(scratchpad))
     exponent = a.exponent + a_dev #promote it if we happened to have been subnormal.
     #trim based on the total amount of bits that are okay.
 
@@ -177,10 +185,10 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   else
     (scratchpad, shift, checkme) = __shift_after_add(carry, scratchpad)
 
+    flags 
+
     #check for overflows.
-    if (a.exponent + shift) >= 2^ESS
-      return almostinf(a)
-    end
+    (a.exponent + shift) >= 2^ESS && return almostinf(a)
 
     fsize = uint16(scratchpad == 0 ? 0 : 63 - lsb(scratchpad))
     (esize, exponent) = encode_exp(_aexp + shift)
