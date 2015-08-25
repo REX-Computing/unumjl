@@ -11,29 +11,48 @@ function ==(a::Unum, b::Unum)
   #check if either is nan
   (isnan(a) || isnan(b)) && return false
 
-  _aexp = decode_exp(a)
-  _bexp = decode_exp(b)
+  _aexp::Int16 = decode_exp(a)
+  _bexp::Int16 = decode_exp(b)
   #make sure the exponents are the same, otherwise not equal unless subnormal...
   #but if one of them has a positive exponent, subnormality is impossible.
-  if (_aexp != _bexp)
-    ((_aexp > 0) || (_bexp > 0)) && return false
-    #moreover, at least one of them
-    (a.exponent != 0) && (b.exponent != 0) && return false
-    #now we do a fairly complicated test
-    ashift = (a.exponent == 0) ? clz(a.fraction) + 1 : 0
-    bshift = (b.exponent == 0) ? clz(b.fraction) + 1 : 0
-    #check to make sure we have compatible shifts
-    ((_aexp - ashift) != (_bexp - bshift)) && return false
-    #then shift and compare.
-    return lsh(a.fraction, ashift) == lsh(b.fraction, bshift)
+
+  #strange subnormal checking
+  if (a.exponent == 0) || (b.exponent == 0)
+    if (_aexp <= 0) && (_bexp <= 0)
+      #set shifters, only if they happen to be
+      clz_a = clz(a.fraction)
+      clz_b = clz(b.fraction)
+      #assign a 'shift' value which is how much we would have to shift to
+      #align these things.
+      ashift::Int16 = (a.exponent == 0) ? clz_a + 1 : 0
+      bshift::Int16 = (b.exponent == 0) ? clz_b + 1 : 0
+      #reassign _aexp to reflect exponent value of the first position.
+      _a_firstpos = ((a.exponent == 0) ? _aexp - ashift + 1 : _aexp)
+      _b_firstpos = ((b.exponent == 0) ? _bexp - bshift + 1 : _bexp)
+      (_a_firstpos != _b_firstpos) && return false
+
+      if (a.flags & UNUM_UBIT_MASK != 0)
+        #calculate the position of the uncertainty bit.  This must also be
+        #identical, if they're ULPs
+        _a_ubitpos = _aexp - a.fsize
+        _b_ubitpos = _bexp - b.fsize
+
+        (_a_ubitpos != _b_ubitpos) && return false
+      end
+
+      #then shift and compare.
+      (lsh(a.fraction, ashift) != lsh(b.fraction, bshift)) && return false
+
+      return true
+    end
   end
+
+  (_aexp != _bexp) && return false
   #now that we know that the exponents are the same,
   #the fractions must also be identical
   (a.fraction != b.fraction) && return false
   #the ubit on case is simple - the fsizes must be equal
-  if ((a.flags & UNUM_UBIT_MASK) == UNUM_UBIT_MASK)
-    (a.fsize != b.fsize) && return false
-  end
+  ((a.flags & UNUM_UBIT_MASK) == UNUM_UBIT_MASK) && return (a.fsize == b.fsize)
   #so we are left with exact floats at any resolution, ok, or uncertain floats
   #with the same resolution.  These must be equal.
   return true

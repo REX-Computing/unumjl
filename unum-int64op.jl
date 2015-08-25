@@ -67,6 +67,20 @@ function bitof(x::Array{Uint64,1}, bit)
   offset = bit % 64
   bitof(x[cell], offset)
 end
+#the reverse experiment is __bit_from_top.  Generates a single Uint64 array that
+#has a single bit flipped, which is the n'th bit from the msb, 1-indexed.
+function __bit_from_top(n::Integer, l::Integer)
+  (l == 1) && return (t64 >> (n - 1))
+  res = zeros(Uint64, l)
+  #calculate the cell number
+  cellidx = l - ((n - 1) >> 6)
+  #figure out what we should replace the cell with.
+  cell = uint64(t64 >> ((n - 1) % 64))
+  #do the replacement
+  res[cellidx] = cell
+  #return the result
+  res
+end
 
 #rebuild "least significant bit" and "most significant bit" as clz/ctz to make
 #conversion to assembler more straightforward.  These are very accelerated

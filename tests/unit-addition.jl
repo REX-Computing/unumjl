@@ -51,7 +51,6 @@ import Unums.z16
 @test Unums.__shift_after_add(uint64(3), o64) == (0x8000_0000_0000_0000, 1, true)
 @test Unums.__shift_after_add(uint64(0), [z64,t64]) == ([z64, 0x8000_0000_0000_0000], 0, false)
 @test Unums.__shift_after_add(uint64(1), [z64,t64]) == ([z64, 0x8000_0000_0000_0000], 0, false)
-println("----")
 @test Unums.__shift_after_add(uint64(2), [z64,t64]) == ([z64, 0x4000_0000_0000_0000], 1, false)
 @test Unums.__shift_after_add(uint64(3), [z64,t64]) == ([z64, 0xC000_0000_0000_0000], 1, false)
 @test Unums.__shift_after_add(uint64(0), [o64,z64]) == ([o64, z64], 0, false)
@@ -80,9 +79,14 @@ whlf =  Unum{4,6}(z16,    0x0001, z16,                  z64, o64)
 wsml = Unum{4,6}(z16,    z16, z16, 0x8000_0000_0000_0000, z64)
 wtny = Unum{4,6}(0x000F, z16, z16, 0x0001_0000_0000_0000, z64)
 @test Unums.__sum_exact(wsml, wtny, -1, -1) == Unum{4,6}(0x000F, z16, z16, 0x8001_0000_0000_0000, z64)
-println(calculate(wsml))
-wsm2 = Unum{4,6}(z16,    0x000F, z16, 0x8000_0000_0000_0000, z64)
-println(calculate(wsm2))
+#note that wsml is also the same as whlf
+@test wone == whlf + whlf
+@test wone == wsml + wsml
+@test wone == wsml + whlf
+
+#println(calculate(wsml))
+#wsm2 = Unum{4,6}(z16,    0x000F, z16, 0x8000_0000_0000_0000, z64)
+#println(calculate(wsm2))
 #corner cases on unusual values.
 #zero should return an identical value
 #adding to +inf should return inf.

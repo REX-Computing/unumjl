@@ -162,7 +162,7 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   scratchpad = rsh(b.fraction, bit_offset)
 
   #don't forget b's phantom bit (1-b_dev) so it's zero if we are subnormal
-  scratchpad |= (bit_offset == 0) ? 0 : (1 - b_dev) << ((l << 6) - bit_offset)
+  (bit_offset != 0) && (b_dev != 1) && (scratchpad |= __bit_from_top(bit_offset, l))
 
   #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
   #b's phantom bit if they are overlapping.

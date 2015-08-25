@@ -10,10 +10,18 @@ allbits = uint64(0xFFFF_FFFF_FFFF_FFFF)
 nobits  = uint64(0x0000_0000_0000_0000)
 
 #test bitof
-@test Unums.bitof(allbits, 0) == lsb1
-@test Unums.bitof(nobits, 0) == nobits
+@test Unums.bitof(allbits, 0)  == lsb1
+@test Unums.bitof(nobits, 0)   == nobits
 @test Unums.bitof(allbits, 63) == msb1
-@test Unums.bitof(nobits, 63) == nobits
+@test Unums.bitof(nobits, 63)  == nobits
+#test bit_from_top
+@test Unums.__bit_from_top(1,1)    == msb1
+@test Unums.__bit_from_top(2,1)    == 0x4000_0000_0000_0000
+@test Unums.__bit_from_top(64,1)   == lsb1
+@test Unums.__bit_from_top(1, 2)   == [nobits, msb1]
+@test Unums.__bit_from_top(64, 2)  == [nobits, lsb1]
+@test Unums.__bit_from_top(65, 2)  == [msb1, nobits]
+@test Unums.__bit_from_top(128, 2) == [lsb1, nobits]
 
 #test clz
 @test clz(allbits) == 0
