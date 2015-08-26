@@ -15,7 +15,7 @@ function bits(x::Unum, space::ASCIIString = "")
   end
   res = string(space, x.flags & 0b1, space, res)
   tl = length(x.fraction) * 64 - 1
-  for idx = (tl-x.fsize - 1):tl
+  for idx = (tl-x.fsize):tl
     res = string(bitof(x.fraction, idx) == 0 ? 0 : 1, res)
   end
   res = string(space, res)
