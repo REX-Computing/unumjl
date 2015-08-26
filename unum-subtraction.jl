@@ -27,7 +27,7 @@ function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt)
 
   #check to see if we need a carry.  Note last() can operate on scalar values
   (last(res) > last(v1)) && (carry -= 1)
-  (carry, res)
+  (carry, length(v1) == 1 ? last(res) : res)
 end
 
 ################################################################################
@@ -97,6 +97,7 @@ end
 
 #a subtraction operation where a and b are ordered such that mag(a) > mag(b)
 function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
+  l = length(a.fraction)
 
   # a series of easy cases.
   if (a == -b)
@@ -117,22 +118,16 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
 
   #subtraction is difficult.  There is a small possibility we'll have a subnormal
   #number with leading zeros, and a subtrahend where the number of digits we'll
-  #need to keep exceeds the cell size.  NB: this only occurs when the major value
-  #is subnormal.  Still, we need to allocate for this possibility.
-  scratchpad_cells = (a_dev != 0) ? (max_fsize + 1 + bit_offset) >> 6 + 1 : length(a.fraction)
-
-  #check to make sure we're not falling off the end here, but in this case return
-  #the previous exact as an ulp; make sure fraction is thrown all the way to the
-  #right.
-  #(bit_offset > max_fsize(FSS) + 1 - b_dev) &&
-  #return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, a.fraction, a.exponent)
+  #need to keep exceeds the cell size.  There may be a more elegant solution to
+  #be found later.
+  scratchpad_cells = ((l << 6) - ctz(b.fraction) + bit_offset) >> 6 + 1
 
   #populate the scratchpad with the rightshifted b values.  Make sure to pad b.
   #fraction to the "full necessary length", before shifting over.
-  scratchpad = rsh([zeros(Uint64, scratchpad_cells - b.fraction.length), b.fraction])
+  scratchpad = rsh([zeros(Uint64, scratchpad_cells - l), b.fraction], bit_offset)
   #figure out the carry value.  It should be zero if a subnormal or if a and b's
   #phantom bits will obliterate each other.
-  carry = (a_dev != 0) || ((_bexp == _aexp) && (b_dev == 0)) ? 0 : 1
+  carry::Uint64 = (a_dev != 0) || ((_bexp == _aexp) && (b_dev == 0)) ? 0 : 1
 
   #push the phantom bit from b.  Use the __bit_from_top method.
   (bit_offset != 0) && (b_dev != 1) && (scratchpad |= __bit_from_top(bit_offset, l))
@@ -140,39 +135,42 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #perform the carried difference on the two fractions.
   (carry, scratchpad) = __carried_diff(carry, a.fraction, scratchpad)
 
-  #calculate the appropriate fraction size.
-  fsize = max_fsize(FSS) - ctz(scratchpad)
+  flags = a.flags & UNUM_SIGN_MASK
+  fsize::Uint16 = 0
 
-  #if carry is still a one, then we are ok and can use the values as they are...
-  #alternatively, if we started as subnormal then leave things be.
-  ((carry == 1) || (a_dev != 0)) && return Unum{ESS,FSS}(a.fsize, a.esize, a.flags, scratchpad, a.exponent)
-
-  #if it's a zero, we may have to shift the whole thing over.
-  shift = clz(scratchpad)
-
-  flags = a.flags & SIGN_MASK
-  #establish whether or not we will have to move things around a bit.
-  #calculate how many fractions we have left.
-  fsize = ((scratchpad == 0) ? z16 : uint16(rmsb - rlsb))
-
-  #check to see if we are below the size of the exponent, if so
-  #put a hard break on the unit's ability to push past the subnormal numbers
-  if (a.exponent <= shift)
-    #make sure our shift doesn't go past a.exponent, then set the parameters to
-    #be subnormal.
-    shift = a.exponent - 1
-    #match it, but remember the subnormals have an incremented exponent.
-    esize = z16
-    exponent = z64
-  else
-    #check to see if we're verging on denormal
-    if (_aexp - shift < 2^ESS)
-      esize = z16
-      exponent = z64
+  #two forks:  The first fork is if the carry bit persists.
+  if (carry != 0)
+    if (scratchpad_cells > 1)
+      #analyze to see if there's content in the last bits.
+      (scratchpad[1:scratchpad_cells - l] != zeros(Uint64, scratchpad_cells - l)) && (flags |= UNUM_UBIT_MASK)
+      #first chop off only the last
+      fraction = ((l == 1) ? last(scratchpad) : scratchpad[scratchpad_cells - l + 1:scratchpad_cells])
     else
-      (esize, exponent) = encode_exp(_aexp - shift)
+      fraction = scratchpad
     end
+    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS) : (l << 6 - ctz(fraction))
+    esize = a.esize
+    exponent = a.exponent
+  else
+    #we want to see if we can push it over as far as possible without hitting
+    #the fraction size limit
+    max_shift = _aexp - min_exponent(ESS)
+    shift = min(max_shift, clz(scratchpad) + 1)
+    scratchpad = lsh(scratchpad, shift)
+
+    #chop off the last parts of the scratchpad.
+    if (scratchpad_cells > 1)
+      (scratchpad[1:scratchpad_cells - l] != zeros(Uint64, scratchpad_cells - l)) && (flags |= UNUM_UBIT_MASK)
+      fraction = (l == 1) ? last(scratchpad) : scratchpad[scratchpad_cells - l:scratchpad_cells]
+    else
+      fraction = scratchpad
+    end
+
+    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS): l << 6 - ctz(fraction)
+
+    (esize, exponent) = encode_exp(_aexp - shift)
+    (max_shift == shift) && (exponent = z16)
   end
-  fraction = scratchpad << shift
+
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
