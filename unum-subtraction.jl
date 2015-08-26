@@ -3,6 +3,33 @@
 #opposing directions.  This is organized into a separate file for convenience
 #purposes (these primitives can be very large.)
 
+###############################################################################
+## multistage carried difference engine for uint64s.
+
+function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt)
+  #run a difference engine across an array of 64-bit integers
+  #"carry" will usually be one, but there are other possibilities (e.g. zero)
+
+  #be sure to pad v1 to the same length as v2, first.
+  v1_adj = [zeros(Uint64, length(v2) - length(v1)), v1]
+  #first perform a direct difference on the integer arrays.
+  res = v1_adj - v2
+  #iterate downward from the most significant cell.  Sneakily, this loop
+  #does not execute if we have a singleton SuperInt
+  for idx = 1:length(v1_adj) - 1
+    #if it looks like it's higher than it should be....
+    if res[idx] > v1_adj[idx]
+      #we don't need to worry about carries because at most we can be
+      #FFF...FFF + FFF...FFF = 1FFF...FFFE
+      res[idx + 1] -= 1
+    end
+  end
+
+  #check to see if we need a carry.  Note last() can operate on scalar values
+  (last(res) > last(v1)) && (carry -= 1)
+  (carry, res)
+end
+
 ################################################################################
 ## DIFFERENCE ALGORITHM
 
@@ -83,10 +110,16 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   end
 
   #check for deviations due to subnormality.
-  a_dev = issubnormal(a) ? 1 : 0
-  b_dev = issubnormal(b) ? 1 : 0
+  a_dev = issubnormal(a) ? o16 : z16
+  b_dev = issubnormal(b) ? o16 : z16
 
-  bit_offset = (_aexp + a_dev) - (_bexp + b_dev)
+  bit_offset = uint16((_aexp + a_dev) - (_bexp + b_dev))
+
+  #subtraction is difficult.  There is a small possibility we'll have a subnormal
+  #number with leading zeros, and a subtrahend where the number of digits we'll
+  #need to keep exceeds the cell size.  NB: this only occurs when the major value
+  #is subnormal.  Still, we need to allocate for this possibility.
+  scratchpad_cells = (a_dev != 0) ? (max_fsize + 1 + bit_offset) >> 6 + 1 : length(a.fraction)
 
   #check to make sure we're not falling off the end here, but in this case return
   #the previous exact as an ulp; make sure fraction is thrown all the way to the
@@ -94,26 +127,28 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #(bit_offset > max_fsize(FSS) + 1 - b_dev) &&
   #return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, a.fraction, a.exponent)
 
-  scratchpad = rsh(b.fraction, bit_offset)
+  #populate the scratchpad with the rightshifted b values.  Make sure to pad b.
+  #fraction to the "full necessary length", before shifting over.
+  scratchpad = rsh([zeros(Uint64, scratchpad_cells - b.fraction.length), b.fraction])
+  #figure out the carry value.  It should be zero if a subnormal or if a and b's
+  #phantom bits will obliterate each other.
+  carry = (a_dev != 0) || ((_bexp == _aexp) && (b_dev == 0)) ? 0 : 1
 
-  ##FIGURE THIS OUT.
-  #push the phantom bit from b (1-b_dev), unless it matches the size of a
-  scratchpad |= (bit_offset == 0) ? 0 : (1 - b_dev) << (64 - bit_offset)
+  #push the phantom bit from b.  Use the __bit_from_top method.
+  (bit_offset != 0) && (b_dev != 1) && (scratchpad |= __bit_from_top(bit_offset, l))
 
-  scratchpad = uint64(a.fraction - scratchpad)  #we know it's larger so things will be ok.
+  #perform the carried difference on the two fractions.
+  (carry, scratchpad) = __carried_diff(carry, a.fraction, scratchpad)
 
-  #calculate the lsb and msb of the scratchpad.
-  (rlsb, rmsb) = lsbmsb(scratchpad)
-  shift = z16
+  #calculate the appropriate fraction size.
+  fsize = max_fsize(FSS) - ctz(scratchpad)
 
-  #if we started out with a_dev being subnormal, we don't care.
-  if ((bit_offset == 0) && (b_dev == 0) && (a_dev == 0)) || (scratchpad > a.fraction)
-    #then we've obliterated the phantom leading one, through direct subtraction
-    #or through a reverse carry operation
-    shift = uint16(64-rmsb)
-  else
-    rmsb = 64
-  end
+  #if carry is still a one, then we are ok and can use the values as they are...
+  #alternatively, if we started as subnormal then leave things be.
+  ((carry == 1) || (a_dev != 0)) && return Unum{ESS,FSS}(a.fsize, a.esize, a.flags, scratchpad, a.exponent)
+
+  #if it's a zero, we may have to shift the whole thing over.
+  shift = clz(scratchpad)
 
   flags = a.flags & SIGN_MASK
   #establish whether or not we will have to move things around a bit.
