@@ -34,7 +34,7 @@ end
 
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
 #assume there is one cell, if no value has been passed.
-function fillbits(n::Integer, cells::Integer = 1)
+function fillbits(n::Integer, cells::Uint16 = 1)
   #kick it to the mask function if there's only one cell.
   if cells == 1
     return mask(n)
@@ -178,6 +178,10 @@ function lsh(a::SuperInt,b::Integer)
   res
 end
 
+function <<(a::Array{Uint64, 1}, b::Uint16)
+  lsh(a,b)
+end
+
 function rsh(a::SuperInt, b::Integer)
   (typeof(a) == Uint64) && return a >> b
   #how many cells apart is our shift
@@ -193,8 +197,26 @@ function rsh(a::SuperInt, b::Integer)
     res[idx] = a[idx + celldiff] >> shift
     res[idx] |= a[idx + celldiff + 1] << (64 - shift)
   end
-  #complete the last one
-  res[l - celldiff] = a[l] >> shift
+  #complete the last one - it's possible that the last one is not there
+  (l - celldiff != 0) && (res[l - celldiff] = a[l] >> shift)
   res
+end
+
+function >>(a::Array{Uint64, 1}, b::Uint16)
+  rsh(a,b)
+end
+
+function <(a::Array{Uint64,1}, b::Array{Uint64,1})
+  for i = length(a):-1:1
+    (a[i] >= b[i]) && return false
+  end
+  return true
+end
+
+function >(a::Array{Uint64,1}, b::Array{Uint64,1})
+  for i=length(a):-1:1
+    (a[i] <= b[i]) && return false
+  end
+  return true
 end
 export lsh, rsh

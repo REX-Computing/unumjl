@@ -72,8 +72,14 @@ tinyfloat = reinterpret(Float64, o64)
 @test isinfinitesimal(convert(Unum{1,1}, tinyfloat))
 @test isinfinitesimal(convert(Unum{2,2}, tinyfloat))
 @test isinfinitesimal(convert(Unum{3,3}, tinyfloat))
+
+#and into the isalmostinf range.
 @test isalmostinf(convert(Unum{0,0}, 2.2))
 @test isalmostinf(convert(Unum{1,1}, 8.2))
+
+#test converting into really big unums.
+@test convert(Unum{4,7}, 1.0) == one(Unum{4,7})
+@test convert(Unum{4,8}, 1.0) == one(Unum{4,8})
 
 #unum to float
 

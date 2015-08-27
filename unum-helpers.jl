@@ -16,7 +16,7 @@ end
 #in the case that it's exact and some zeros can be trimmed, and whether or not
 #ubit needs to be thrown (were there values cast out by fsize)?
 function __frac_trim(frac::SuperInt, fsize::Uint16)
-  l = length(frac)
+  l::Uint16 = length(frac)
   #drop an error if the superint can't accomodate fsize.
   (fsize >= (l << 6)) && throw(ArgumentError("fraction array must accomodate fsize value for __frac_trim"))
 
@@ -68,7 +68,7 @@ function __frac_match(frac::SuperInt, fss::Integer)
 end
 
 #calculates how many words of fraction are necessary to support a certain fss
-__frac_cells(fss::Integer) = fss < 6 ? 1 : (1 << (fss - 6))
+__frac_cells(fss::Integer) = uint16(fss < 6 ? 1 : (1 << (fss - 6)))
 
 ################################################################################
 # EXPONENT ENCODING AND DECODING

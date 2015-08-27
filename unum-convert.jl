@@ -24,7 +24,7 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
   #find the msb of x, this will tell us how much to move things
   msbx = 63 - clz(x)
   #do a check to see if we should release almost_infinite
-  (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS})
+  (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
 
   #move it over.  One bit should spill over the side.
   frac = x << (64 - msbx)
@@ -121,6 +121,10 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   else
     (esize, exponent) = encode_exp(unbiased_exp)
   end
+
+  #for really large FSS fractions pad some zeroes in front.
+  (__frac_cells(FSS) > 1) && (fraction = [zeros(Uint64, __frac_cells(FSS) - 1),fraction])
+
   unum(Unum{ESS,FSS}, min(_fsize, max_fsize(FSS)), esize, flags, fraction, exponent)
 end
 

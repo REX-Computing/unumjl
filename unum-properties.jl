@@ -38,9 +38,9 @@ function nextunum(x::Unum)
   ess = esizesize(x)
   fss = fsizesize(x)
 
-  if (x.flags & UBIT_MASK == UBIT_MASK)
+  if (x.flags & UNUM_UBIT_MASK == UNUM_UBIT_MASK)
 
-    _sub_x = issubnormal(x) ? 0 : 1
+    _sub_x::Uint64 = issubnormal(x) ? z64 : o64
     (carry, fraction) = __carried_add(_sub_x, x.fraction, (t64 >> x.fsize))
 
     #table of conditions
@@ -52,7 +52,7 @@ function nextunum(x::Unum)
     # delta-exp = carry - _sub_x
     exponent = uint64(x.exponent + carry - _sub_x)
     #change the number of fraction bits to get the best representation
-    fsize = (fraction == 0) ? z16 : uint16(63 - lsb(fraction))
+    fsize = (fraction == 0) ? z16 : uint16(63 - ctz(fraction))
 
   else
     throw(ArgumentError("not yet"))
@@ -60,27 +60,25 @@ function nextunum(x::Unum)
     #carry machine.
   end
 
-  Unum{ess,fss}(fsize, x.esize, x.flags & ~UBIT_MASK, fraction, exponent)
+  Unum{ess,fss}(fsize, x.esize, x.flags & ~UNUM_UBIT_MASK, fraction, exponent)
 end
 function prevunum(x::Unum)
 end
 function nextulp{ESS,FSS}(x::Unum{ESS,FSS})
   #check to see if we're an ulp
-  if (x.flags & UBIT_MASK == UBIT_MASK)
+  if (x.flags & UNUM_UBIT_MASK == UNUM_UBIT_MASK)
     throw(ArgumentError("nextulp only works on exact unums"))
   end
   if !isfinite(x)
     throw(ArgumentError("nextulp doesn't work on infinite unums"))
   end
   #literally just turn on the ulp bit
-  xp = unum(x)
-  xp.flags |= UBIT_MASK
-  xp
+  unum_unsafe(x, x.flags | UNUM_UBIT_MASK)
 end
 
 function prevulp{ESS,FSS}(x::Unum{ESS,FSS})
   #check to see if we're an ulp.
-  if (x.flags & UBIT_MASK == UBIT_MASK)
+  if (x.flags & UNUM_UBIT_MASK == UNUM_UBIT_MASK)
     throw(ArgumentError("prevulp only works on exact unums"))
   end
   #check to make sure we aren't zero.
@@ -88,26 +86,35 @@ function prevulp{ESS,FSS}(x::Unum{ESS,FSS})
     throw(ArgumentError("prevulp doesn't work on zero"))
   end
   scratchpad = x.fraction - t64 >> x.fsize
-  xp = unum(x)
-  xp.flags |= UBIT_MASK
+  flags = x.flags | UNUM_UBIT_MASK
   #check if we're subnormal
   if x.exponent == 0
-    xp.fraction = scratchpad
+    fraction = scratchpad
+    exponent = x.exponent
+    esize = x.esize
+    fsize = x.fsize
   elseif scratchpad > x.fraction
     #check for carry loss.
-    if xp.exponent == 1
+    if x.exponent == 1
       #do nothing.
-      xp.fraction = scratchpad
-      xp.exponent = 0
-      xp.esize = 0
+      fraction = scratchpad
+      exponent = z64
+      esize = z16
+      fsize = x.fsize
     else
       #shift over one.
-      xp.fraction = scratchpad >> 1
-      xp.fsize -= 1
-      (xp.esize, xp.exponent) = encode_exp(decode_exp(xp) - 1)
+      fraction = scratchpad >> 1
+      fsize = uint16(x.fsize - 1)
+      (esize, exponent) = encode_exp(decode_exp(xp) - 1)
     end
+  else
+    fsize = x.fsize
+    esize = x.esize
+    exponent = x.exponent
+    fraction = scratchpad
   end
-  xp
+
+  Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
 export nextfloat
 export prevfloat
@@ -120,10 +127,10 @@ export prevulp
 function nan(x::Unum)
   ess = esizesize(x)
   fss = fsizesize(x)
-  Unum{ess,fss}(uint16(2^fss - 1), uint16(2^ess-1), uint16(0b1), fillbits(-2^fss), mask(2^ess))
+  Unum{ess,fss}(uint16(2^fss - 1), uint16(2^ess-1), uint16(0b1), fillbits(-(1 << fss), __frac_cells(fss)), mask(1 << ess))
 end
 function nan!{ESS,FSS}(::Type{Unum{ESS,FSS}}) #for when you just need the noisy NaN
-  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), uint16(0b11), fillbits(-2^FSS), mask(2^ESS))
+  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), uint16(0b11), fillbits(-(1 << FSS), __frac_cells(FSS)), mask(1 << ESS))
 end
 
 function almostpinf{ESS,FSS}(::Type{Unum{ESS,FSS}})
@@ -153,20 +160,19 @@ export decode_exp
 import Base.isnan
 import Base.isfinite
 import Base.issubnormal
-function fwords{ESS,FSS}(::Type{Unum{ESS,FSS}})
-  (2 << (fsize - 6)) + 1
-end
+
 function isnan(x::Unum)
   fss = fsizesize(x)
   ess = esizesize(x)
-  (x.fsize == (1 << fss - 1)) && (x.esize == (1 << ess - 1)) && (x.flags == 0b1) && (x.fraction == fillbits(-(1 << fss))) && (x.exponent == mask(1 << ess))
-end
-function isfinite(x::Unum)
-  (x.fraction != fillbits(-2^fsizesize(x))) || (x.exponent != mask(2^esizesize(x)))
+  (x.fsize == (1 << fss - 1)) && (x.esize == (1 << ess - 1)) && (x.flags == 0b1) && (x.fraction == fillbits(-(1 << fss), uint16(length(x.fraction)))) && (x.exponent == mask(1 << ess))
 end
 
-ispinf(x::Unum) = (x.flags & UNUM_SIGN_MASK == 0) && (x.exponent == mask(1 << esizesize(x))) && (x.fraction == fillbits(-(1 << fsizesize(x))))
-isninf(x::Unum) = (x.flags & UNUM_SIGN_MASK != 0) && (x.exponent == mask(1 << esizesize(x))) && (x.fraction == fillbits(-(1 << fsizesize(x))))
+function isfinite(x::Unum)
+  (x.fraction != fillbits(-1 << fsizesize(x), uint16(length(x.fraction)))) || (x.exponent != mask(1 << esizesize(x)))
+end
+
+ispinf(x::Unum) = (x.flags & UNUM_SIGN_MASK != 0) && (x.exponent == mask(1 << esizesize(x))) && (x.fraction != fillbits(-(1 << fsizesize(x)),uint16(length(x.fraction))))
+isninf(x::Unum) = (x.flags & UNUM_SIGN_MASK != 0) && (x.exponent == mask(1 << esizesize(x))) && (x.fraction == fillbits(-(1 << fsizesize(x)),uint16(length(x.fraction))))
 
 function issubnormal(x::Unum)
   x.exponent == 0
@@ -176,20 +182,20 @@ function isfraczero(x::Unum)
 end
 #iszeroish checks to see if it's infinitesimal or if it's zero.
 function iszeroish(x::Unum)
-  fwords = length(x.fraction)
+  fwords::Uint16 = length(x.fraction)
   x.fraction == ((fwords == 1) ? z64 : zeros(fwords)) && (x.exponent == z64)
 end
 function iszero(x::Unum)
-  fwords = length(x.fraction)
+  fwords= length(x.fraction)
   (x.fraction == ((fwords == 1) ? z64 : zeros(fwords))) && (x.exponent == z64) && ((x.flags & UNUM_UBIT_MASK) == 0)
 end
 function isinfinitesimal(x::Unum)
-  fwords = length(x.fraction)
+  fwords::Uint16 = length(x.fraction)
   (x.fraction == ((fwords == 1) ? z64 : zeros(fwords))) && (x.exponent == z64) && ((x.flags & UNUM_UBIT_MASK) != 0)
 end
 function isalmostinf(x::Unum)
-  fwords = length(x.fraction)
-  (x.fraction == fillbits(-(2^fsizesize(x) - 1))) && (x.exponent == mask(2^esizesize(x))) && ((x.flags & UNUM_UBIT_MASK) != 0)
+  fwords::Uint16 = length(x.fraction)
+  (x.fraction == fillbits(-(1 << fsizesize(x) - 1), fwords)) && (x.exponent == mask(1 << esizesize(x))) && ((x.flags & UNUM_UBIT_MASK) != 0)
 end
 function isalmostpinf(x::Unum)
   isalmostinf(x) && (x.flags == UNUM_UBIT_MASK)

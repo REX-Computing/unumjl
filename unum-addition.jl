@@ -69,7 +69,7 @@ end
 #returns a (SuperInt, int, bool) triplet:  (value, shift, falloff)
 function __shift_after_add(carry::Uint64, value::SuperInt)
   #cache the length of value
-  l = length(value)
+  l::Uint16 = length(value)
   #calculate how far we have to shift.
   shift = 64 - clz(carry) - 1
   #did we lose values off the end of the number?
@@ -114,12 +114,16 @@ function __sum_ordered(a, b, _aexp, _bexp)
   end
 end
 
-function __sum_ulp(a, b, _aexp, _bexp)
+function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #this code is assuredly wrong.
   isalmostinf(a) && return a
 
-  exact_a = Unum{ESS,FSS}(a.fsize, a.esize, a.flags & (~UBIT_MASK), a.fraction, a.exponent)
-  exact_b = Unum{ESS,FSS}(b.fsize, b.esize, b.flags & (~UBIT_MASK), b.fraction, b.exponent)
+  #check to see which ones actually are ulps
+  a_ulp = ((a.flags & UNUM_UBIT_MASK) != 0)
+  b_ulp = ((b.flags & UNUM_UBIT_MASK) != 0)
+
+  exact_a = Unum{ESS,FSS}(a.fsize, a.esize, a.flags & (~UNUM_UBIT_MASK), a.fraction, a.exponent)
+  exact_b = Unum{ESS,FSS}(b.fsize, b.esize, b.flags & (~UNUM_UBIT_MASK), b.fraction, b.exponent)
 
   #find the min and max additions to be performed.
   max_a = (a_ulp) ? nextunum(a) : exact_a
@@ -133,7 +137,7 @@ function __sum_ulp(a, b, _aexp, _bexp)
   far_result = max_a + max_b
   near_result = exact_a + exact_b
 
-  if a_neg
+  if (a.flags & UNUM_SIGN_MASK != 0)
     ubound_resolve(open_ubound(far_result, near_result))
   else
     ubound_resolve(open_ubound(near_result, far_result))
@@ -192,7 +196,7 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
     #check for overflows.
     _nexp = _aexp + shift
 
-    (_nexp > max_exponent(ESS)) && return almostinf(a)
+    (_nexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
 
     fsize = __frac_length(scratchpad)
     (esize, exponent) = encode_exp(_nexp)

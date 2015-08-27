@@ -23,3 +23,4 @@ wtwo = Unum{4,6}(z16,uint16(1),z16,z64,uint64(3))
 wthr = Unum{4,6}(z16,uint16(1),z16,t64,uint64(3))
 @test Unums.__diff_exact(wone, -wone, 0, 0) == zero(Unum{4,6})   #one plus one is two
 @test Unums.__diff_exact(wtwo, -wone, 1, 0) == wone              #two minus one is one
+@test Unums.__diff_exact(wthr, -wone, decode_exp(wthr), decode_exp(wone)) == wtwo
