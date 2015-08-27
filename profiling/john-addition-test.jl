@@ -43,7 +43,7 @@ function add_test_ulp(T::Type)
   toc()
 end
 
-
+Unums.__unum_release_environment()
 #map the add_test function onto an array of types we want to run it on!
 map(add_test, [Float64, BigFloat, Unum{4,6}, Unum{4,7}, Unum{4,8}])
 map(add_test_ulp, [Unum{4,6}, Unum{4,7}, Unum{4,8}])

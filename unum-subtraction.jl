@@ -167,7 +167,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
       fraction = scratchpad
     end
 
-    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS): (l << 6 - ctz(fraction)) - 1
+    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS): max(0, (l << 6 - ctz(fraction)) - 1)
 
     (esize, exponent) = encode_exp(_aexp - shift)
     (max_shift == shift) && (exponent = z16)
