@@ -1,29 +1,6 @@
 #unum-properties
+#functions that assess properties of values.
 
-#unum type properties
-#typemax and typemin should report infinities
-import Base.typemax
-typemax{ESS,FSS}(::Type{Unum{ESS,FSS}}) = pinf(Unum{ESS,FSS})
-export typemax
-maxreal{ESS,FSS}(::Type{Unum{ESS,FSS}}) = Unum{ESS,FSS}(uint16(2^FSS-1), uint16(2^ESS-1), z16, fillbits(-2^FSS + 1), uint64(2^2^ESS - 1))
-export maxreal
-
-import Base.typemin
-typemin{ESS,FSS}(::Type{Unum{ESS,FSS}}) = ninf(Unum{ESS,FSS})
-export typemin
-minreal{ESS,FSS}(::Type{Unum{ESS,FSS}}) = Unum{ESS,FSS}(uint16(2^FSS-1), uint16(2^ESS-1), SIGN_MASK, fillbits(-2^FSS + 1), uint64(2^2^ESS - 1))
-export minreal
-
-#machine epsilon
-import Base.eps
-#find the next unum after the number one.
-function eps{ESS,FSS}(::Type{Unum{ESS,FSS}})
-end
-#find the next unum after any given number.
-#conveniently also is the width of the ubound adjacent, represented there.
-function eps(x::Unum)
-end
-export eps
 
 #nextfloat, prevfloat
 import Base.nextfloat
@@ -134,10 +111,10 @@ function nan!{ESS,FSS}(::Type{Unum{ESS,FSS}}) #for when you just need the noisy 
 end
 
 function almostpinf{ESS,FSS}(::Type{Unum{ESS,FSS}})
-  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), UBIT_MASK, fillbits(-(2^FSS-1)), mask(2^ESS))
+  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), UNUM_UBIT_MASK, fillbits(-(2^FSS-1), __frac_cells(FSS)), mask(2^ESS))
 end
 function almostninf{ESS,FSS}(::Type{Unum{ESS,FSS}})
-  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), UBIT_MASK | SIGN_MASK, fillbits(-(2^FSS-1)), mask(2^ESS))
+  Unum{ESS,FSS}(uint16(2^FSS - 1), uint16(2^ESS-1), UNUM_UBIT_MASK | UNUM_SIGN_MASK, fillbits(-(2^FSS-1), __frac_cells(FSS)), mask(2^ESS))
 end
 #almostinf takes the sign of whatever you're passing it.
 function almostinf(x::Unum)
@@ -171,15 +148,29 @@ function isfinite(x::Unum)
   (x.fraction != fillbits(-1 << fsizesize(x), uint16(length(x.fraction)))) || (x.exponent != mask(1 << esizesize(x)))
 end
 
-ispinf(x::Unum) = (x.flags & UNUM_SIGN_MASK != 0) && (x.exponent == mask(1 << esizesize(x))) && (x.fraction != fillbits(-(1 << fsizesize(x)),uint16(length(x.fraction))))
-isninf(x::Unum) = (x.flags & UNUM_SIGN_MASK != 0) && (x.exponent == mask(1 << esizesize(x))) && (x.fraction == fillbits(-(1 << fsizesize(x)),uint16(length(x.fraction))))
+#isinf matches the julia definiton and triggers on either positive or negative
+#infinity.  is_pos_inf and is_neg_inf both are Unum-specific functions that detect
+#the expected values.
+isinf{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags & UNUM_UBIT_MASK != 0) && (x.esize == 1 << ESS - 1) && (x.exponent == mask(1 << ESS)) && (x.fsize == 1 << FSS - 1) && (x.fraction == fillbits(-(1 << FSS), uint16(length(x.fraction)))
+is_pos_inf{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags & UNUM_SIGN_MASK == 0) && (x.flags & UNUM_UBIT_MASK == 0) && (x.esize == 1 << ESS - 1) && (x.exponent == mask(1 << ESS)) && (x.fsize == 1 << FSS -1) && (x.fraction == fillbits(-(1 << FSS),uint16(length(x.fraction))))
+is_neg_inf{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags & UNUM_SIGN_MASK != 0) && (x.flags & UNUM_UBIT_MASK == 0) && (x.esize == 1 << ESS - 1) && (x.exponent == mask(1 << ESS)) && (x.fsize == 1 << FSS -1) && (x.fraction == fillbits(-(1 << FSS),uint16(length(x.fraction))))
 
-function issubnormal(x::Unum)
+function issubnormal{ESS,FSS}(x::Unum{ESS,FSS})
   x.exponent == 0
 end
-function isfraczero(x::Unum)
-  reduce((b, i) -> b && (i == zero(Uint64)), true, x.fraction)
+
+function __breakaway_checkzeros(a)
+  for idx = length(a):-1:1
+    a[idx] != 0 && return false
+  end
+  true
 end
+
+function isfraczero{ESS,FSS}(x::Unum{ESS,FSS})
+  #use ESS because this will be checked by the compiler.
+  (ESS > 6) ? __breakaway_checkzeros(x.fraction) : (x.fraction == 0)
+end
+
 #iszeroish checks to see if it's infinitesimal or if it's zero.
 function iszeroish(x::Unum)
   fwords::Uint16 = length(x.fraction)
@@ -208,8 +199,8 @@ function isulp(x::Unum)
 end
 export isnan
 export isfinite
-export ispinf
-export isninf
+export is_pos_inf
+export is_neg_inf
 export issubnormal
 export isinfinitesimal
 export isalmostinf

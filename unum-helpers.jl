@@ -8,7 +8,9 @@
 #literally grab the fraction length of a superlength.  No assumptions are made
 #about the validity of the trailing bits...  pass l to make it faster.
 function __frac_length(frac::SuperInt, l::Integer = length(frac))
-  uint16(max(0, (l << 6) - ctz(frac) - 1))
+  digits::Uint16 = (l << 6) - ctz(frac)
+  #all zeroes means you have one zero digit.
+  return uint16((digits == 0) ? 0 : digits - 1)
 end
 
 #fractrim:  Takes a superint value and returns a triplet: (fraction, fsize, ubit)
@@ -33,7 +35,7 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   frac &= high_mask
   #we may need to trim the fraction further, in which case we alter fsize.
   #also take the "zero" case and make sure we represent at least one digit.
-  fsize = (ubit == 0) ? fsize = __frac_length(frac, l) : fsize
+  fsize = (ubit == 0) ? __frac_length(frac, l) : fsize
   (frac, fsize, ubit)
 end
 
@@ -82,5 +84,6 @@ end
 decode_exp(esize::Uint16, exponent::Uint64) = int(exponent) - (1 << esize)
 #maxfsize returns the the maximum fraction size for a given FSS.
 max_fsize(FSS) = uint16((1 << FSS) - 1)
+max_esize(ESS) = uint16((1 << ESS) - 1)
 max_exponent(ESS) = (1 << (1 << ESS - 1) - 1)
 min_exponent(ESS) = -(1 << (1 << ESS - 1) - 1)

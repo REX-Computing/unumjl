@@ -57,3 +57,14 @@ function ==(a::Unum, b::Unum)
   #with the same resolution.  These must be equal.
   return true
 end
+
+#make sure we have an isequal function that is equivalent to main one.
+import Base.isequal
+function isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  if isnan(a) && isnan(b)
+    return true
+  else
+    return a == b
+  end
+end
+export isequal

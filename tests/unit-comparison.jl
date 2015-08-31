@@ -13,6 +13,8 @@ testfor((T) -> zero(T) == -zero(T))
 testfor((T) -> one(T) != -one(T))
 #test inequality for NaNs
 testfor((T) -> nan(T) != nan(T))
+#but make sure isequal does see NaNs as equal.
+testfor((T) -> isequal(nan(T), nan(T)))
 
 #wierd equalities with subnormal numbers.
 #whlf is the 'normal' representation of half.

@@ -25,10 +25,10 @@ function +(a::Unum, b::Unum)
   #infinities plus anything is NaN if opposite infinity. (checking for operand a)
   if (ispinf(a))
     (isninf(b)) && return nan(typeof(a))
-    return pinf(typeof(a))
+    return unum_unsafe(a)
   elseif (isninf(a))
     (ispinf(b)) && return nan(typeof(a))
-    return ninf(typeof(a))
+    return unum_unsafe(a)
   end
 
   #infinities b (infinity a is ruled out) plus anything is b3
@@ -134,8 +134,10 @@ function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   _mbexp = decode_exp(b)
 
   #find the high and low bounds.  Pass this to a subsidiary function (recursion!)
-  far_result = max_a + max_b
-  near_result = exact_a + exact_b
+  println(bits(max_a.fraction))
+  println("hi dad")
+  far_result = __sum_exact(max_a, max_b, _maexp, _mbexp)
+  near_result = __sum_exact(exact_a, exact_b, _aexp, _bexp)
 
   if (a.flags & UNUM_SIGN_MASK != 0)
     ubound_resolve(open_ubound(far_result, near_result))
@@ -147,7 +149,6 @@ end
 function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp)
   #calculate the exact sum between two unums.  You may pass this function a unum
   #with a ubit, but it will calculate the sum as if it didn't have the ubit there
-
   l = length(a.fraction)
   #check for deviations due to subnormality.
   a_dev = issubnormal(a) ? 1 : 0
@@ -184,6 +185,10 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   elseif (carry == 1)
     #esize is unchanged.  May have to alter fsize.
     fsize = __frac_length(scratchpad, l)
+
+    println("$(bits(scratchpad))")
+    println(l)
+    println(fsize)
 
     (esize, exponent) = encode_exp(_aexp + a_dev) #promote the exponent if we
     #happened to have started as a subnormal.

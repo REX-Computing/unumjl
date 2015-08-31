@@ -167,7 +167,7 @@ function testop(op, expected)
     for j=1:15
       try
         res = op(warlpiris[i], warlpiris[j])
-        if res != expected[i, j]
+        if !isequal(res, expected[i, j])
           println("$i, $j: $(bits(warlpiris[i])) $op $(bits(warlpiris[j])) failed as $(bits(res)); should be $(bits(expected[i,j]))")
           fails += 1
         end

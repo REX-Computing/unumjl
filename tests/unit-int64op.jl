@@ -43,6 +43,18 @@ nobits  = uint64(0x0000_0000_0000_0000)
 @test ctz([0x00FF_0000_0000_0000, nobits]) == 48
 @test ctz([nobits, 0x0000_0000_0000_F00F]) == 64
 @test ctz([nobits, nobits]) == 128
+#test __fsize_of_exact
+@test Unums.__fsize_of_exact(allbits) == 63
+@test Unums.__fsize_of_exact(nobits) == 0
+@test Unums.__fsize_of_exact(msb1) == 0
+@test Unums.__fsize_of_exact(lsb1) == 63
+@test Unums.__fsize_of_exact(msb8) == 7
+@test Unums.__fsize_of_exact([nobits, nobits]) == 0
+@test Unums.__fsize_of_exact([nobits, msb1]) == 0
+@test Unums.__fsize_of_exact([msb1, nobits]) == 64
+@test Unums.__fsize_of_exact([allbits, allbits]) == 127
+@test Unums.__fsize_of_exact([lsb1, nobits]) == 127
+@test Unums.__fsize_of_exact([lsb1, nobits, nobits, nobits]) == 255
 
 #test mask generation
 @test Unums.mask(1) == lsb1
@@ -58,24 +70,27 @@ nobits  = uint64(0x0000_0000_0000_0000)
 @test Unums.mask(0:63) == allbits
 
 #test the fillbits machinery.  One cell - should be identical to mask.
-@test Unums.fillbits(0) == nobits
-@test Unums.fillbits(1) == lsb1
-@test Unums.fillbits(-1) == msb1
-@test Unums.fillbits(64) == allbits
-@test Unums.fillbits(-64) == allbits
+one16 = uint16(1)
+@test Unums.fillbits(0,   one16) == nobits
+@test Unums.fillbits(1,   one16) == lsb1
+@test Unums.fillbits(-1,  one16) == msb1
+@test Unums.fillbits(64,  one16) == allbits
+@test Unums.fillbits(-64, one16) == allbits
 #test two cells.
-@test Unums.fillbits(-1, 2) == [nobits, msb1]
-@test Unums.fillbits(1, 2) == [lsb1, nobits]
-@test Unums.fillbits(64, 2) == [allbits, nobits]
-@test Unums.fillbits(-64, 2) == [nobits, allbits]
-@test Unums.fillbits(65, 2) == [allbits, lsb1]
-@test Unums.fillbits(-65, 2) == [msb1, allbits]#@test Unums.fi
-@test Unums.fillbits(0, 2) == [nobits, nobits]
-@test Unums.fillbits(128, 2) == [allbits, allbits]
-@test Unums.fillbits(-128, 2) == [allbits, allbits]
+two16 = uint16(2)
+@test Unums.fillbits(-1,   two16) == [nobits, msb1]
+@test Unums.fillbits(1,    two16) == [lsb1, nobits]
+@test Unums.fillbits(64,   two16) == [allbits, nobits]
+@test Unums.fillbits(-64,  two16) == [nobits, allbits]
+@test Unums.fillbits(65,   two16) == [allbits, lsb1]
+@test Unums.fillbits(-65,  two16) == [msb1, allbits]#@test Unums.fi
+@test Unums.fillbits(0,    two16) == [nobits, nobits]
+@test Unums.fillbits(128,  two16) == [allbits, allbits]
+@test Unums.fillbits(-128, two16) == [allbits, allbits]
 #test three cells
-@test Unums.fillbits(65,3) == [allbits, lsb1, nobits]
-@test Unums.fillbits(-65,3) == [nobits, msb1, allbits]
+three16 = uint16(3)
+@test Unums.fillbits(65, three16) == [allbits, lsb1, nobits]
+@test Unums.fillbits(-65,three16) == [nobits, msb1, allbits]
 
 #test leftshifts and rightshifts on multi-arrays
 @test Unums.lsh(allbits, 4) == 0xFFFF_FFFF_FFFF_FFF0

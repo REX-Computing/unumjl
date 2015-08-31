@@ -154,8 +154,15 @@ function ctz(n::Array{Uint64, 1})
   end
   res
 end
-
 export clz, ctz
+
+#calculates the fsize of f when it's an exact value.
+function __fsize_of_exact(f::SuperInt)
+  #multiply the length of f by 64 and then subtract ctz
+  #if we're a zero, just return that, otherwise return the result minus 1.
+  #use the max() method as suggested by profiling.
+  uint16(max(0, length(f) << 6 - ctz(f) - 1))
+end
 
 #iterative leftshift and rightshift operations on Array SuperInts
 function lsh(a::SuperInt,b::Integer)

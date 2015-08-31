@@ -12,8 +12,9 @@ include("unit-helpers.jl")
 #type constructors
 include("unit-unum.jl")
 
-#testing helper functions
+#testing things that get done to unums
 include("unit-convert.jl")
+include("unit-operations.jl")
 #include("unum-test-properties.jl")
 
 #comparison testing

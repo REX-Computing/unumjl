@@ -24,7 +24,7 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
   #find the msb of x, this will tell us how much to move things
   msbx = 63 - clz(x)
   #do a check to see if we should release almost_infinite
-  (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
+  (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK)
 
   #move it over.  One bit should spill over the side.
   frac = x << (64 - msbx)
@@ -65,7 +65,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
 
   #some checks for special values
   (isnan(x)) && return nan(Unum{ESS,FSS})
-  (isinf(x)) && return ((x < 0) ? ninf(Unum{ESS,FSS}) : pinf(Unum{ESS,FSS}))
+  (isinf(x)) && return ((x < 0) ? neg_inf(Unum{ESS,FSS}) : pos_inf(Unum{ESS,FSS}))
 
   #convert the floating point x to its integer equivalent
   I = fp.intequiv                 #the integer type of the same width
@@ -151,8 +151,8 @@ function __u_to_f_generator(T::Type)
   function(x::Unum)
     #DEAL with Infs, NaNs, and subnormals.
     isnan(x) && return nan(T)
-    ispinf(x) && return inf(T)
-    isninf(x) && return -inf(T)
+    is_pos_inf(x) && return inf(T)
+    is_neg_inf(x) && return -inf(T)
     iszero(x) && return zero(T)
 
     #create a dummy value that will hold our result.

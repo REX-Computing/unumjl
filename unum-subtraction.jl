@@ -44,10 +44,13 @@ function __diff_ordered(a, b, _aexp, _bexp)
   end
 end
 
-function __diff_ulp(a, b, _aexp, _bexp)
+function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
+  a_ulp = isulp(a)
+  b_ulp = isulp(b)
+  a_neg = (a.flags & UNUM_SIGN_MASK) != 0
   if (a_ulp)
     max_a = nextunum(a)
-    exact_a = unum(a, a.flags & (~UBIT_MASK))
+    exact_a = unum(a, a.flags & (~UNUM_UBIT_MASK))
     _maexp = decode_exp(max_a)
   else
     max_a = exact_a = unum(a)
@@ -55,7 +58,7 @@ function __diff_ulp(a, b, _aexp, _bexp)
   end
   if (b_ulp)
     max_b = nextunum(b)
-    exact_b = unum(b, b.flags & (~UBIT_MASK))
+    exact_b = unum(b, b.flags & (~UNUM_UBIT_MASK))
     _mbexp = decode_exp(max_b)
   else
     max_b = exact_b = unum(b)
@@ -70,19 +73,19 @@ function __diff_ulp(a, b, _aexp, _bexp)
 
     if (a_neg)
       #exploit the fact that __exact_subtraction ignores ubits
-      return open_ubound(a, __do_subtraction(a, max_b, _aexp, _mbexp))
+      return open_ubound(a, __diff_exact(a, max_b, _aexp, _mbexp))
     else
-      return open_ubound(__do_subtraction(a, max_b, _aexp, _mbexp), a)
+      return open_ubound(__diff_exact(a, max_b, _aexp, _mbexp), a)
     end
   end
 
-  far_res = __do_subtraction(max_a, exact_b, _maexp, _bexp)
+  far_res = __diff_exact(max_a, exact_b, _maexp, _bexp)
 
   #it's possible that exact_a is less than max_b
   if ((exact_a.exponent > max_b.exponent) || ((exact_a.exponent == max_b.exponent) && (exact_a.fraction > max_b.fraction)))
-    near_res = __do_subtraction(exact_a, max_b, _aexp, _mbexp)
+    near_res = __diff_exact(exact_a, max_b, _aexp, _mbexp)
   else
-    near_res = __do_subtraction(max_b, exact_a, _mbexp, _aexp)
+    near_res = __diff_exact(max_b, exact_a, _mbexp, _aexp)
     near_res.flags &= SIGN_MASK
     near_res.flags |= SIGN_MASK $ far_res.flags
     #now we have to do something here.
@@ -138,6 +141,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
 
   flags = a.flags & UNUM_SIGN_MASK
   fsize::Uint16 = 0
+  exponent::Uint64 = 0
 
   #two forks:  The first fork is if the carry bit persists.
   if (carry != 0)
@@ -153,6 +157,10 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
     esize = a.esize
     exponent = a.exponent
   else
+    ##TODO:  Rethink this segment.  Is it not the case that the worst the shift can be is ONE?
+
+
+
     #we want to see if we can push it over as far as possible without hitting
     #the fraction size limit
     max_shift = _aexp - min_exponent(ESS)
@@ -173,5 +181,6 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
     (max_shift == shift) && (exponent = z16)
   end
 
+  __frac_cells(FSS) == 1 && (fraction = last(fraction))
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end

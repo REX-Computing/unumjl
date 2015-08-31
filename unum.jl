@@ -20,13 +20,13 @@ include("unum-unum.jl")
 include("unum-ubound.jl")
 
 #functions that operate on the unum type itself, and friends.
-include("unum-typefunctions.jl")
+include("unum-typeproperties.jl")
 
 include("unum-constants.jl")
 include("unum-properties.jl")
 include("unum-comparison.jl")
 include("unum-convert.jl")
-include("unum-oddsandends.jl")
+include("unum-operations.jl")
 #some math stuff
 include("unum-addition.jl")
 include("unum-subtraction.jl")

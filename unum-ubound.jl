@@ -19,18 +19,20 @@ export bits
 #creates a open ubound from two unums, a < b
 function open_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #match the sign masks for the case of a or b being zero.
-  iszero(a) && (a.flags = (a.flags & ~UNUM_SIGN_MASK) | (b.flags & UNUM_SIGN_MASK))
-  iszero(b) && (b.flags = (a.flags & ~UNUM_SIGN_MASK) | (a.flags & UNUM_SIGN_MASK))
+  aflags = a.flags
+  bflags = b.flags
+  iszero(a) && (aflags = (a.flags & ~UNUM_SIGN_MASK) | (b.flags & UNUM_SIGN_MASK))
+  iszero(b) && (bflags = (a.flags & ~UNUM_SIGN_MASK) | (a.flags & UNUM_SIGN_MASK))
 
-  a_pointsout = (a.flags & UNUM_SIGN_MASK == 0) || iszero(a)
-  b_pointsout = (b.flags & UNUM_SIGN_MASK != 0) || iszero(b)
+  a_pointsout = (aflags & UNUM_SIGN_MASK == 0) || iszero(a)
+  b_pointsout = (bflags & UNUM_SIGN_MASK != 0) || iszero(b)
 
-  ulp_a = (isulp(a) ? unum(a) : (a_pointsout ? nextulp(a) : prevulp(a)))
-  ulp_b = (isulp(b) ? unum(b) : (b_pointsout ? nextulp(b) : prevulp(b)))
+  ulp_a = (isulp(a) ? unum_unsafe(a, aflags) : (a_pointsout ? nextulp(a) : prevulp(a)))
+  ulp_b = (isulp(b) ? unum_unsafe(b, bflags) : (b_pointsout ? nextulp(b) : prevulp(b)))
 
   #make sure that a zero b points negative if it points out.
   if (iszero(b) && b_pointsout)
-    ulp_b.flags |= UNUM_SIGN_MASK
+    ulp_b = unum_unsafe(ulp_b, ulp_b.flags | UNUM_SIGN_MASK)
   end
 
   Ubound(ulp_a, ulp_b)
