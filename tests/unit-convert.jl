@@ -7,9 +7,9 @@
 #integer to unum
 
 @test [calculate(convert(Unum{3,6},i)) for i=-50:50] == [BigFloat(i) for i = -50:50]
-@test isalmostinf(mmr(Unum{0,0}))
-@test isalmostinf(convert(Unum{0,0}, 2))
-@test isalmostinf(convert(Unum{1,1}, 8))
+@test is_mmr(mmr(Unum{0,0}))
+@test is_mmr(convert(Unum{0,0}, 2))
+@test is_mmr(convert(Unum{1,1}, 8))
 
 #unum to integer
 
@@ -63,19 +63,19 @@ pastsubnormal(ess, fss) = reinterpret(Float64,(Unums.min_exponent(ess) - Unums.m
 @test calculate(convert(Unum{1,1}, smallsubnormal(1,1))) == BigFloat(smallsubnormal(1,1))
 @test calculate(convert(Unum{2,2}, smallsubnormal(2,2))) == BigFloat(smallsubnormal(2,2))
 @test calculate(convert(Unum{3,3}, smallsubnormal(3,3))) == BigFloat(smallsubnormal(3,3))
-@test isinfinitesimal(convert(Unum{0,0}, pastsubnormal(0,0)))
-@test isinfinitesimal(convert(Unum{1,1}, pastsubnormal(1,1)))
-@test isinfinitesimal(convert(Unum{2,2}, pastsubnormal(2,2)))
-@test isinfinitesimal(convert(Unum{3,3}, pastsubnormal(3,3)))
+@test is_ssn(convert(Unum{0,0}, pastsubnormal(0,0)))
+@test is_ssn(convert(Unum{1,1}, pastsubnormal(1,1)))
+@test is_ssn(convert(Unum{2,2}, pastsubnormal(2,2)))
+@test is_ssn(convert(Unum{3,3}, pastsubnormal(3,3)))
 tinyfloat = reinterpret(Float64, o64)
-@test isinfinitesimal(convert(Unum{0,0}, tinyfloat))
-@test isinfinitesimal(convert(Unum{1,1}, tinyfloat))
-@test isinfinitesimal(convert(Unum{2,2}, tinyfloat))
-@test isinfinitesimal(convert(Unum{3,3}, tinyfloat))
+@test is_ssn(convert(Unum{0,0}, tinyfloat))
+@test is_ssn(convert(Unum{1,1}, tinyfloat))
+@test is_ssn(convert(Unum{2,2}, tinyfloat))
+@test is_ssn(convert(Unum{3,3}, tinyfloat))
 
 #and into the isalmostinf range.
-@test isalmostinf(convert(Unum{0,0}, 2.2))
-@test isalmostinf(convert(Unum{1,1}, 8.2))
+@test is_mmr(convert(Unum{0,0}, 2.2))
+@test is_mmr(convert(Unum{1,1}, 8.2))
 
 #test converting into really big unums.
 @test convert(Unum{4,7}, 1.0) == one(Unum{4,7})
