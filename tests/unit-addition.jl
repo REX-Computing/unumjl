@@ -94,8 +94,8 @@ ttot = Unum{4,7}(z16        , o16, z16, [z64, z64], uint64(0b11))
 #being nowhere near the maximum size limit.
 ctt1 = Unum{4,6}(uint16(0b110011), uint16(0b0110), z16, uint64(0b01101001000011110001110011101100100101000000111000101100110_00000000000), uint64(0b1100101))
 ctt2 = Unum{4,6}(uint16(0b110010), uint16(0b0100), z16, uint64(0b1011101011010111000000101000101011010000100111100010_000000000000), uint64(0b11111))
-@test !isalmostinf(Unums.__sum_exact(ctt1, ctt1, decode_exp(ctt1), decode_exp(ctt1)))
-@test !isalmostinf(Unums.__sum_exact(ctt2, ctt2, decode_exp(ctt2), decode_exp(ctt2)))
+@test !is_mmr(Unums.__sum_exact(ctt1, ctt1, decode_exp(ctt1), decode_exp(ctt1)))
+@test !is_mmr(Unums.__sum_exact(ctt2, ctt2, decode_exp(ctt2), decode_exp(ctt2)))
 #result:  This was due to poorly constructed test for the maximum exponent value
 
 #corner cases on unusual values.

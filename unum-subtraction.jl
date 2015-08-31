@@ -11,7 +11,7 @@ function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt)
   #"carry" will usually be one, but there are other possibilities (e.g. zero)
 
   #be sure to pad v1 to the same length as v2, first.
-  v1_adj = [zeros(Uint64, length(v2) - length(v1)), v1]
+  v1_adj = (length(v1) == 1) ? v1 : [zeros(Uint64, length(v2) - length(v1)), v1]
   #first perform a direct difference on the integer arrays.
   res = v1_adj - v2
   #iterate downward from the most significant cell.  Sneakily, this loop
@@ -37,7 +37,7 @@ function __diff_ordered(a, b, _aexp, _bexp)
   #add two values, where a has a greater magnitude than b.  Both operands have
   #matching signs, either positive or negative.  At this stage, they may both
   #be ULPs.
-  if (isulp(a) || isulp(b))
+  if (is_ulp(a) || is_ulp(b))
     __diff_ulp(a, b, _aexp, _bexp)
   else
     __diff_exact(a, b, _aexp, _bexp)
@@ -45,9 +45,9 @@ function __diff_ordered(a, b, _aexp, _bexp)
 end
 
 function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
-  a_ulp = isulp(a)
-  b_ulp = isulp(b)
-  a_neg = (a.flags & UNUM_SIGN_MASK) != 0
+  a_ulp = is_ulp(a)
+  b_ulp = is_ulp(b)
+  a_neg = is_negative(a)
   if (a_ulp)
     max_a = nextunum(a)
     exact_a = unum(a, a.flags & (~UNUM_UBIT_MASK))
@@ -66,10 +66,10 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   end
 
   #do a check to see if a is almost infinite.
-  if (isalmostinf(a))
-    #a ubound ending in infinity can't result in an ulp unless the lower subtracted
+  if (is_mmr(a))
+    #a ubound endinc in infinity can't result in an ulp unless the lower subtracted
     #value is zero, which is already tested for.
-    isalmostinf(b) && return open_ubound(almostninf(Unum{ESS,FSS}), almostpinf(Unum{ESS,FSS}))
+    is_mmr(b) && return open_ubound(neg_mmr(Unum{ESS,FSS}), pos_mmr(Unum{ESS,FSS}))
 
     if (a_neg)
       #exploit the fact that __exact_subtraction ignores ubits
@@ -153,7 +153,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
     else
       fraction = scratchpad
     end
-    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS) : (l << 6 - ctz(fraction)) - 1
+    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS) : max(0, (l << 6 - ctz(fraction) - 1))
     esize = a.esize
     exponent = a.exponent
   else
@@ -175,7 +175,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
       fraction = scratchpad
     end
 
-    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS): max(0, (l << 6 - ctz(fraction)) - 1)
+    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS): max(0, (l << 6 - ctz(fraction) - 1))
 
     (esize, exponent) = encode_exp(_aexp - shift)
     (max_shift == shift) && (exponent = z16)

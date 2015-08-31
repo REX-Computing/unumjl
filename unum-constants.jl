@@ -26,7 +26,12 @@ function nan{ESS,FSS}(::Type{Unum{ESS,FSS}})
   fsize::Uint16 = 1 << FSS - 1
   Unum{ESS,FSS}(fsize, esize, UNUM_UBIT_MASK, fillbits(-(1 << FSS), __frac_cells(FSS)), mask(1 << ESS))
 end
-export nan
+function nan!{ESS,FSS}(::Type{Unum{ESS,FSS}})
+  esize::Uint16 = 1 << ESS - 1
+  fsize::Uint16 = 1 << FSS - 1
+  Unum{ESS,FSS}(fsize, esize, UNUM_UBIT_MASK | UNUM_SIGN_MASK, fillbits(-(1 << FSS), __frac_cells(FSS)), mask(1 << ESS))
+end
+export nan, nan!
 
 import Base.inf
 function inf{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)

@@ -14,26 +14,26 @@
 #passing to either the 'addition' or 'subtraction' algorithms.  Two separate
 #algorithms are necessary because of the zero-symmetrical nature of the unum
 #floating point spec.
-function +(a::Unum, b::Unum)
+function +{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #some basic gating checks before we do any crazy operations.
   #one, is either one zero?
   iszero(a) && return b
   iszero(b) && return a
   #do a nan check
-  (isnan(a) || isnan(b)) && return nan(typeof(a))
+  (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
 
   #infinities plus anything is NaN if opposite infinity. (checking for operand a)
-  if (ispinf(a))
-    (isninf(b)) && return nan(typeof(a))
+  if (is_pos_inf(a))
+    (is_neg_inf(b)) && return nan(Unum{ESS,FSS})
     return unum_unsafe(a)
-  elseif (isninf(a))
-    (ispinf(b)) && return nan(typeof(a))
+  elseif (is_neg_inf(a))
+    (is_pos_inf(b)) && return nan(Unum{ESS,FSS})
     return unum_unsafe(a)
   end
 
   #infinities b (infinity a is ruled out) plus anything is b3
-  (ispinf(b)) && return pinf(typeof(a))
-  (isninf(b)) && return ninf(typeof(a))
+  (is_pos_inf(b)) && return pos_inf(Unum{ESS,FSS})
+  (is_neg_inf(b)) && return neg_inf(Unum{ESS,FSS})
 
   #sort a and b and then add them using the gateway operation.
   __add_ordered(magsort(a,b)...)
@@ -90,8 +90,8 @@ end
 
 #an addition operation where a and b are ordered such that mag(a) > mag(b)
 function __add_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
-  a_neg = isnegative(a)
-  b_neg = isnegative(b)
+  a_neg = is_negative(a)
+  b_neg = is_negative(b)
 
   if (b_neg != a_neg)
     __diff_ordered(a, b, _aexp, _bexp)
@@ -107,7 +107,7 @@ function __sum_ordered(a, b, _aexp, _bexp)
   #add two values, where a has a greater magnitude than b.  Both operands have
   #matching signs, either positive or negative.  At this stage, they may both
   #be ULPs.
-  if (isulp(a) || isulp(b))
+  if (is_ulp(a) || is_ulp(b))
     __sum_ulp(a, b, _aexp, _bexp)
   else
     __sum_exact(a, b, _aexp, _bexp)
@@ -116,26 +116,24 @@ end
 
 function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #this code is assuredly wrong.
-  isalmostinf(a) && return a
+  is_mmr(a) && return a
 
   #check to see which ones actually are ulps
-  a_ulp = ((a.flags & UNUM_UBIT_MASK) != 0)
-  b_ulp = ((b.flags & UNUM_UBIT_MASK) != 0)
+  a_ulp = is_ulp(a)
+  b_ulp = is_ulp(b)
 
   exact_a = Unum{ESS,FSS}(a.fsize, a.esize, a.flags & (~UNUM_UBIT_MASK), a.fraction, a.exponent)
   exact_b = Unum{ESS,FSS}(b.fsize, b.esize, b.flags & (~UNUM_UBIT_MASK), b.fraction, b.exponent)
 
   #find the min and max additions to be performed.
-  max_a = (a_ulp) ? nextunum(a) : exact_a
-  max_b = (b_ulp) ? nextunum(b) : exact_b
+  max_a = (a_ulp) ? next_exact(a) : exact_a
+  max_b = (b_ulp) ? next_exact(b) : exact_b
 
   #we may have to re-decode these because these might have changed.
   _maexp = decode_exp(a)
   _mbexp = decode_exp(b)
 
   #find the high and low bounds.  Pass this to a subsidiary function (recursion!)
-  println(bits(max_a.fraction))
-  println("hi dad")
   far_result = __sum_exact(max_a, max_b, _maexp, _mbexp)
   near_result = __sum_exact(exact_a, exact_b, _aexp, _bexp)
 
@@ -185,11 +183,6 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   elseif (carry == 1)
     #esize is unchanged.  May have to alter fsize.
     fsize = __frac_length(scratchpad, l)
-
-    println("$(bits(scratchpad))")
-    println(l)
-    println(fsize)
-
     (esize, exponent) = encode_exp(_aexp + a_dev) #promote the exponent if we
     #happened to have started as a subnormal.
   else

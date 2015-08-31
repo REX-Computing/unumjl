@@ -23,7 +23,7 @@ warlpiri(flags::Integer, frac::Uint64, exp::Uint64) = Warlpiri(zero16, zero16, u
 
 #create english words for each of the warlpiri unums
 stop_ = nan!(Warlpiri)
-n_all = ninf(Warlpiri)
+n_all = neg_inf(Warlpiri)
 nmany = warlpiri(0b11, zero64, one64)
 n_two = -one(Warlpiri)
 nsome = warlpiri(0b11, top64,  zero64)
@@ -36,7 +36,7 @@ pone_ = warlpiri(0b0,  top64,  zero64)
 psome = warlpiri(0b1,  top64,  zero64)
 ptwo_ = one(Warlpiri)
 pmany = warlpiri(0b1,  zero64, one64)
-pall_ = pinf(Warlpiri)
+pall_ = pos_inf(Warlpiri)
 junk_ = nan(Warlpiri)
 #check the bits on all of the warpiri unums
 @test "1111" == bits(stop_)
