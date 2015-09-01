@@ -40,7 +40,7 @@ end
 #number line.  NB:  __bigger_exact and __smaller_exact do *not* perform checks
 #on the properties of their passed values so should be used with caution.
 
-function __more_exact{ESS,FSS}(a::Unum{ESS,FSS})
+function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #set the location of the added bit:  remember that fsize is the actual length - 1
   location = (is_ulp(a)) ? a.fsize + 1 : max_fsize(FSS)
   #generate a new superint that represents what we're going to add in.
@@ -84,7 +84,7 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   end
 end
 
-function __less_exact{ESS,FSS}(a::Unum{ESS,FSS})
+function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #TODO:  throw in a zero check here.  Maybe?
   #if we're a zero, just return that, otherwise return the result minus 1.
 
@@ -97,9 +97,9 @@ function __less_exact{ESS,FSS}(a::Unum{ESS,FSS})
 
     #resolve a from (possibly inoptimal subnormal) to optimal subnormal or normal
     canonical_a = issubnormal(a) ? __resolve_subnormal(a) : unum_unsafe(a)
-    carry = 1
+    carry::Uint64 = 1
 
-    (carry, res) = __carried_diff(carry, canonical_a, delta)
+    (carry, res) = __carried_diff(carry, canonical_a.fraction, delta)
     #figure out the exponent.
     _aexp = decode_exp(canonical_a)
     flags = canonical_a.flags & UNUM_SIGN_MASK
@@ -112,14 +112,15 @@ function __less_exact{ESS,FSS}(a::Unum{ESS,FSS})
       elseif (_aexp > min_exponent(ESS))
         (esize, exponent) = encode_exp(_aexp - 1) #reset it to one below.
         #shift over the fraction by one.
-        fraction = res << 1maxintfloat
-
+        fraction = res << 1
       else #we must have started off as subnormal.
         (esize, exponent) = (canonical_a.esize, canonical_a.exponent)
         fraction = res
       end
+      fsize::Uint16 = __fsize_of_exact(fractions)
       Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
     else
+      fsize = __fsize_of_exact(res)
       Unum{ESS,FSS}(fsize, canonical_a.esize, flags, res, canonical_a.exponent)
     end
   end
@@ -137,7 +138,7 @@ function next_exact{ESS,FSS}(x::Unum{ESS,FSS})
   (x.flags & UNUM_SIGN_MASK != 0) && return __less_exact(x)
   return __more_exact(x)
 end
-function last_exact{ESS,FSS}(x::Unum{ESS,FSS})
+function prev_exact{ESS,FSS}(x::Unum{ESS,FSS})
   is_neg_inf(x) && return nan(Unum{ESS,FSS})
   is_neg_mmr(x) && return neg_inf(Unum{ESS,FSS})
   is_zero(x) && return neg_eps(Unum{ESS,FSS})
@@ -145,4 +146,30 @@ function last_exact{ESS,FSS}(x::Unum{ESS,FSS})
   (x.flags & UNUM_SIGN_MASK != 0) && return __more_exact(x)
   return __less_exact(x)
 end
-export next_exact, last_exact
+export next_exact, prev_exact
+
+function outward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
+  is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
+  #note that infinity will throw NAN, which is just fine.
+  is_neg_inf(x) && return nan(Unum{ESS,FSS})
+  unum_unsafe(x, x.flags | UNUM_UBIT_MASK)
+end
+function inward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
+  is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
+  iszero(x) && return nan(Unum{ESS,FSS})
+  is_pos_inf(x) && return pos_mmr(Unum{ESS,FSS})
+  is_neg_inf(x) && return neg_mmr(Unum{ESS,FSS})
+  unum_unsafe(__inward_exact(x), x.flags | UNUM_UBIT_MASK)
+end
+function next_ulp{ESS,FSS}(x::Unum{ESS,FSS})
+  iszero(x) && return pos_ssn(Unum{ESS,FSS})
+  is_negative(x) && return inward_ulp(x)
+  outward_ulp(x)
+end
+function prev_ulp{ESS,FSS}(x::Unum{ESS,FSS})
+  iszero(x) && return neg_ssn(Unum{ESS,FSS})
+  is_negative(x) && return outward_ulp(x)
+  inward_ulp(x)
+end
+
+export outward_ulp, inward_ulp, next_ulp, prev_ulp

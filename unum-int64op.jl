@@ -26,7 +26,8 @@ function __copy_superint(a::SuperInt)
 end
 
 # a helper function for issubnormal, and isfraczero.  Optimized to be fast.
-function allzeros(a::Array{Uint64})
+function allzeros(a::SuperInt)
+  (length(a) == 1) && return a == 0
   for idx = length(a):-1:1
     a[idx] != 0 && return false
   end

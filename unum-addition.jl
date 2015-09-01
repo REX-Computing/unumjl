@@ -121,8 +121,8 @@ function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   is_mmr(a) && return mmr(Unum{ESS,FSS})
 
   #assign "exact" and "bound" a's
-  (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), more_exact(a)) : (a, a)
-  (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), more_exact(b)) : (b, b)
+  (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
+  (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
   #recalculate these values if necessary.
   _baexp = is_ulp(a) ? decode_exp(bound_a) : _aexp
   _bbexp = is_ulp(b) ? decode_exp(bound_b) : _bexp

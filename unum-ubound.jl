@@ -24,11 +24,11 @@ function open_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   iszero(a) && (aflags = (a.flags & ~UNUM_SIGN_MASK) | (b.flags & UNUM_SIGN_MASK))
   iszero(b) && (bflags = (a.flags & ~UNUM_SIGN_MASK) | (a.flags & UNUM_SIGN_MASK))
 
-  a_pointsout = (aflags & UNUM_SIGN_MASK == 0) || iszero(a)
-  b_pointsout = (bflags & UNUM_SIGN_MASK != 0) || iszero(b)
+  a_pointsout = (aflags & UNUM_SIGN_MASK != 0) || iszero(a)
+  b_pointsout = (bflags & UNUM_SIGN_MASK == 0) || iszero(b)
 
-  ulp_a = (is_ulp(a) ? unum_unsafe(a, aflags) : (a_pointsout ? nextulp(a) : prevulp(a)))
-  ulp_b = (is_ulp(b) ? unum_unsafe(b, bflags) : (b_pointsout ? nextulp(b) : prevulp(b)))
+  ulp_a = (is_ulp(a) ? unum_unsafe(a, aflags) : (a_pointsout ? inward_ulp(a) : outward_ulp(a)))
+  ulp_b = (is_ulp(b) ? unum_unsafe(b, bflags) : (b_pointsout ? inward_ulp(b) : outward_ulp(b)))
 
   #make sure that a zero b points negative if it points out.
   if (iszero(b) && b_pointsout)
@@ -46,13 +46,13 @@ function ubound_resolve{ESS,FSS}(b::Ubound{ESS,FSS})
   l::Uint16 = length(b.lowbound.fraction)
 
   #if the sign masks are not equal then we're toast.
-  ((b.lowbound.flags & UNUM_SIGN_MASK) != (b.highbound.flags & UNUM_SIGN_MASK)) && return b
+  (is_negative(b.lowbound) != is_negative(b.highbound)) && return b
   #lastly, these must both be uncertain unums
-  if (b.lowbound.flags & UNUM_UBIT_MASK == UNUM_UBIT_MASK) && (b.highbound.flags & UNUM_UBIT_MASK == UNUM_UBIT_MASK)
+  if (is_ulp(b.lowbound)) && (is_ulp(b.highbound))
     #if negative then swap them around.
-    (smaller, bigger) = (b.lowbound.flags & UNUM_SIGN_MASK == UNUM_SIGN_MASK) ? (b.highbound, b.lowbound) : (b.lowbound, b.highbound)
-    #now, find the next unum for the bigger one
-    bigger = nextunum(bigger)
+    (smaller, bigger) = (is_negative(b.lowbound)) ? (b.highbound, b.lowbound) : (b.lowbound, b.highbound)
+    #now, find the next exact ulp for the bigger one
+    bigger = __outward_exact(bigger)
 
     #check to see if bigger is at the boundary of two enums.
     if (bigger.fraction == 0) && (bigger.exponent == smaller.exponent + 1)

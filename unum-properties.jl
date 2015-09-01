@@ -42,7 +42,7 @@ is_ssn(x::Unum) = (x.exponent == z64) && is_ulp(x) && isfraczero(x)
 is_pos_ssn(x::Unum) = is_positive(x) && is_ssn(x)
 is_neg_ssn(x::Unum) = is_negative(x) && is_ssn(x)
 #checks if the value is more than maxreal
-is_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_exact(x) && (x.exponent == mask(1 << ESS)) && (x.fraction == fillbits(-(1 << FSS - 1), uint16(length(x.fraction))))
+is_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_ulp(x) && (x.exponent == mask(1 << ESS)) && (x.fraction == fillbits(-(1 << FSS - 1), uint16(length(x.fraction))))
 is_pos_mmr(x::Unum) = is_positive(x) && is_mmr(x)
 is_neg_mmr(x::Unum) = is_negative(x) && is_mmr(x)
 
