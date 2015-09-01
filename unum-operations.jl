@@ -99,7 +99,7 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
       #in which case just make it a bunch of ones, decrement the exponent, and
       #make sure we aren't subnormal, in which case, we just encode as subnormal.
       _aexp = decode_exp(a)
-      fraction::Uint64 = fillbits(-(max_fsize(FSS) + 1), l)
+      fraction::SuperInt = fillbits(-(max_fsize(FSS) + 1), l)
       fsize::Uint16 = max_fsize(FSS)
       (esize, exponent) = (_aexp == min_exponent(ESS)) ? (max_esize(ESS), z64) : encode_exp(_aexp - 1)
     else

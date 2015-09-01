@@ -21,7 +21,9 @@ function add_test(T::Type)
   println("testing $T")
   tic()
     #i don't think that llvm aggressively optimizes this out since we don't use the result.
-    a + b
+    for (idx = 1:iters)
+      a[idx] + b[idx]
+    end
   toc()
 end
 
@@ -45,5 +47,5 @@ end
 
 Unums.__unum_release_environment()
 #map the add_test function onto an array of types we want to run it on!
-map(add_test, [Float64, BigFloat, Unum{4,6}, Unum{4,7}, Unum{4,8}])
-map(add_test_ulp, [Unum{4,6}, Unum{4,7}, Unum{4,8}])
+map(add_test, [Float64, BigFloat, Unum{0,0}, Unum{1,1}, Unum{3,3}, Unum{4,6}, Unum{4,7}, Unum{4,8}])
+map(add_test_ulp, [Unum{0,0}, Unum{1,1}, Unum{3,3}, Unum{4,6}, Unum{4,7}, Unum{4,8}])

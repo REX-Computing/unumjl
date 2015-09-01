@@ -23,17 +23,16 @@ function +{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
 
   #infinities plus anything is NaN if opposite infinity. (checking for operand a)
-  if (is_pos_inf(a))
-    (is_neg_inf(b)) && return nan(Unum{ESS,FSS})
-    return unum_unsafe(a)
-  elseif (is_neg_inf(a))
-    (is_pos_inf(b)) && return nan(Unum{ESS,FSS})
-    return unum_unsafe(a)
+  if (isinf(a))
+    (isinf(b)) && (a.flags & UNUM_SIGN_MASK != b.flags & UNUM_SIGN_MASK) && return nan(Unum{ESS,FSS})
+    return inf(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
   end
 
-  #infinities b (infinity a is ruled out) plus anything is b3
-  (is_pos_inf(b)) && return pos_inf(Unum{ESS,FSS})
-  (is_neg_inf(b)) && return neg_inf(Unum{ESS,FSS})
+  #infinities b (infinity a is ruled out) plus anything is b
+  (isinf(b)) && return inf(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK)
+
+  (is_mmr(a)) && (a.flags & UNUM_SIGN_MASK == b.flags & UNUM_SIGN_MASK) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
+  (is_mmr(b)) && (a.flags & UNUM_SIGN_MASK == b.flags & UNUM_SIGN_MASK) && return mmr(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK)
 
   #sort a and b and then add them using the gateway operation.
   __add_ordered(magsort(a,b)...)
@@ -141,7 +140,7 @@ end
 function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp)
   #calculate the exact sum between two unums.  You may pass this function a unum
   #with a ubit, but it will calculate the sum as if it didn't have the ubit there
-  l = length(a.fraction)
+  l::Uint16 = length(a.fraction)
   #check for deviations due to subnormality.
   a_dev = isexpzero(a) ? 1 : 0
   b_dev = isexpzero(b) ? 1 : 0
@@ -195,10 +194,8 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   end
 
   #another way to get overflow is: by adding just enough bits to exactly
-  #make the binary value for infinity.  This should, instead, yield almostinf.
-  #if (fsize == )
-  #  return almostinf(a)
-  #end
+  #make the binary value for infinity.  This should, instead, yield mmr.
+  (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (scratchpad == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
 
   Unum{ESS,FSS}(fsize, esize, flags, scratchpad, exponent)
 end

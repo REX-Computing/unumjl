@@ -59,7 +59,7 @@ function ubound_resolve{ESS,FSS}(b::Ubound{ESS,FSS})
     if (bigger.fraction == 0) && (bigger.exponent == smaller.exponent + 1)
       #check to see if the smaller fraction is all ones.
       eligible = smaller.fraction == fillbits(-(smaller.fsize + 1), l)
-      trim = 0
+      trim::Uint16 = 0
     elseif smaller.fsize > bigger.fsize #mask out the lower bits
       eligible = (smaller.fraction & fillbits(bigger.fsize, l)) == zeros(Uint64, l)
       trim = bigger.fsize

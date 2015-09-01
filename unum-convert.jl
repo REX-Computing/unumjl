@@ -88,7 +88,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   #generate the unbiased exponent and remember to take frac_move into account.
   unbiased_exp::Int16 = biased_exp - _ebias + ((biased_exp == 0) ? 1 : 0)
 
-  if isexpzero(x)
+  if issubnormal(x)
     #keeping in mind that the fraction bits are now left-aligned, calculate
     #how much further we have to push the fraction bits.
     frac_move::Int16 = clz(fraction) + 1
