@@ -12,10 +12,6 @@ z64 = uint64(0)
 o64 = uint64(1)
 t64 = uint64(0x8000_0000_0000_0000)
 
-#1101
-
-a = Unum{0,0}(z16, z16, UNUM_SIGN_MASK, z64, o64)
-b = Unum{0,0}(z16, z16, UNUM_UBIT_MASK, t64, z64)
-println(bits(a))
-println(bits(b))
+a = Unum{0,0}(z16, z16, UNUM_UBIT_MASK, z64, z64)
+b = Unum{0,0}(z16, z16, UNUM_UBIT_MASK, z64, z64)
 println("$(bits(a)) + $(bits(b)) = $(bits(a + b))")

@@ -31,7 +31,11 @@ isfinite{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent != mask(1 << ESS)) || (x.fract
 export isinf, is_pos_inf, is_neg_inf, isfinite
 
 import Base.issubnormal
+#NB:  The difference between "isexpzero" and "issubnormal" - isexpzero admits
+#zero as a solution; issubnormal is in compliance with the standard julia
+#issubnormal function and does not admit zero as a true result.
 issubnormal{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && ((ESS > 6) ? !(allzeros(x.fraction)) : x.fraction != 0)
+isexpzero{ESS,FSS}(x::Unum{ESS,FSS}) = x.exponent == z64
 
 #use ESS because this will be checked by the compiler, instead of at runtime.
 isfraczero{ESS,FSS}(x::Unum{ESS,FSS}) = (ESS > 6) ? allzeros(x.fraction) : (x.fraction == 0)
@@ -46,6 +50,6 @@ is_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_ulp(x) && (x.exponent == mask(1 << ESS)) 
 is_pos_mmr(x::Unum) = is_positive(x) && is_mmr(x)
 is_neg_mmr(x::Unum) = is_negative(x) && is_mmr(x)
 
-export issubnormal
+export issubnormal, isexpzero
 export isfraczero, iszero, is_ssn, is_pos_ssn, is_neg_ssn
 export is_mmr, is_pos_mmr, is_neg_mmr

@@ -62,7 +62,7 @@ end
 function eps{ESS,FSS}(x::Unum{ESS,FSS})
   #check to see if we're zero
   iszero(x) && return pos_small_exact(Unum{ESS,FSS})
-  if (issubnormal(x))
+  if (isexpzero(x))
     if (x.esize == max_esize(ESS))
       #in the case it's subnormal and not resolved, replace it with a resolved subnormal.
       return eps(Unum{ESS,FSS})
@@ -70,7 +70,7 @@ function eps{ESS,FSS}(x::Unum{ESS,FSS})
       x = __resolve_subnormal(x)
     end
     #double-check if it's still subnormal, in which case, drop the normal machine epsilon.
-    issubnormal(x) && return pos_small_exact(Unum{ESS,FSS})
+    isexpzero(x) && return pos_small_exact(Unum{ESS,FSS})
   end
   #two cases.  The first is if the exponent is really low and our only option is
   #to express the machine epsilon as a subnormal number.  To figure this out, is

@@ -86,43 +86,30 @@ end
 
 function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #TODO:  throw in a zero check here.  Maybe?
-  #if we're a zero, just return that, otherwise return the result minus 1.
-
+  l::Uint16 = length(a.fraction)
   if (is_ulp(a))
     #all we have to do is strip the ubit mask.
     unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK)
   else
     #check if it's a subnormal number.  If so, try to move it to the right.
-    delta = __bit_from_top(max_fsize(FSS), length(a.fraction))
-
     #resolve a from (possibly inoptimal subnormal) to optimal subnormal or normal
-    canonical_a = issubnormal(a) ? __resolve_subnormal(a) : unum_unsafe(a)
-    carry::Uint64 = 1
-
-    (carry, res) = __carried_diff(carry, canonical_a.fraction, delta)
-    #figure out the exponent.
-    _aexp = decode_exp(canonical_a)
-    flags = canonical_a.flags & UNUM_SIGN_MASK
-
-    if (carry == 0)
-      if (_aexp == min_exponent(ESS))
-        #set ourselves to subnormal.
-        (esize, exponent) = (mask(ESS), z64)
-        fraction = res
-      elseif (_aexp > min_exponent(ESS))
-        (esize, exponent) = encode_exp(_aexp - 1) #reset it to one below.
-        #shift over the fraction by one.
-        fraction = res << 1
-      else #we must have started off as subnormal.
-        (esize, exponent) = (canonical_a.esize, canonical_a.exponent)
-        fraction = res
-      end
-      fsize::Uint16 = __fsize_of_exact(fractions)
-      Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
+    isexpzero(a) && (a = __resolve_subnormal(a))
+    #the next step is pretty trivial.  First, check if a is all zeros.
+    if isfraczero(a)
+      #in which case just make it a bunch of ones, decrement the exponent, and
+      #make sure we aren't subnormal, in which case, we just encode as subnormal.
+      _aexp = decode_exp(a)
+      fraction::Uint64 = fillbits(-(max_fsize(FSS) + 1), l)
+      fsize::Uint16 = max_fsize(FSS)
+      (esize, exponent) = (_aexp == min_exponent(ESS)) ? (max_esize(ESS), z64) : encode_exp(_aexp - 1)
     else
-      fsize = __fsize_of_exact(res)
-      Unum{ESS,FSS}(fsize, canonical_a.esize, flags, res, canonical_a.exponent)
+      #even easire.  Just do a direct subtraction.
+      fraction = a.fraction - __bit_from_top(max_fsize(FSS) + 1, l)
+      fsize = __fsize_of_exact(a.fraction)
+      esize = a.esize
+      exponent = a.exponent
     end
+    Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
   end
 end
 
@@ -152,14 +139,15 @@ function outward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
   is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
   #note that infinity will throw NAN, which is just fine.
   is_neg_inf(x) && return nan(Unum{ESS,FSS})
-  unum_unsafe(x, x.flags | UNUM_UBIT_MASK)
+  Unum{ESS,FSS}(max_fsize(FSS), x.esize, x.flags | UNUM_UBIT_MASK, x.fraction, x.exponent)
 end
 function inward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
   is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
   iszero(x) && return nan(Unum{ESS,FSS})
   is_pos_inf(x) && return pos_mmr(Unum{ESS,FSS})
   is_neg_inf(x) && return neg_mmr(Unum{ESS,FSS})
-  unum_unsafe(__inward_exact(x), x.flags | UNUM_UBIT_MASK)
+  tx = __inward_exact(x)
+  Unum{ESS,FSS}(max_fsize(FSS), tx.esize, x.flags | UNUM_UBIT_MASK, tx.fraction, tx.exponent)
 end
 function next_ulp{ESS,FSS}(x::Unum{ESS,FSS})
   iszero(x) && return pos_ssn(Unum{ESS,FSS})

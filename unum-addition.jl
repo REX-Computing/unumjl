@@ -123,6 +123,7 @@ function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #assign "exact" and "bound" a's
   (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
   (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
+
   #recalculate these values if necessary.
   _baexp = is_ulp(a) ? decode_exp(bound_a) : _aexp
   _bbexp = is_ulp(b) ? decode_exp(bound_b) : _bexp
@@ -142,8 +143,8 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   #with a ubit, but it will calculate the sum as if it didn't have the ubit there
   l = length(a.fraction)
   #check for deviations due to subnormality.
-  a_dev = issubnormal(a) ? 1 : 0
-  b_dev = issubnormal(b) ? 1 : 0
+  a_dev = isexpzero(a) ? 1 : 0
+  b_dev = isexpzero(b) ? 1 : 0
 
   #calculate the bit offset.
   bit_offset = (_aexp + a_dev) - (_bexp + b_dev)

@@ -53,7 +53,7 @@ __fp_props = {
 ##################################################################
 ## FLOATS TO UNUM
 
-#for some reason we need a shim that provides issubnormal support to Float16
+#for some reason we need a shim that provides isexpzero support to Float16
 import Base.issubnormal
 issubnormal(x::Float16) = (x != 0) && ((reinterpret(Uint16, x) & 0x7c00) == 0)
 export issubnormal
@@ -88,7 +88,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   #generate the unbiased exponent and remember to take frac_move into account.
   unbiased_exp::Int16 = biased_exp - _ebias + ((biased_exp == 0) ? 1 : 0)
 
-  if issubnormal(x)
+  if isexpzero(x)
     #keeping in mind that the fraction bits are now left-aligned, calculate
     #how much further we have to push the fraction bits.
     frac_move::Int16 = clz(fraction) + 1
@@ -161,7 +161,7 @@ function __u_to_f_generator(T::Type)
     res |= (convert(I, x.flags) & convert(I, 2)) << (_bits - 2)
 
     #check to see if the unum is subnormal
-    if issubnormal(x)
+    if isexpzero(x)
       #measure the msb significant bit of x.fraction and we'll move the exponent to that.
       shift::Uint16 = clz(x.fraction) + 1
       #shift the fraction over

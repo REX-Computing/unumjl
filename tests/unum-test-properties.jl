@@ -10,7 +10,7 @@ println(bits(y, " "))
 
 #isnan
 #isfinite
-#issubnormal
+#isexpzero
 #isffraczero
 #iszero
 

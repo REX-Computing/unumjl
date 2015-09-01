@@ -21,11 +21,12 @@ function open_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #match the sign masks for the case of a or b being zero.
   aflags = a.flags
   bflags = b.flags
+
   iszero(a) && (aflags = (a.flags & ~UNUM_SIGN_MASK) | (b.flags & UNUM_SIGN_MASK))
   iszero(b) && (bflags = (a.flags & ~UNUM_SIGN_MASK) | (a.flags & UNUM_SIGN_MASK))
 
-  a_pointsout = (aflags & UNUM_SIGN_MASK != 0) || iszero(a)
-  b_pointsout = (bflags & UNUM_SIGN_MASK == 0) || iszero(b)
+  a_pointsout = (aflags & UNUM_SIGN_MASK != 0) && !iszero(a)
+  b_pointsout = (bflags & UNUM_SIGN_MASK == 0) && !iszero(b)
 
   ulp_a = (is_ulp(a) ? unum_unsafe(a, aflags) : (a_pointsout ? inward_ulp(a) : outward_ulp(a)))
   ulp_b = (is_ulp(b) ? unum_unsafe(b, bflags) : (b_pointsout ? inward_ulp(b) : outward_ulp(b)))
