@@ -16,26 +16,17 @@ import Base.bits
 bits(b::Ubound) = describe(b, "")
 export bits
 
+function __ubound_helper{ESS,FSS}(a::Unum{ESS,FSS}, lowbound::Bool)
+  is_ulp(a) && return unum_unsafe(a)
+  iszero(a) && return ssn(Unum{ESS,FSS}, lowbound ? z16 : UNUM_SIGN_MASK)
+  (is_negative(a) != lowbound) ? outward_ulp(a) : inward_ulp(a)
+end
+
 #creates a open ubound from two unums, a < b
 function open_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #match the sign masks for the case of a or b being zero.
-  aflags = a.flags
-  bflags = b.flags
-
-  iszero(a) && (aflags = (a.flags & ~UNUM_SIGN_MASK) | (b.flags & UNUM_SIGN_MASK))
-  iszero(b) && (bflags = (a.flags & ~UNUM_SIGN_MASK) | (a.flags & UNUM_SIGN_MASK))
-
-  a_pointsout = (aflags & UNUM_SIGN_MASK != 0) && !iszero(a)
-  b_pointsout = (bflags & UNUM_SIGN_MASK == 0) && !iszero(b)
-
-  ulp_a = (is_ulp(a) ? unum_unsafe(a, aflags) : (a_pointsout ? inward_ulp(a) : outward_ulp(a)))
-  ulp_b = (is_ulp(b) ? unum_unsafe(b, bflags) : (b_pointsout ? inward_ulp(b) : outward_ulp(b)))
-
-  #make sure that a zero b points negative if it points out.
-  if (iszero(b) && b_pointsout)
-    ulp_b = unum_unsafe(ulp_b, ulp_b.flags | UNUM_SIGN_MASK)
-  end
-
+  ulp_a = __ubound_helper(a, true)
+  ulp_b = __ubound_helper(b, false)
   Ubound(ulp_a, ulp_b)
 end
 

@@ -59,6 +59,9 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   _baexp = is_ulp(a) ? decode_exp(bound_a) : _aexp
   _bbexp = is_ulp(b) ? decode_exp(bound_b) : _bexp
 
+  #println("exact_a: $(bits(exact_a)) bound_a: $(bits(bound_a))")
+  #println("exact_b: $(bits(exact_b)) bound_b: $(bits(bound_b))")
+
   #do a check to see if a is almost infinite.
   if (is_mmr(a))
     #a ubound endinc in infinity can't result in an ulp unless the lower subtracted
@@ -74,18 +77,7 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   end
 
   far_result = __diff_exact(bound_a, exact_b, _baexp, _bexp)
-  println("$(bits(bound_a)) -> $(bits(exact_b)) => $(bits(far_result))")
-
-  println("$(bits(exact_a)), $(bits(bound_b))")
-
-  #it's possible that exact_a is less than bound_a
-  #if ((_aexp > _baexp) && (exact_a.fraction > bound_b.fraction))
-    near_result = __diff_exact(exact_a, bound_b, _aexp, _bbexp)
-  #else
-  #  near_result = -__diff_exact(bound_b, exact_a, _bbexp, _aexp)
-  #end
-
-  println("fr: $(bits(far_result)) nr: $(bits(near_result))")
+  near_result = __diff_exact(magsort(exact_a, bound_b)...)
 
   if is_negative(a)
     ubound_resolve(open_ubound(far_result, near_result))
