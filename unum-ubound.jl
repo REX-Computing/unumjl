@@ -27,8 +27,8 @@ function open_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   a_pointsout = (aflags & UNUM_SIGN_MASK == 0) || iszero(a)
   b_pointsout = (bflags & UNUM_SIGN_MASK != 0) || iszero(b)
 
-  ulp_a = (isulp(a) ? unum_unsafe(a, aflags) : (a_pointsout ? nextulp(a) : prevulp(a)))
-  ulp_b = (isulp(b) ? unum_unsafe(b, bflags) : (b_pointsout ? nextulp(b) : prevulp(b)))
+  ulp_a = (is_ulp(a) ? unum_unsafe(a, aflags) : (a_pointsout ? nextulp(a) : prevulp(a)))
+  ulp_b = (is_ulp(b) ? unum_unsafe(b, bflags) : (b_pointsout ? nextulp(b) : prevulp(b)))
 
   #make sure that a zero b points negative if it points out.
   if (iszero(b) && b_pointsout)

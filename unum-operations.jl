@@ -42,7 +42,7 @@ end
 
 function __more_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #set the location of the added bit:  remember that fsize is the actual length - 1
-  location = (isulp(a)) ? a.fsize + 1 : max_fsize(FSS)
+  location = (is_ulp(a)) ? a.fsize + 1 : max_fsize(FSS)
   #generate a new superint that represents what we're going to add in.
   delta = __bit_from_top(location, length(a.fraction))
   #add the delta in, making it a
@@ -57,13 +57,13 @@ function __more_exact{ESS,FSS}(a::Unum{ESS,FSS})
     exponent = a.exponent
   end
   #recalculate fsize, since this is exact, we can deal with ULPs as needed.
-  fsize = max_fsize(FSS) - ctz(fraction)
+  fsize::Uint16 = ctz(fraction) > max_fsize(FSS) ? 0 : max_fsize(FSS) - ctz(fraction)
 
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
 
 function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
-  #resolves a subnormal with an "unusual exponent", i.e. when esize is not
+  #resolves a unum with an "unusual exponent", i.e. when esize is not
   #max_esize.  This is an "unsafe" operation, in that it does not check
   #if the passed value is actually subnormal, or that esize isn't pushed to the brim.
   _aexp::Int16 = decode_exp(a)
@@ -88,7 +88,7 @@ function __less_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #TODO:  throw in a zero check here.  Maybe?
   #if we're a zero, just return that, otherwise return the result minus 1.
 
-  if (isulp(a))
+  if (is_ulp(a))
     #all we have to do is strip the ubit mask.
     unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK)
   else
@@ -130,7 +130,7 @@ end
 #repsecting more/less function.  Because these have input tests, they are exported
 #and don't have the doubleunderscore prefix.
 function next_exact{ESS,FSS}(x::Unum{ESS,FSS})
-  is_n_inf(x) && return neg_maxreal(Unum{ESS,FSS})
+  is_neg_inf(x) && return neg_maxreal(Unum{ESS,FSS})
   iszero(x) && return eps(Unum{ESS,FSS})
   is_pos_mmr(x) && return pos_inf(Unum{ESS,FSS})
   is_pos_inf(x) && return nan(Unum{ESS,FSS})

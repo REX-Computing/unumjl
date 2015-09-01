@@ -115,29 +115,22 @@ function __sum_ordered(a, b, _aexp, _bexp)
 end
 
 function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
-  #this code is assuredly wrong.
-  is_mmr(a) && return a
+  #a and b are ordered by magnitude and have the same sign.
 
-  #check to see which ones actually are ulps
-  a_ulp = is_ulp(a)
-  b_ulp = is_ulp(b)
+  #thus, if a is mmr, it can only result in mmr.
+  is_mmr(a) && return mmr(Unum{ESS,FSS})
 
-  exact_a = Unum{ESS,FSS}(a.fsize, a.esize, a.flags & (~UNUM_UBIT_MASK), a.fraction, a.exponent)
-  exact_b = Unum{ESS,FSS}(b.fsize, b.esize, b.flags & (~UNUM_UBIT_MASK), b.fraction, b.exponent)
-
-  #find the min and max additions to be performed.
-  max_a = (a_ulp) ? next_exact(a) : exact_a
-  max_b = (b_ulp) ? next_exact(b) : exact_b
-
-  #we may have to re-decode these because these might have changed.
-  _maexp = decode_exp(a)
-  _mbexp = decode_exp(b)
-
-  #find the high and low bounds.  Pass this to a subsidiary function (recursion!)
-  far_result = __sum_exact(max_a, max_b, _maexp, _mbexp)
+  #assign "exact" and "bound" a's
+  (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), more_exact(a)) : (a, a)
+  (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), more_exact(b)) : (b, b)
+  #recalculate these values if necessary.
+  _baexp = is_ulp(a) ? decode_exp(bound_a) : _aexp
+  _bbexp = is_ulp(b) ? decode_exp(bound_b) : _bexp
+  #find the high and low bounds.  Pass this to a subsidiary function
+  far_result  = __sum_exact(bound_a, bound_b, _baexp, _bbexp)
   near_result = __sum_exact(exact_a, exact_b, _aexp, _bexp)
 
-  if (a.flags & UNUM_SIGN_MASK != 0)
+  if (is_negative(a))
     ubound_resolve(open_ubound(far_result, near_result))
   else
     ubound_resolve(open_ubound(near_result, far_result))

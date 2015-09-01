@@ -30,19 +30,11 @@ is_neg_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_negative(x) && isinf(x)
 isfinite{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent != mask(1 << ESS)) || (x.fraction != fillbits(-1 << FSS, uint16(length(x.fraction))))
 export isinf, is_pos_inf, is_neg_inf, isfinite
 
-# a helper function for issubnormal, and isfraczero.  Optimized to be fast.
-function __breakaway_checkzeros(a::Array{Uint64})
-  for idx = length(a):-1:1
-    a[idx] != 0 && return false
-  end
-  true
-end
-
 import Base.issubnormal
-issubnormal{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && ((ESS > 6) ? !(__breakaway_checkzeros(x.fraction)) : x.fraction != 0)
+issubnormal{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && ((ESS > 6) ? !(allzeros(x.fraction)) : x.fraction != 0)
 
 #use ESS because this will be checked by the compiler, instead of at runtime.
-isfraczero{ESS,FSS}(x::Unum{ESS,FSS}) = (ESS > 6) ? __breakaway_checkzeros(x.fraction) : (x.fraction == 0)
+isfraczero{ESS,FSS}(x::Unum{ESS,FSS}) = (ESS > 6) ? allzeros(x.fraction) : (x.fraction == 0)
 
 iszero(x::Unum) = (x.exponent == z64) && is_exact(x) && isfraczero(x)
 #checks if the value is small subnormal

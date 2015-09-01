@@ -6,14 +6,19 @@
 ###############################################################################
 ## multistage carried difference engine for uint64s.
 
-function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt)
+function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt, lag_carry::Uint64 = 0)
   #run a difference engine across an array of 64-bit integers
   #"carry" will usually be one, but there are other possibilities (e.g. zero)
 
-  #be sure to pad v1 to the same length as v2, first.
-  v1_adj = (length(v1) == 1) ? v1 : [zeros(Uint64, length(v2) - length(v1)), v1]
   #first perform a direct difference on the integer arrays.
-  res = v1_adj - v2
+  res = v1 - v2
+
+  if (length(v1) == 1)
+    res -= lag_carry
+  else
+    res[1] -= lag_carry
+  end
+
   #iterate downward from the most significant cell.  Sneakily, this loop
   #does not execute if we have a singleton SuperInt
   for idx = 1:length(v1_adj) - 1
@@ -45,25 +50,14 @@ function __diff_ordered(a, b, _aexp, _bexp)
 end
 
 function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
-  a_ulp = is_ulp(a)
-  b_ulp = is_ulp(b)
-  a_neg = is_negative(a)
-  if (a_ulp)
-    max_a = nextunum(a)
-    exact_a = unum(a, a.flags & (~UNUM_UBIT_MASK))
-    _maexp = decode_exp(max_a)
-  else
-    max_a = exact_a = unum(a)
-    _maexp = _aexp
-  end
-  if (b_ulp)
-    max_b = nextunum(b)
-    exact_b = unum(b, b.flags & (~UNUM_UBIT_MASK))
-    _mbexp = decode_exp(max_b)
-  else
-    max_b = exact_b = unum(b)
-    _mbexp = _bexp
-  end
+  #a and b are ordered by magnitude and have opposing signs.
+
+  #assign "exact" and "bound" a's
+  (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __more_exact(a)) : (a, a)
+  (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __more_exact(b)) : (b, b)
+  #recalculate these values if necessary.
+  _baexp = is_ulp(a) ? decode_exp(bound_a) : _aexp
+  _bbexp = is_ulp(b) ? decode_exp(bound_b) : _bexp
 
   #do a check to see if a is almost infinite.
   if (is_mmr(a))
@@ -72,115 +66,106 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
     is_mmr(b) && return open_ubound(neg_mmr(Unum{ESS,FSS}), pos_mmr(Unum{ESS,FSS}))
 
     if (a_neg)
-      #exploit the fact that __exact_subtraction ignores ubits
-      return open_ubound(a, __diff_exact(a, max_b, _aexp, _mbexp))
+      #exploit the fact that __exact_subtraction ignores ubits.
+      return open_ubound(a, __diff_exact(a, bound_b, _aexp, _bbexp))
     else
-      return open_ubound(__diff_exact(a, max_b, _aexp, _mbexp), a)
+      return open_ubound(__diff_exact(a, bound_b, _aexp, _bbexp), a)
     end
   end
 
-  far_res = __diff_exact(max_a, exact_b, _maexp, _bexp)
+  far_result = __diff_exact(bound_a, exact_b, _baexp, _bexp)
 
-  #it's possible that exact_a is less than max_b
-  if ((exact_a.exponent > max_b.exponent) || ((exact_a.exponent == max_b.exponent) && (exact_a.fraction > max_b.fraction)))
-    near_res = __diff_exact(exact_a, max_b, _aexp, _mbexp)
+  #it's possible that exact_a is less than bound_a
+  if ((_aexp > _baexp) && (exact_a.fraction > bound_b.fraction))
+    near_res = __diff_exact(exact_a, bound_b, _aexp, _bbexp)
   else
-    near_res = __diff_exact(max_b, exact_a, _mbexp, _aexp)
-    near_res.flags &= SIGN_MASK
-    near_res.flags |= SIGN_MASK $ far_res.flags
-    #now we have to do something here.
+    near_res = -__diff_exact(bound_b, exact_a, _bbexp, _aexp)
   end
 
-  if a_neg
-    ubound_resolve(open_ubound(far_res, near_res))
+  if isnegative(a)
+    ubound_resolve(open_ubound(far_result, near_result))
   else
-    ubound_resolve(open_ubound(near_res, far_res))
+    ubound_resolve(open_ubound(near_result, far_result))
   end
 end
 
 #a subtraction operation where a and b are ordered such that mag(a) > mag(b)
 function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
-  l = length(a.fraction)
-
   # a series of easy cases.
-  if (a == -b)
-    return zero(Unum{ESS,FSS})
-  end
-  if (iszero(b))
-    return unum(a)
-  end
-  if (iszero(a))
-    return -b
-  end
+  (a == -b) && return zero(Unum{ESS,FSS})
+  (iszero(b)) && return unum_unsafe(a)
+  (iszero(a)) && return -b
+
+  #reassign a to a resolved subnormal value.
+  issubnormal(a) && (a.esize != max_esize(ESS)) && (a = __resolve_subnormal(a))
 
   #check for deviations due to subnormality.
-  a_dev = issubnormal(a) ? o16 : z16
-  b_dev = issubnormal(b) ? o16 : z16
+  a_dev::Int16, carry::Uint64 = issubnormal(a) ? (o16, z64) : (z16, o64)
+  b_dev::Int16 = issubnormal(b) ? o16 : z16)
 
+  #calculate the bit offset
   bit_offset = uint16((_aexp + a_dev) - (_bexp + b_dev))
 
-  #subtraction is difficult.  There is a small possibility we'll have a subnormal
-  #number with leading zeros, and a subtrahend where the number of digits we'll
-  #need to keep exceeds the cell size.  There may be a more elegant solution to
-  #be found later.
-  scratchpad_cells = max(((l << 6) - ctz(b.fraction) + bit_offset) >> 6 + 1, l)
-
-  #populate the scratchpad with the rightshifted b values.  Make sure to pad b.
-  #fraction to the "full necessary length", before shifting over.
-  scratchpad = [zeros(Uint64, scratchpad_cells - l), b.fraction]
-  scratchpad = rsh(scratchpad, bit_offset)
-  #figure out the carry value.  It should be zero if a subnormal or if a and b's
-  #phantom bits will obliterate each other.
-  carry::Uint64 = (a_dev != 0) || ((_bexp == _aexp) && (b_dev == 0)) ? 0 : 1
-
-  #push the phantom bit from b.  Use the __bit_from_top method.
-  (bit_offset != 0) && (b_dev != 1) && (scratchpad |= __bit_from_top(bit_offset, scratchpad_cells))
-
-  #perform the carried difference on the two fractions.
-  (carry, scratchpad) = __carried_diff(carry, a.fraction, scratchpad)
-
-  flags = a.flags & UNUM_SIGN_MASK
-  fsize::Uint16 = 0
-  exponent::Uint64 = 0
-
-  #two forks:  The first fork is if the carry bit persists.
-  if (carry != 0)
-    if (scratchpad_cells > 1)
-      #analyze to see if there's content in the last bits.
-      (scratchpad[1:scratchpad_cells - l] != zeros(Uint64, scratchpad_cells - l)) && (flags |= UNUM_UBIT_MASK)
-      #first chop off only the last
-      fraction = ((l == 1) ? last(scratchpad) : scratchpad[scratchpad_cells - l + 1:scratchpad_cells])
-    else
-      fraction = scratchpad
-    end
-    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS) : max(0, (l << 6 - ctz(fraction) - 1))
-    esize = a.esize
-    exponent = a.exponent
-  else
-    ##TODO:  Rethink this segment.  Is it not the case that the worst the shift can be is ONE?
-
-
-
-    #we want to see if we can push it over as far as possible without hitting
-    #the fraction size limit
-    max_shift = _aexp - min_exponent(ESS)
-    shift::Int16 = min(max_shift, clz(scratchpad) + 1)
-    scratchpad = lsh(scratchpad, shift)
-
-    #chop off the last parts of the scratchpad.
-    if (scratchpad_cells > 1)
-      (scratchpad[1:scratchpad_cells - l] != zeros(Uint64, scratchpad_cells - l)) && (flags |= UNUM_UBIT_MASK)
-      fraction = (l == 1) ? last(scratchpad) : scratchpad[scratchpad_cells - l + 1:scratchpad_cells]
-    else
-      fraction = scratchpad
-    end
-
-    fsize = (flags & UNUM_UBIT_MASK != 0) ? max_fsize(FSS): max(0, (l << 6 - ctz(fraction) - 1))
-
-    (esize, exponent) = encode_exp(_aexp - shift)
-    (max_shift == shift) && (exponent = z16)
+  if (bit_offset > max_fsize(FSS) + 1)
+    #return the previous unum.
   end
 
-  __frac_cells(FSS) == 1 && (fraction = last(fraction))
+  #set up carry, lag bit, and flags.  Carry defaults to 1 (leading virtual bit)
+  #lag_bit defaults to zero, since this is an exact number.
+  carry::Uint64 = 1
+  lag_bit::Uint64 = 0
+  flags::Uint16 = a.flags & UNUM_SIGN_MASK
+
+  if (bit_offset == 0)
+    #this is the easy case where we don't have to do much...
+    issubnormal(b) || carry = 0
+
+    (carry, fraction) = __carried_diff(carry, a.fraction, b.fraction)
+  else
+    #set up a scratchpad.  This will contain the 'correct' value of b in the frac
+    #framework of a.  First shift all of the bits from b.
+    scratchpad = b.fraction >> bit_offset
+    #then throw in virtual bit that corresponds to the leading digit.
+    issubnormal(b) || (scratchpad &= bit_from_top(bit_offset - 1))
+
+    #first, let's isolate the "chop" region of the subtrahend b - if this is 1 then
+    #we have to carry from the main, and also set the ubit to be on.
+    allzeros(b.fraction & fillbits(bit_offset)) || (flags |= UNUM_UBIT_MASK; lag_bit = 1)
+    #next, we have to check the position under the lag bit, which only throws the lag bit
+    #and not (necessarily) the ubit.
+    (bit_of(b.fraction, bit_offset) == 0) || (lag_bit = 1)
+    #if we found a lag bit, be sure to subtract an extra one from the scratchpad.
+    (carry, fraction) = __carried_diff(carry, a.fraction, scratchpad, lag_bit)
+  end
+
+  #if we started with a subnormal a (which should be maximally subnormal), we are
+  #done. note that we don't have to throw a ubit flag on because a subtraction
+  #yielding smallsubnormal should have been impossible.
+  (issubnormal(a)) && return Unum{ESS,FSS}(__fsize_of_exact(fraction), max_esize(ESS), flags, fraction, z64)
+
+  #process the remaining factors: carry, fraction, lag_bit
+  if (carry == 0)
+    #set shift to be as big as it can be.
+    shift = clz(fraction) + 1
+    #modify _aexp here.
+    if shift > (_aexp - min_exponent(ESS) + 1)
+      #just push it as far as we can push it.
+      fraction << (aexp - min_exponent(ESS))
+      fsize = __fsize_of_exact(fraction)
+      #return a subnormal fraction that appears the way it should.
+      return Unum{ESS,FSS}(fsize, max_esize(ESS), flags, fraction, z64)
+    end
+
+    #regenerate the new fraction and fsize
+    fraction << shift
+    fsize = __fsize_of_exact(fraction)
+    #recalculate the exponent.
+    _aexp -= shift
+  else
+    #the lag bit fell over, so declare inexact, if necessary, otherwise pass
+    #everything
+    (lag_bit == 0) || (flags |= UNUM_UBIT_MASK)
+  end
+  (esize, exponent) = encode_exp(_aexp)
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end

@@ -19,6 +19,20 @@ GI16 = Union(Uint16, Int16)
 #generates a superint zero for a given superint length
 superzero(l::Integer) = ((l == 1) ? z64 : zeros(Uint64, l))
 
+function __copy_superint(a::SuperInt)
+  a.length == 1 && return a
+  res = zeros(Uint64, a.length)
+  res[:] = a
+end
+
+# a helper function for issubnormal, and isfraczero.  Optimized to be fast.
+function allzeros(a::Array{Uint64})
+  for idx = length(a):-1:1
+    a[idx] != 0 && return false
+  end
+  true
+end
+
 #generates a mask of a certain number of bits on the right, or left if negative
 function mask(bits::Integer)
   if bits >= 0
