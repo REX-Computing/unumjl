@@ -1,0 +1,122 @@
+#frag-mult-test.jl
+#test fragmented multiplication
+
+function frag_mult(a::Array{Uint64,1}, b::Array{Uint64,1})
+  #note that frag_mult fails for absurdly high length integer arrays.
+  length(a) != length(b) && throw(ArgumentError("mismatched arrays"))
+
+  #take these two Uint64 arrays and reinterpret them as Uint32 arrays
+  a_32 = reinterpret(Uint32, a)
+  b_32 = reinterpret(Uint32, b)
+
+  scratchpad = zeros(Uint32, length(a) * 4)
+  carries    = zeros(Uint32, length(a) * 4)
+
+  for idx = 1:length(a_32)
+    for jdx = 1:length(b_32)
+      #multiply the two values.
+      multres::Uint64 = a_32[idx] * b_32[jdx]
+      #bin these into a high word and a lwo word
+      multresbins = reinterpret(Uint32, [multres])
+      #add the low word to the scratchpad
+      scratchpad[idx + jdx - 1] += multresbins[1]
+      #save the carry, if need be.
+      (scratchpad[idx + jdx - 1] < multresbins[1]) && (carries[idx + jdx] += 1)
+      #add the high word to the scratchpad
+      scratchpad[idx + jdx] += multresbins[2]
+      #save the carry, if need be.
+      (scratchpad[idx + jdx] < multresbins[2]) && (carries[idx + jdx + 1] += 1)
+    end
+  end
+  #go through and resolve the carries.
+  for idx = 1:length(carries)
+    scratchpad[idx] += carries[idx]
+    (scratchpad[idx] < carries[idx]) && (carries[idx + 1] += 1)
+  end
+  reinterpret(Uint64, scratchpad)
+end
+
+function calculate(a::Array{Uint64,1})
+  sum = big(0)
+  for idx = 1:length(a)
+    sum += big(a[idx]) << (64 * (idx - 1))
+  end
+  sum
+end
+
+function test_mults(cells::Integer)
+  x = rand(Uint64, cells)
+  y = rand(Uint64, cells)
+
+  x_big = calculate(x)
+  y_big = calculate(y)
+
+  #calculate using fragment multiplication
+  res_frag = calculate(frag_mult(x,y))
+  res_big = x_big * y_big
+
+  println(res_frag)
+  println(res_big)
+end
+
+#test that fragment multiplication in general works.
+test_mults(1)
+test_mults(2)
+test_mults(3)
+test_mults(4)
+
+#next up:  truncated fragment multiplication.
+function trunc_frag_mult(a::Array{Uint64,1}, b::Array{Uint64,1})
+  #note that frag_mult fails for absurdly high length integer arrays.
+  length(a) != length(b) && throw(ArgumentError("mismatched arrays"))
+
+  #take these two Uint64 arrays and reinterpret them as Uint32 arrays
+  a_32 = reinterpret(Uint32, a)
+  b_32 = reinterpret(Uint32, b)
+  l = length(a_32)
+
+  scratchpad = zeros(Uint32, l + 1)
+  carries    = zeros(Uint32, l + 1)
+
+  #first indexsum is length(a_32)
+  indexsum = l
+  for (aidx = 1:(indexsum - 1))
+    temp_res::Uint64 = a_32[aidx] * b_32[indexsum - aidx]
+    temp_res_high::Uint32 = (temp_res >> 32)
+    scratchpad[1] += temp_res_high
+    (scratchpad[1] < temp_res_high) && (carries[2] += 1)
+  end
+  #now proceed with the rest of the additions.
+  for aidx = 1:l
+    for bidx = (l + 1 - aidx):l
+      temp_res = a_32[aidx] * b_32[bidx]
+      temp_res_bins = reinterpret(Uint32, [temp_res])
+      temp_res_low::Uint32 = temp_res
+      temp_res_high = (temp_res >> 32)
+
+      scratchindex = aidx + bidx - l
+
+      scratchpad[scratchindex] += temp_res_low
+      (temp_res_low > scratchpad[scratchindex]) && (carries[scratchindex + 1] += 1)
+
+      scratchpad[scratchindex + 1] += temp_res_high
+      (temp_res_high > scratchpad[scratchindex + 1]) && (carries[scratchindex + 2] += 1)
+    end
+  end
+
+  #go through and resolve the carries.
+  for idx = 2:length(carries)
+    scratchpad[idx] += carries[idx]
+    (scratchpad[idx] < carries[idx]) && (carries[idx + 1] += 1)
+  end
+  reinterpret(Uint64, scratchpad[2:length(scratchpad)])
+end
+
+x = rand(Uint64, 2)
+y = rand(Uint64, 2)
+
+z = frag_mult(x, y)[3:4]
+w = trunc_frag_mult(x, y)
+
+println(z)
+println(w)

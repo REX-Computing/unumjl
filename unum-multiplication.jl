@@ -1,7 +1,7 @@
 #unum-multiplication.jl
 #does multiplication for unums.
 
-function *(a::Unum, b::Unum)
+function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #count how many uints go into the unum.
   #we can break this up into two cases, and maybe merge them later.
   #remember, a and b must have the same environment.
