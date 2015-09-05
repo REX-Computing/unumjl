@@ -53,7 +53,7 @@ end
 function ssn{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
   esize::Uint16 = 1 << ESS - 1
   fsize::Uint16 = 1 << FSS - 1
-  Unum{ESS,FSS}(fsize, esize, signmask | UNUM_UBIT_MASK, zeros(Uint64,__frac_cells(FSS)), z64)
+  Unum{ESS,FSS}(fsize, esize, signmask | UNUM_UBIT_MASK, superzero(__frac_cells(FSS)), z64)
 end
 pos_mmr{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = mmr(T)
 neg_mmr{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = mmr(T, UNUM_SIGN_MASK)
