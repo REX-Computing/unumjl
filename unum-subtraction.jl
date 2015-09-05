@@ -74,18 +74,12 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   end
 
   far_result = __diff_exact(bound_a, exact_b, _baexp, _bexp)
-  println("$(bits(bound_a)) -> $(bits(exact_b)) => $(bits(far_result))")
-
-  println("$(bits(exact_a)), $(bits(bound_b))")
-
   #it's possible that exact_a is less than bound_a
   #if ((_aexp > _baexp) && (exact_a.fraction > bound_b.fraction))
     near_result = __diff_exact(exact_a, bound_b, _aexp, _bbexp)
   #else
   #  near_result = -__diff_exact(bound_b, exact_a, _bbexp, _aexp)
   #end
-
-  println("fr: $(bits(far_result)) nr: $(bits(near_result))")
 
   if is_negative(a)
     ubound_resolve(open_ubound(far_result, near_result))
