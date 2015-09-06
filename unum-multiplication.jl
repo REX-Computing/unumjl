@@ -5,10 +5,30 @@ function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #count how many uints go into the unum.
   #we can break this up into two cases, and maybe merge them later.
   #remember, a and b must have the same environment.
-  if length(a.fraction) == 1
-    __simple_mult(a, b)
+
+  #some obviously simple checks.
+  #check for nans
+  (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
+  #check for infinities
+  (is_inf(a) || is_inf(b)) && return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
+
+  #mmr has a special multiplication handler.
+  is_mmr(a) && return mmr_mult(b, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
+  is_mmr(b) && return mmr_mult(a, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
+
+  #zero checking
+  (iszero(a) || iszero(b)) && return zero(Unum{ESS,FSS})
+  #one checking
+  (isone(a)) && return b
+  (isone(b)) && return a
+
+  #just a comment.
+
+  #check to see if we're an ulp.
+  if (is_ulp(a) || is_ulp(b))
+    __ulp_mult(a, b)
   else
-    __poly_mult(a, b)
+    __exact_mult(a, b)
   end
 end
 
@@ -25,34 +45,65 @@ end
 
 __M32 = 2^32 - 1
 
-# chunk_mult handles simply the chunked multiply of two int64s
-function __chunk_mult(a::Uint64, b::Uint64)
-  #chunk into high and low segments
-  al = a & __M32
-  ah = (a >> 32) & __M32
-  bl = b & __M32
-  bh = (b >> 32) & __M32
-  #calculate all four components of the segment.
-  seg3_64 = al * bl
-  seg2a_64 = ah * bl
-  seg2b_64 = al * bh
-  seg1_64 = ah * bh
-  #create a scratchpad
-  scratchpad = zeros(Uint32, 4)
-  scratchpad[1] = uint32(seg3_64)
-  #the middle gets complicated
-  seg2f_64 = seg2b_64 + seg2a_64 + (seg3_64 >> 32)  #add the 'carry' from seg3 to the first part of seg2
-  #this should never exceed int64_max, but it can come close.  so we'll need another carry bit
-  seg1_64 += (seg2f_64 < seg2b_64) ? 0x100000000 : 0
-  scratchpad[2] = uint32(seg2f_64)
-  seg3f_64 = seg1_64 + (seg2f_64 >> 32)
-  scratchpad[3] = uint32(seg3f_64)
-  scratchpad[4] = uint32(seg3f_64 >> 32)
-  #reinterpret the scratchpad as an array of uint64
-  reinterpret(Uint64, scratchpad)
+# chunk_mult handles simply the chunked multiply of two superints
+function __chunk_mult(a::SuperInt, b::SuperInt)
+  #note that frag_mult fails for absurdly high length integer arrays.
+  l = length(a) << 1
+
+  #take these two Uint64 arrays and reinterpret them as Uint32 arrays
+  a_32 = reinterpret(Uint32, (l == 2) ? [a] : a)
+  b_32 = reinterpret(Uint32, (l == 2) ? [b] : b)
+
+  #the scratchpad must have an initial segment to determine carries.
+  scratchpad = zeros(Uint32, l + 1)
+  #create an array for carries.
+  carries    = zeros(Uint32, l)
+
+  #populate the column just before the left carry. first indexsum is length(a_32)
+  for (aidx = 1:(l - 1))
+    #skip this if either is a zero
+    (a_32[aidx] == 0) || (b_32[l-aidx] == 0) && continue
+
+    #do a mulitply of the two numbers into a 64-bit integer.
+    temp_res::Uint64 = a_32[aidx] * b_32[l - aidx]
+    #in this round we just care about the high 32-bit register
+    temp_res_high::Uint32 = (temp_res >> 32)
+
+    scratchpad[1] += temp_res_high
+    (scratchpad[1] < temp_res_high) && (carries[1] += 1)
+  end
+  #now proceed with the rest of the additions.
+  for aidx = 1:l
+    a_32[aidx] == 0 && continue
+    for bidx = (l + 1 - aidx):l
+      b_32[bidx] == 0 && continue
+
+      temp_res = a_32[aidx] * b_32[bidx]
+      temp_res_low::Uint32 = temp_res
+      temp_res_high = (temp_res >> 32)
+
+      scratchindex = aidx + bidx - l
+
+      scratchpad[scratchindex] += temp_res_low
+      (temp_res_low > scratchpad[scratchindex]) && (carries[scratchindex] += 1)
+
+      scratchpad[scratchindex + 1] += temp_res_high
+      (temp_res_high > scratchpad[scratchindex + 1]) && (carries[scratchindex + 1] += 1)
+    end
+  end
+
+  #go through and resolve the carries.
+  for idx = 1:length(carries) - 1
+    scratchpad[idx + 1] += carries[idx]
+    (scratchpad[idx + 1] < carries[idx]) && (carries[idx + 1] += 1)
+  end
+
+  (l == 2) && return (uint64(scratchpad[2]) << 32) | scratchpad[1]
+  reinterpret(Uint64, scratchpad[2:length(scratchpad)])
 end
 
-function __simple_mult{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
+#performs an exact mult on two unums a and b.
+function __exact_mult{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #figure out the sign.  Xor does the trick.
   flags = (a.flags & SIGN_MASK) $ (b.flags & SIGN_MASK)
   #run a chunk_mult on the a and b fractions

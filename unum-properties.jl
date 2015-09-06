@@ -41,6 +41,7 @@ isexpzero{ESS,FSS}(x::Unum{ESS,FSS}) = x.exponent == z64
 isfraczero{ESS,FSS}(x::Unum{ESS,FSS}) = (ESS > 6) ? allzeros(x.fraction) : (x.fraction == 0)
 
 iszero(x::Unum) = (x.exponent == z64) && is_exact(x) && isfraczero(x)
+isone(x::Unum) = (decode_exp(x) == 0) && isfraczero(x)
 #checks if the value is small subnormal
 is_ssn(x::Unum) = (x.exponent == z64) && is_ulp(x) && isfraczero(x)
 is_pos_ssn(x::Unum) = is_positive(x) && is_ssn(x)

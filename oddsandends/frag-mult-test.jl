@@ -62,8 +62,8 @@ end
 #test that fragment multiplication in general works.
 test_mults(1)
 test_mults(2)
-test_mults(3)
 test_mults(4)
+test_mults(8)
 
 #next up:  truncated fragment multiplication.
 function trunc_frag_mult(a::Array{Uint64,1}, b::Array{Uint64,1})
@@ -76,7 +76,7 @@ function trunc_frag_mult(a::Array{Uint64,1}, b::Array{Uint64,1})
   l = length(a_32)
 
   scratchpad = zeros(Uint32, l + 1)
-  carries    = zeros(Uint32, l + 1)
+  carries    = zeros(Uint32, l)
 
   #first indexsum is length(a_32)
   indexsum = l
@@ -84,7 +84,7 @@ function trunc_frag_mult(a::Array{Uint64,1}, b::Array{Uint64,1})
     temp_res::Uint64 = a_32[aidx] * b_32[indexsum - aidx]
     temp_res_high::Uint32 = (temp_res >> 32)
     scratchpad[1] += temp_res_high
-    (scratchpad[1] < temp_res_high) && (carries[2] += 1)
+    (scratchpad[1] < temp_res_high) && (carries[1] += 1)
   end
   #now proceed with the rest of the additions.
   for aidx = 1:l
@@ -97,26 +97,34 @@ function trunc_frag_mult(a::Array{Uint64,1}, b::Array{Uint64,1})
       scratchindex = aidx + bidx - l
 
       scratchpad[scratchindex] += temp_res_low
-      (temp_res_low > scratchpad[scratchindex]) && (carries[scratchindex + 1] += 1)
+      (temp_res_low > scratchpad[scratchindex]) && (carries[scratchindex] += 1)
 
       scratchpad[scratchindex + 1] += temp_res_high
-      (temp_res_high > scratchpad[scratchindex + 1]) && (carries[scratchindex + 2] += 1)
+      (temp_res_high > scratchpad[scratchindex + 1]) && (carries[scratchindex + 1] += 1)
     end
   end
 
   #go through and resolve the carries.
-  for idx = 2:length(carries)
-    scratchpad[idx] += carries[idx]
-    (scratchpad[idx] < carries[idx]) && (carries[idx + 1] += 1)
+  for idx = 1:length(carries) - 1
+    scratchpad[idx + 1] += carries[idx]
+    (scratchpad[idx + 1] < carries[idx]) && (carries[idx + 1] += 1)
   end
   reinterpret(Uint64, scratchpad[2:length(scratchpad)])
 end
 
-x = rand(Uint64, 2)
-y = rand(Uint64, 2)
 
-z = frag_mult(x, y)[3:4]
-w = trunc_frag_mult(x, y)
+function test_truncs(cells::Integer)
+  x = rand(Uint64, cells)
+  y = rand(Uint64, cells)
 
-println(z)
-println(w)
+  z = frag_mult(x, y)[cells + 1:2 *cells]
+  w = trunc_frag_mult(x, y)
+
+  println(z)
+  println(w)
+end
+
+test_truncs(1)
+test_truncs(2)
+test_truncs(4)
+test_truncs(8)
