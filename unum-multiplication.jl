@@ -26,12 +26,11 @@ function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 
   #check to see if we're an ulp.
   if (is_ulp(a) || is_ulp(b))
-    __ulp_mult(a, b)
+    __mult_ulp(a, b)
   else
-    __exact_mult(a, b)
+    __mult_exact(a, b)
   end
 end
-
 
 # how to do multiplication?  Just chunk your 64-bit block into two 32-bit
 # segments and do multiplication on those.
@@ -42,8 +41,6 @@ end
 # This should only require 2 Uint64s.  But, also remember that we have a
 # 'phantom one' in front of potentially both segments, so we'll throw in a third
 # Uint64 in front to handle that.
-
-__M32 = 2^32 - 1
 
 # chunk_mult handles simply the chunked multiply of two superints
 function __chunk_mult(a::SuperInt, b::SuperInt)
@@ -103,26 +100,25 @@ function __chunk_mult(a::SuperInt, b::SuperInt)
 end
 
 #performs an exact mult on two unums a and b.
-function __exact_mult{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
+function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #figure out the sign.  Xor does the trick.
-  flags = (a.flags & SIGN_MASK) $ (b.flags & SIGN_MASK)
+  flags = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
   #run a chunk_mult on the a and b fractions
-  chunkproduct = __chunk_mult(a.fraction, b.fraction)
+  fraction = __chunk_mult(a.fraction, b.fraction)
   #next, steal the carried add function from addition.  We're going to need
   #to re-add the fractions back due to algebra with the phantom bit.
   #
   # i.e.: (1 + a)(1 + b) = 1 + a + b + ab
   # => initial carry + a.fraction + b.fraction + chunkproduct
   #
-  fraction = chunkproduct[2]
-  (carry, fraction) = __carried_add(1, fraction, a.fraction)
+  (carry, fraction) = __carried_add(o64, fraction, a.fraction)
   (carry, fraction) = __carried_add(carry, fraction, b.fraction)
   #our fraction is now just chunkproduct[2]
   #carry may be as high as three!  So we must shift as necessary.
   (fraction, shift, check) = __shift_after_add(carry, fraction)
   #for now, just throw fsize as the blah blah blah.
-  fsize = 64 - lsb(fraction)
-  fsize = uint16(min(fsize, 2^FSS) - 1)
+  fsize::Uint16 = 64 - ctz(fraction)
+  fsize = min(fsize, 1 << FSS) - 1
   #the exponent is just the sum of the two exponents.
   (esize, exponent) = encode_exp(decode_exp(a) + decode_exp(b) + shift)
   #deal with ubit later.

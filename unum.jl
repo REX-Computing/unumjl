@@ -30,7 +30,7 @@ include("unum-operations.jl")
 #some math stuff
 include("unum-addition.jl")
 include("unum-subtraction.jl")
-#include("unum-multiplication.jl")
+include("unum-multiplication.jl")
 #include("unum-division.jl")
 
 #h-layer stuff (human)
