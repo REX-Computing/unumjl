@@ -46,7 +46,6 @@ function -{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
   lb = a.lowbound - b
   hb = a.highbound - b
 
-
   (typeof(lb) <: Ubound) && (lb = lb.lowbound)
   (typeof(hb) <: Ubound) && (hb = hb.highbound)
   ubound_resolve(Ubound(lb, hb))
@@ -55,4 +54,13 @@ end
 function -{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
   #I'm too lazy to do this explicitly.
   a + (-b)
+end
+
+################################################################################
+## multiplication
+function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
+  b * a
+end
+
+function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
 end
