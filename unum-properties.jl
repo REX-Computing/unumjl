@@ -36,6 +36,7 @@ import Base.issubnormal
 #issubnormal function and does not admit zero as a true result.
 issubnormal{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && ((ESS > 6) ? !(allzeros(x.fraction)) : x.fraction != 0)
 isexpzero{ESS,FSS}(x::Unum{ESS,FSS}) = x.exponent == z64
+is_strange_subnormal{ESS,FSS}(x::Unum{ESS,FSS}) = isexpzero(x) && (x.esize < max_esize(ESS))
 
 #use ESS because this will be checked by the compiler, instead of at runtime.
 isfraczero{ESS,FSS}(x::Unum{ESS,FSS}) = (ESS > 6) ? allzeros(x.fraction) : (x.fraction == 0)

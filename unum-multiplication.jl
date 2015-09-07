@@ -209,8 +209,8 @@ function __ssn_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
 
   #then create the appropriate ubounds, directed by the desired sign.
   if (sign != 0)
-    Ubound(val , neg_ssn(Unum{ESS,FSS}))
+    ubound_resolve(Ubound(val , neg_ssn(Unum{ESS,FSS})))
   else
-    Ubound(pos_ssn(Unum{ESS,FSS}), val)
+    ubound_resolve(Ubound(pos_ssn(Unum{ESS,FSS}), val))
   end
 end

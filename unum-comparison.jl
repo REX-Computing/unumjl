@@ -40,3 +40,57 @@ function isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   end
 end
 export isequal
+
+function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  #adjust them in case they are subnormal
+  is_strange_subnormal(a) && (a = __resolve_subnormal(a))
+  is_strange_subnormal(b) && (b = __resolve_subnormal(b))
+
+  #first, fastest criterion:  Are they not the same sign?
+  if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0
+    isnegative(a) && return a
+    return b
+  end
+  #next criterion, are the exponents different
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+  if (_aexp != _bexp)
+    ((_aexp > _bexp) != isnegative(a)) && return a
+    return b
+  end
+  #next criteria, check the fractions
+  if (a.fraction != b.fraction)
+    ((a.fraction > b.fraction) != isnegative(a)) && return a
+    return b
+  end
+  #finally, check the ubit
+  (is_ulp(a) != isnegative(a)) && return a
+  return b
+end
+
+function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  #adjust them in case they are subnormal
+  is_strange_subnormal(a) && (a = __resolve_subnormal(a))
+  is_strange_subnormal(b) && (b = __resolve_subnormal(b))
+
+  #first, fastest criterion:  Are they not the same sign?
+  if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0
+    isnegative(a) && return b
+    return a
+  end
+  #next criterion, are the exponents different
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+  if (_aexp != _bexp)
+    ((_aexp > _bexp) != isnegative(a)) && return b
+    return a
+  end
+  #next criteria, check the fractions
+  if (a.fraction != b.fraction)
+    ((a.fraction > b.fraction) != isnegative(a)) && return b
+    return a
+  end
+  #finally, check the ubit
+  (is_ulp(a) != isnegative(a)) && return b
+  return a
+end
