@@ -10,7 +10,7 @@ function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #check for nans
   (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
   #check for infinities
-  (is_inf(a) || is_inf(b)) && return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
+  (isinf(a) || isinf(b)) && return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
 
   #mmr has a special multiplication handler.
   is_mmr(a) && return mmr_mult(b, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
@@ -46,6 +46,7 @@ end
 function __chunk_mult(a::SuperInt, b::SuperInt)
   #note that frag_mult fails for absurdly high length integer arrays.
   l = length(a) << 1
+  ulp_flag::Uint16 = 0
 
   #take these two Uint64 arrays and reinterpret them as Uint32 arrays
   a_32 = reinterpret(Uint32, (l == 2) ? [a] : a)
@@ -55,7 +56,6 @@ function __chunk_mult(a::SuperInt, b::SuperInt)
   scratchpad = zeros(Uint32, l + 1)
   #create an array for carries.
   carries    = zeros(Uint32, l)
-
   #populate the column just before the left carry. first indexsum is length(a_32)
   for (aidx = 1:(l - 1))
     #skip this if either is a zero
@@ -69,6 +69,7 @@ function __chunk_mult(a::SuperInt, b::SuperInt)
     scratchpad[1] += temp_res_high
     (scratchpad[1] < temp_res_high) && (carries[1] += 1)
   end
+
   #now proceed with the rest of the additions.
   for aidx = 1:l
     a_32[aidx] == 0 && continue
@@ -90,21 +91,31 @@ function __chunk_mult(a::SuperInt, b::SuperInt)
   end
 
   #go through and resolve the carries.
-  for idx = 1:length(carries) - 1
+  for idx = 1:length(carries)
     scratchpad[idx + 1] += carries[idx]
+    #don't worry, this is mathematically forbidden from tripping on the last carry.
     (scratchpad[idx + 1] < carries[idx]) && (carries[idx + 1] += 1)
   end
 
-  (l == 2) && return (uint64(scratchpad[2]) << 32) | scratchpad[1]
-  reinterpret(Uint64, scratchpad[2:length(scratchpad)])
+  (l == 2) && return (uint64(scratchpad[3]) << 32) | scratchpad[2]
+  (reinterpret(Uint64, scratchpad[(l >> 1):length(scratchpad)]), ulp_flag)
 end
 
 #performs an exact mult on two unums a and b.
 function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #figure out the sign.  Xor does the trick.
   flags = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
+  #calculate and cache _aexp and _bexp
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+  #preliminary overflow and underflow tests save us from calculations in the
+  #case these are definite outcomes.
+  (_aexp + _bexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
+  (_aexp + _bexp < min_exponent(ESS) - 3) && return ssn(Unum{ESS,FSS}, flags)
+
   #run a chunk_mult on the a and b fractions
-  fraction = __chunk_mult(a.fraction, b.fraction)
+  (fraction, res_ulp) = __chunk_mult(a.fraction, b.fraction)
+  flags |= res_ulp
   #next, steal the carried add function from addition.  We're going to need
   #to re-add the fractions back due to algebra with the phantom bit.
   #
@@ -113,14 +124,17 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #
   (carry, fraction) = __carried_add(o64, fraction, a.fraction)
   (carry, fraction) = __carried_add(carry, fraction, b.fraction)
-  #our fraction is now just chunkproduct[2]
+
   #carry may be as high as three!  So we must shift as necessary.
   (fraction, shift, check) = __shift_after_add(carry, fraction)
-  #for now, just throw fsize as the blah blah blah.
-  fsize::Uint16 = 64 - ctz(fraction)
-  fsize = min(fsize, 1 << FSS) - 1
+  #for now, just throw fsize as exact fsize.
+  fsize = __fsize_of_exact(fraction)
   #the exponent is just the sum of the two exponents.
-  (esize, exponent) = encode_exp(decode_exp(a) + decode_exp(b) + shift)
+  unbiased_exp::Int16 = _aexp + _bexp + shift
+  #have to repeat the overflow and underflow tests in light of carry shifts.
+  (unbiased_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
+  (unbiased_exp < min_exponent(ESS)) && return ssn(Unum{ESS,FSS}, flags)
+  (esize, exponent) = encode_exp(unbiased_exp)
   #deal with ubit later.
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
