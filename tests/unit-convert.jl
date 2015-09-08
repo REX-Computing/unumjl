@@ -39,9 +39,9 @@ c64a = [calculate(convert(Unum{4,6}, float64(seed[i]))) for i = 1:100]
 @test is_neg_inf(convert(Unum{4,6}, -Inf32))
 @test is_neg_inf(convert(Unum{4,6}, -Inf))
 #test that zero converts correctly
-@test iszero(convert(Unum{4,6}, zero(Float16)))
-@test iszero(convert(Unum{4,6}, zero(Float32)))
-@test iszero(convert(Unum{4,6}, zero(Float64)))
+@test is_zero(convert(Unum{4,6}, zero(Float16)))
+@test is_zero(convert(Unum{4,6}, zero(Float32)))
+@test is_zero(convert(Unum{4,6}, zero(Float64)))
 
 #test some subnormal numbers.
 f16sn = reinterpret(Float16, one(Uint16))
@@ -63,15 +63,15 @@ pastsubnormal(ess, fss) = reinterpret(Float64,(Unums.min_exponent(ess) - Unums.m
 @test calculate(convert(Unum{1,1}, smallsubnormal(1,1))) == BigFloat(smallsubnormal(1,1))
 @test calculate(convert(Unum{2,2}, smallsubnormal(2,2))) == BigFloat(smallsubnormal(2,2))
 @test calculate(convert(Unum{3,3}, smallsubnormal(3,3))) == BigFloat(smallsubnormal(3,3))
-@test is_ssn(convert(Unum{0,0}, pastsubnormal(0,0)))
-@test is_ssn(convert(Unum{1,1}, pastsubnormal(1,1)))
-@test is_ssn(convert(Unum{2,2}, pastsubnormal(2,2)))
-@test is_ssn(convert(Unum{3,3}, pastsubnormal(3,3)))
+@test is_sss(convert(Unum{0,0}, pastsubnormal(0,0)))
+@test is_sss(convert(Unum{1,1}, pastsubnormal(1,1)))
+@test is_sss(convert(Unum{2,2}, pastsubnormal(2,2)))
+@test is_sss(convert(Unum{3,3}, pastsubnormal(3,3)))
 tinyfloat = reinterpret(Float64, o64)
-@test is_ssn(convert(Unum{0,0}, tinyfloat))
-@test is_ssn(convert(Unum{1,1}, tinyfloat))
-@test is_ssn(convert(Unum{2,2}, tinyfloat))
-@test is_ssn(convert(Unum{3,3}, tinyfloat))
+@test is_sss(convert(Unum{0,0}, tinyfloat))
+@test is_sss(convert(Unum{1,1}, tinyfloat))
+@test is_sss(convert(Unum{2,2}, tinyfloat))
+@test is_sss(convert(Unum{3,3}, tinyfloat))
 
 #and into the isalmostinf range.
 @test is_mmr(convert(Unum{0,0}, 2.2))

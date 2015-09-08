@@ -17,8 +17,8 @@
 function +{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #some basic gating checks before we do any crazy operations.
   #one, is either one zero?
-  iszero(a) && return b
-  iszero(b) && return a
+  is_zero(a) && return b
+  is_zero(b) && return a
   #do a nan check
   (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
 
@@ -142,8 +142,8 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   #with a ubit, but it will calculate the sum as if it didn't have the ubit there
   l::Uint16 = length(a.fraction)
   #check for deviations due to subnormality.
-  a_dev = isexpzero(a) ? 1 : 0
-  b_dev = isexpzero(b) ? 1 : 0
+  a_dev = is_exp_zero(a) ? 1 : 0
+  b_dev = is_exp_zero(b) ? 1 : 0
 
   #calculate the bit offset.
   bit_offset = (_aexp + a_dev) - (_bexp + b_dev)

@@ -53,7 +53,7 @@ __fp_props = {
 ##################################################################
 ## FLOATS TO UNUM
 
-#for some reason we need a shim that provides isexpzero support to Float16
+#for some reason we need a shim that provides is_exp_zero support to Float16
 import Base.issubnormal
 issubnormal(x::Float16) = (x != 0) && ((reinterpret(Uint16, x) & 0x7c00) == 0)
 export issubnormal
@@ -153,7 +153,7 @@ function __u_to_f_generator(T::Type)
     isnan(x) && return nan(T)
     is_pos_inf(x) && return inf(T)
     is_neg_inf(x) && return -inf(T)
-    iszero(x) && return zero(T)
+    is_zero(x) && return zero(T)
 
     #create a dummy value that will hold our result.
     res = zero(I)
@@ -161,7 +161,7 @@ function __u_to_f_generator(T::Type)
     res |= (convert(I, x.flags) & convert(I, 2)) << (_bits - 2)
 
     #check to see if the unum is subnormal
-    if isexpzero(x)
+    if is_exp_zero(x)
       #measure the msb significant bit of x.fraction and we'll move the exponent to that.
       shift::Uint16 = clz(x.fraction) + 1
       #shift the fraction over

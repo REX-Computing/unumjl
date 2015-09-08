@@ -93,9 +93,9 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   else
     #check if it's a subnormal number.  If so, try to move it to the right.
     #resolve a from (possibly inoptimal subnormal) to optimal subnormal or normal
-    isexpzero(a) && (a = __resolve_subnormal(a))
+    is_exp_zero(a) && (a = __resolve_subnormal(a))
     #the next step is pretty trivial.  First, check if a is all zeros.
-    if isfraczero(a)
+    if is_frac_zero(a)
       #in which case just make it a bunch of ones, decrement the exponent, and
       #make sure we aren't subnormal, in which case, we just encode as subnormal.
       _aexp = decode_exp(a)
@@ -119,7 +119,7 @@ end
 #and don't have the doubleunderscore prefix.
 function next_exact{ESS,FSS}(x::Unum{ESS,FSS})
   is_neg_inf(x) && return neg_maxreal(Unum{ESS,FSS})
-  iszero(x) && return eps(Unum{ESS,FSS})
+  is_zero(x) && return eps(Unum{ESS,FSS})
   is_pos_mmr(x) && return pos_inf(Unum{ESS,FSS})
   is_pos_inf(x) && return nan(Unum{ESS,FSS})
   (x.flags & UNUM_SIGN_MASK != 0) && return __less_exact(x)
@@ -143,19 +143,19 @@ function outward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
 end
 function inward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
   is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
-  iszero(x) && return nan(Unum{ESS,FSS})
+  is_zero(x) && return nan(Unum{ESS,FSS})
   is_pos_inf(x) && return pos_mmr(Unum{ESS,FSS})
   is_neg_inf(x) && return neg_mmr(Unum{ESS,FSS})
   tx = __inward_exact(x)
   Unum{ESS,FSS}(max_fsize(FSS), tx.esize, x.flags | UNUM_UBIT_MASK, tx.fraction, tx.exponent)
 end
 function next_ulp{ESS,FSS}(x::Unum{ESS,FSS})
-  iszero(x) && return pos_ssn(Unum{ESS,FSS})
+  is_zero(x) && return pos_sss(Unum{ESS,FSS})
   is_negative(x) && return inward_ulp(x)
   outward_ulp(x)
 end
 function prev_ulp{ESS,FSS}(x::Unum{ESS,FSS})
-  iszero(x) && return neg_ssn(Unum{ESS,FSS})
+  is_zero(x) && return neg_sss(Unum{ESS,FSS})
   is_negative(x) && return outward_ulp(x)
   inward_ulp(x)
 end

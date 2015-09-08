@@ -18,7 +18,7 @@ export bits
 
 function __ubound_helper{ESS,FSS}(a::Unum{ESS,FSS}, lowbound::Bool)
   is_ulp(a) && return unum_unsafe(a)
-  iszero(a) && return ssn(Unum{ESS,FSS}, lowbound ? z16 : UNUM_SIGN_MASK)
+  is_zero(a) && return sss(Unum{ESS,FSS}, lowbound ? z16 : UNUM_SIGN_MASK)
   (is_negative(a) != lowbound) ? outward_ulp(a) : inward_ulp(a)
 end
 

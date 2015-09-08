@@ -25,7 +25,7 @@ function __copy_superint(a::SuperInt)
   res[:] = a
 end
 
-# a helper function for isexpzero, and isfraczero.  Optimized to be fast.
+# a helper function for is_exp_zero, and is_frac_zero.  Optimized to be fast.
 function allzeros(a::SuperInt)
   (length(a) == 1) && return a == 0
   for idx = length(a):-1:1

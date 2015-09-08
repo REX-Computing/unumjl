@@ -11,20 +11,20 @@ function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
   #check for infinities
   if (isinf(a))
-    iszero(b) && return nan(Unum{ESS,FSS})
+    is_zero(b) && return nan(Unum{ESS,FSS})
     return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
   end
 
   if (isinf(b))
-    iszero(a) && return nan(Unum{ESS,FSS})
+    is_zero(a) && return nan(Unum{ESS,FSS})
     return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
   end
 
   #zero checking
-  (iszero(a) || iszero(b)) && return zero(Unum{ESS,FSS})
+  (is_zero(a) || is_zero(b)) && return zero(Unum{ESS,FSS})
   #one checking
-  (isone(a)) && return b
-  (isone(b)) && return a
+  (is_one(a)) && return b
+  (is_one(b)) && return a
 
   #check to see if we're an ulp.
   if (is_ulp(a) || is_ulp(b))
@@ -122,10 +122,10 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #figure out the sign.  Xor does the trick.
   flags = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
 
-  #cache subnormality of a and b.  Use "isexpzero" instead of "issubnormal"
+  #cache subnormality of a and b.  Use "is_exp_zero" instead of "issubnormal"
   #to avoid the extra (not zero) check for issubnormal.
-  _a_sn = isexpzero(a)
-  _b_sn = isexpzero(b)
+  _a_sn = is_exp_zero(a)
+  _b_sn = is_exp_zero(b)
 
   #calculate and cache _aexp and _bexp
   _aexp::Int16 = decode_exp(a) + (_a_sn ? 1 : 0)
@@ -134,7 +134,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #preliminary overflow and underflow tests save us from calculations in the
   #case these are definite outcomes.
   (_aexp + _bexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
-  (_aexp + _bexp < min_exponent(ESS) - 3) && return ssn(Unum{ESS,FSS}, flags)
+  (_aexp + _bexp < min_exponent(ESS) - 3) && return sss(Unum{ESS,FSS}, flags)
 
   is_ubit::Uint16 = 0;
   fsize::Uint16 = 0;
@@ -165,7 +165,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   unbiased_exp::Int16 = _aexp + _bexp + shift
   #have to repeat the overflow and underflow tests in light of carry shifts.
   (unbiased_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
-  (unbiased_exp < min_exponent(ESS)) && return ssn(Unum{ESS,FSS}, flags)
+  (unbiased_exp < min_exponent(ESS)) && return sss(Unum{ESS,FSS}, flags)
   (esize, exponent) = encode_exp(unbiased_exp)
 
   #analyze the fraction to appropriately set fsize and ubit.
@@ -179,11 +179,11 @@ function __mult_ulp{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #because zero cannot be traversed by the ulp, we can do something very simple
   #here.
 
-  #mmr and ssn have a special multiplication handler.
+  #mmr and sss have a special multiplication handler.
   is_mmr(a) && return __mmr_mult(b, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
   is_mmr(b) && return __mmr_mult(a, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
-  is_ssn(a) && return __ssn_mult(b, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
-  is_ssn(b) && return __ssn_mult(a, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
+  is_sss(a) && return __sss_mult(b, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
+  is_sss(b) && return __sss_mult(a, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
 
   #assign "exact" and "bound" a's
   (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
@@ -221,10 +221,10 @@ function __mmr_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
   end
 end
 
-function __ssn_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
-  #ssn_mult only yields something besides ssn if we are multiplying
+function __sss_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
+  #sss_mult only yields something besides sss if we are multiplying
   #by something between one and infinity.
-  (decode_exp(a) < 0 && return ssn(Unum{ESS,FSS}, sign))
+  (decode_exp(a) < 0 && return sss(Unum{ESS,FSS}, sign))
 
   #calculate value.
   val = __mult_exact(a, small_exact(Unum{ESS,FSS}))
@@ -237,8 +237,8 @@ function __ssn_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
 
   #then create the appropriate ubounds, directed by the desired sign.
   if (sign != 0)
-    ubound_resolve(Ubound(val , neg_ssn(Unum{ESS,FSS})))
+    ubound_resolve(Ubound(val , neg_sss(Unum{ESS,FSS})))
   else
-    ubound_resolve(Ubound(pos_ssn(Unum{ESS,FSS}), val))
+    ubound_resolve(Ubound(pos_sss(Unum{ESS,FSS}), val))
   end
 end

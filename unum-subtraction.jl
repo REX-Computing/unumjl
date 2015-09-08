@@ -91,15 +91,15 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   l::Uint16 = length(a.fraction)
   # a series of easy cases.
   (a == -b) && return zero(Unum{ESS,FSS})
-  (iszero(b)) && return unum_unsafe(a)
-  (iszero(a)) && return -b
+  (is_zero(b)) && return unum_unsafe(a)
+  (is_zero(a)) && return -b
 
   #reassign a to a resolved subnormal value.
-  isexpzero(a) && (a.esize != max_esize(ESS)) && (a = __resolve_subnormal(a))
+  is_exp_zero(a) && (a.esize != max_esize(ESS)) && (a = __resolve_subnormal(a))
 
   #check for deviations due to subnormality.
-  a_dev::Int16, carry::Uint64 = isexpzero(a) ? (o16, z64) : (z16, o64)
-  b_dev::Int16 = isexpzero(b) ? o16 : z16
+  a_dev::Int16, carry::Uint64 = is_exp_zero(a) ? (o16, z64) : (z16, o64)
+  b_dev::Int16 = is_exp_zero(b) ? o16 : z16
 
   #calculate the bit offset
   bit_offset = uint16((_aexp + a_dev) - (_bexp + b_dev))
@@ -116,7 +116,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
 
   if (bit_offset == 0)
     #this is the easy case where we don't have to do much...
-    isexpzero(b) || (carry = 0)
+    is_exp_zero(b) || (carry = 0)
 
     (carry, fraction) = __carried_diff(carry, a.fraction, b.fraction)
   else
@@ -125,7 +125,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
     scratchpad = b.fraction >> bit_offset
 
     #then throw in virtual bit that corresponds to the leading digit.
-    !isexpzero(b) && (scratchpad |= __bit_from_top(bit_offset, l))
+    !is_exp_zero(b) && (scratchpad |= __bit_from_top(bit_offset, l))
 
     #first, let's isolate the "chop" region of the subtrahend b - if this is 1 then
     #we have to carry from the main, and also set the ubit to be on.
@@ -140,7 +140,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #if we started with a subnormal a (which should be maximally subnormal), we are
   #done. note that we don't have to throw a ubit flag on because a subtraction
   #yielding smallsubnormal should have been impossible.
-  (isexpzero(a)) && return Unum{ESS,FSS}(__fsize_of_exact(fraction), max_esize(ESS), flags, fraction, z64)
+  (is_exp_zero(a)) && return Unum{ESS,FSS}(__fsize_of_exact(fraction), max_esize(ESS), flags, fraction, z64)
   
   fsize::Uint16 = 0
   is_ubit::Uint16 = 0

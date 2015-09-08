@@ -43,23 +43,23 @@ pos_inf{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = inf(T)
 neg_inf{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = inf(T, UNUM_SIGN_MASK)
 export inf, pos_inf, neg_inf
 
-#mmr and ssn - "more than maxreal" and "smaller than subnormal", ubits for very small things.
+#mmr and sss - "more than maxreal" and "smaller than subnormal", ubits for very small things.
 function mmr{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
   esize   ::Uint16 = 1 << ESS - 1
   fsize   ::Uint16 = 1 << FSS - 1
   max_exp ::Uint64 = 1 << (esize + 1) - 1
   Unum{ESS,FSS}(fsize, esize, signmask | UNUM_UBIT_MASK, fillbits(1 - (1 << FSS), __frac_cells(FSS)), max_exp)
 end
-function ssn{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
+function sss{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
   esize::Uint16 = 1 << ESS - 1
   fsize::Uint16 = 1 << FSS - 1
   Unum{ESS,FSS}(fsize, esize, signmask | UNUM_UBIT_MASK, superzero(__frac_cells(FSS)), z64)
 end
 pos_mmr{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = mmr(T)
 neg_mmr{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = mmr(T, UNUM_SIGN_MASK)
-pos_ssn{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = ssn(T)
-neg_ssn{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = ssn(T, UNUM_SIGN_MASK)
-export mmr, ssn, pos_mmr, neg_mmr, pos_ssn, neg_ssn
+pos_sss{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = sss(T)
+neg_sss{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = sss(T, UNUM_SIGN_MASK)
+export mmr, sss, pos_mmr, neg_mmr, pos_sss, neg_sss
 
 #a function that generates the "big_exact value of either the positive or neegative sign."
 function big_exact{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
