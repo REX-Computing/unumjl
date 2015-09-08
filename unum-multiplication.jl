@@ -10,7 +10,15 @@ function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #check for nans
   (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
   #check for infinities
-  (isinf(a) || isinf(b)) && return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
+  if (isinf(a))
+    iszero(b) && return nan(Unum{ESS,FSS})
+    return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
+  end
+
+  if (isinf(b))
+    iszero(a) && return nan(Unum{ESS,FSS})
+    return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
+  end
 
   #zero checking
   (iszero(a) || iszero(b)) && return zero(Unum{ESS,FSS})
@@ -113,9 +121,16 @@ end
 function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #figure out the sign.  Xor does the trick.
   flags = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
+
+  #cache subnormality of a and b.  Use "isexpzero" instead of "issubnormal"
+  #to avoid the extra (not zero) check for issubnormal.
+  _a_sn = isexpzero(a)
+  _b_sn = isexpzero(b)
+
   #calculate and cache _aexp and _bexp
-  _aexp = decode_exp(a)
-  _bexp = decode_exp(b)
+  _aexp::Int16 = decode_exp(a) + (_a_sn ? 1 : 0)
+  _bexp::Int16 = decode_exp(b) + (_a_sn ? 1 : 0)
+
   #preliminary overflow and underflow tests save us from calculations in the
   #case these are definite outcomes.
   (_aexp + _bexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
@@ -131,8 +146,17 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   # i.e.: (1 + a)(1 + b) = 1 + a + b + ab
   # => initial carry + a.fraction + b.fraction + chunkproduct
   #
-  (carry, fraction) = __carried_add(o64, fraction, a.fraction)
-  (carry, fraction) = __carried_add(carry, fraction, b.fraction)
+  # considering the case of subnormality:
+  # b - subnormal (1 + a)(0 + b) = 0 + 0 + b + ab
+  # a - subnormal (0 + a)(1 + b) = 0 + a + 0 + ab
+  # both subnormal:  Just ab.
+
+  #set the carry to be one only if both are not subnormal.
+  carry = (_a_sn || _b_sn) ? z64 : o64
+
+  #only perform the respective adds if the *opposing* thing is not subnormal.
+  _b_sn || ((carry, fraction) = __carried_add(carry, fraction, a.fraction))
+  _a_sn || ((carry, fraction) = __carried_add(carry, fraction, b.fraction))
 
   #carry may be as high as three!  So we must shift as necessary.
   (fraction, shift, is_ubit) = __shift_after_add(carry, fraction, is_ubit)

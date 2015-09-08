@@ -15,9 +15,8 @@ function =={ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   _bexp::Int16 = decode_exp(b)
   #make sure the exponents are the same, otherwise not equal unless subnormal...
   #but if one of them has a positive exponent, subnormality is impossible.
-
-  issubnormal(a) && (_aexp >= min_exponent(ESS)) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
-  issubnormal(b) && (_bexp >= min_exponent(ESS)) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
+  isexpzero(a) && (_aexp >= min_exponent(ESS)) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
+  isexpzero(b) && (_bexp >= min_exponent(ESS)) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
 
   (_aexp != _bexp) && return false
   #now that we know that the exponents are the same,
