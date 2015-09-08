@@ -165,37 +165,37 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   (carry, scratchpad) = __carried_add(carry, a.fraction, scratchpad)
   flags = a.flags & UNUM_SIGN_MASK
 
+  #a variable that stores if we're a ubit.
+  is_ubit::Uint16 = 0
+  shift::Uint16 = a_dev
+
+  if (carry > 1)
+    (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad)
+  end
+
+  (fraction, fsize, is_ubit) = __frac_analyze(scratchpad, is_ubit, FSS)
+
+  #if we started as subnormal, shift cannot be one, but we might have to addprocs
+  #one to the exponent to account for the promotion from subnormal.  Otherwise,
+  #exponent gets augmented as if it were a shift.
+  _nexp = _aexp + shift
+
   #handle the carry bit (which may be up to three? or more).
   if (carry == 0)
-    fsize = __frac_length(scratchpad, l)
-
     #don't use encode_exp because that might do strange things to subnormals.
     #just pass through esize, exponent from the a value.
     esize = a.esize
     exponent = a.exponent
-  elseif (carry == 1)
-    #esize is unchanged.  May have to alter fsize.
-    fsize = __frac_length(scratchpad, l)
-    (esize, exponent) = encode_exp(_aexp + a_dev) #promote the exponent if we
-    #happened to have started as a subnormal.
   else
-    (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad)
-
-    #check to see if _shift_after_add wants us to decare us a ubit.
-    is_ubit && (flags &= UNUM_UBIT_MASK)
-
-    #check for overflows.
-    _nexp = _aexp + shift
-
+    #check for overflow, and return mmr if that happens.
     (_nexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
 
-    fsize = __frac_length(scratchpad)
     (esize, exponent) = encode_exp(_nexp)
   end
 
   #another way to get overflow is: by adding just enough bits to exactly
   #make the binary value for infinity.  This should, instead, yield mmr.
-  (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (scratchpad == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
+  (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (fraction == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
 
-  Unum{ESS,FSS}(fsize, esize, flags, scratchpad, exponent)
+  Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end

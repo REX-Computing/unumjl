@@ -41,6 +41,8 @@ function isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 end
 export isequal
 
+import Base.min
+import Base.max
 function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #adjust them in case they are subnormal
   is_strange_subnormal(a) && (a = __resolve_subnormal(a))
@@ -68,7 +70,7 @@ function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   return b
 end
 
-function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+function max{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #adjust them in case they are subnormal
   is_strange_subnormal(a) && (a = __resolve_subnormal(a))
   is_strange_subnormal(b) && (b = __resolve_subnormal(b))
@@ -94,3 +96,4 @@ function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (is_ulp(a) != isnegative(a)) && return b
   return a
 end
+export min, max

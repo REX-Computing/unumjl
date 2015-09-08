@@ -72,10 +72,10 @@ end
 
 function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
   signcode::Uint16 = 0
-  isnegative(a.lowbound) && signcode += 1
-  isnegative(a.highbound) && signcode += 2
-  isnegative(b.lowbound) && signcode += 4
-  isnegative(b.highbound) && signcode += 8
+  isnegative(a.lowbound)  && (signcode += 1)
+  isnegative(a.highbound) && (signcode += 2)
+  isnegative(b.lowbound)  && (signcode += 4)
+  isnegative(b.highbound) && (signcode += 8)
 
   if (signcode == 0) #everything is positive
     ubound_resolve(Ubound(a.lowbound * b.lowbound, a.highbound * b.highbound))

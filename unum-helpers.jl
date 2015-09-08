@@ -5,14 +5,6 @@
 ###########################################################
 #Utility functions
 
-#literally grab the fraction length of a superlength.  No assumptions are made
-#about the validity of the trailing bits...  pass l to make it faster.
-function __frac_length(frac::SuperInt, l::Integer = length(frac))
-  digits::Uint16 = (l << 6) - ctz(frac)
-  #all zeroes means you have one zero digit.
-  return uint16((digits == 0) ? 0 : digits - 1)
-end
-
 #fractrim:  Takes a superint value and returns a triplet: (fraction, fsize, ubit)
 #this triplet represents the fraction SuperInt trimmed to fsize, a new fsize,
 #in the case that it's exact and some zeros can be trimmed, and whether or not
@@ -30,13 +22,38 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   #this needs to be in an array because that will collapse to the appropriate
   #one-dimensional array in the array case and collapse to a one-element array
   #in the single case, so that matches with the zeros() directive.
-  ubit = ([low_mask & frac] == zeros(Uint64, l)) ? z16 : UNUM_UBIT_MASK
+  ubit = allzeros(low_mask & frac) ? z16 : UNUM_UBIT_MASK
   #mask out the low bits and save that as the fraction.
   frac &= high_mask
   #we may need to trim the fraction further, in which case we alter fsize.
   #also take the "zero" case and make sure we represent at least one digit.
-  fsize = (ubit == 0) ? __frac_length(frac, l) : fsize
+  fsize = (ubit == 0) ? __fsize_of_exact(frac, l) : fsize
   (frac, fsize, ubit)
+end
+
+#takes a peek at the fraction and decides if ubit needs to be set (if the boundary
+#is not flush with max_fss), but also decides if fsize_of_exact needs to be set.
+function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Int16)
+  #two possibilities:  fss is less than 6 (and the fraction is not on a 64-bit border)
+  _mfs::Int16 = max_fsize(fss)
+  if (fss < 6)
+    #set the high mask
+    high_mask::Uint64 = fillbits(-(_mfs + 1), 1)
+    #check if we're already a ubit, then trim to high mask.
+    (is_ubit != 0) && return (fraction & high_mask, _mfs, is_ubit)
+
+    #generate the low mask and check it out.
+    low_mask::Uint64 = ~high_mask
+    is_ubit = (fraction & low_mask != 0) ? UNUM_UBIT_MASK : 0
+
+    fsize = (is_ubit != 0) ? _mfs : __fsize_of_exact(fraction)
+    (fraction, fsize, is_ubit)
+  else
+    #we don't need to check for lost bits because when 6 or greater, the fractions
+    #are aligned with the 64-bit boundaries.
+    (is_ubit != 0) && return (fraction, _mfs, is_ubit)
+    (fraction, __fsize_of_exact(fraction), is_ubit)
+  end
 end
 
 #match the fraction to fss, setting the ubit if digits were thrown out in the

@@ -9,10 +9,13 @@ sure those use the __fsize_of_exact function
 
 Annotate all functions with {ESS,FSS} signature
 
-Change names of constants to "pos_" format.
-Change names of testing things to "is_pos_" format
-
 Go through and make use of double underscore functions consistent, including
 changing unum_unsafe to just __unum
 
 go through and make sure max_esize and max_fsize are well-used.
+
+make sure is_strange_subnormal is well-used
+
+repair min() and max() functions so that they take into account ulps
+
+repair mult_exact.

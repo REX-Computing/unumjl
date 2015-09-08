@@ -36,8 +36,8 @@ end
 # 'phantom one' in front of potentially both segments, so we'll throw in a third
 # Uint64 in front to handle that.
 
-function __lower_scan(a::Array{Uint32, 1}, b::Array{Uint32, 1}, l)
-  for (aidx == 1:(l - 1))
+function __lower_scan(a::Array{Uint32, 1}, b::Array{Uint32, 1}, l::Uint16)
+  for (aidx = 1:(l - 1))
     for (bidx = 1:(l - aidx))
       ((a[aidx] != 0) && (b[bidx] != 0)) && return UNUM_UBIT_MASK
     end
@@ -48,14 +48,14 @@ end
 # chunk_mult handles simply the chunked multiply of two superints
 function __chunk_mult(a::SuperInt, b::SuperInt)
   #note that frag_mult fails for absurdly high length integer arrays.
-  l = length(a) << 1
+  l::Uint16 = length(a) << 1
 
   #take these two Uint64 arrays and reinterpret them as Uint32 arrays
   a_32 = reinterpret(Uint32, (l == 2) ? [a] : a)
   b_32 = reinterpret(Uint32, (l == 2) ? [b] : b)
 
   #scan the lower bits to see if we are ulp.
-  ulp_flag::Uint16 = __lower_scan(a, b, l)
+  ulp_flag::Uint16 = __lower_scan(a_32, b_32, l)
 
   #the scratchpad must have an initial segment to determine carries.
   scratchpad = zeros(Uint32, l + 1)
