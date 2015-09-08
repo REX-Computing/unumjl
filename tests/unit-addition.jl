@@ -42,14 +42,14 @@ import Unums.o16
 @test (2, [~o64,f64,f64,f64]) == Unums.__carried_add(o64, [f64, f64, f64, f64], [f64, f64, f64, f64]) #with a passthru carry
 
 #__shift_after_add(carry, value) - resolves the result of a carry operation, and reports shift amt, and falloff.
-@test Unums.__shift_after_add(uint64(2), t64) == (0x4000_0000_0000_0000, 1, false)
-@test Unums.__shift_after_add(uint64(3), t64) == (0xC000_0000_0000_0000, 1, false)
-@test Unums.__shift_after_add(uint64(2), o64) == (0x0000_0000_0000_0000, 1, true)
-@test Unums.__shift_after_add(uint64(3), o64) == (0x8000_0000_0000_0000, 1, true)
-@test Unums.__shift_after_add(uint64(2), [z64,t64]) == ([z64, 0x4000_0000_0000_0000], 1, false)
-@test Unums.__shift_after_add(uint64(3), [z64,t64]) == ([z64, 0xC000_0000_0000_0000], 1, false)
-@test Unums.__shift_after_add(uint64(2), [o64,z64]) == ([z64, z64], 1, true)
-@test Unums.__shift_after_add(uint64(3), [o64,z64]) == ([z64, t64], 1, true)
+@test Unums.__shift_after_add(uint64(2), t64, z16) == (0x4000_0000_0000_0000, 1, z16)
+@test Unums.__shift_after_add(uint64(3), t64, z16) == (0xC000_0000_0000_0000, 1, z16)
+@test Unums.__shift_after_add(uint64(2), o64, z16) == (0x0000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
+@test Unums.__shift_after_add(uint64(3), o64, z16) == (0x8000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
+@test Unums.__shift_after_add(uint64(2), [z64,t64], z16) == ([z64, 0x4000_0000_0000_0000], 1, z16)
+@test Unums.__shift_after_add(uint64(3), [z64,t64], z16) == ([z64, 0xC000_0000_0000_0000], 1, z16)
+@test Unums.__shift_after_add(uint64(2), [o64,z64], z16) == ([z64, z64], 1, Unums.UNUM_UBIT_MASK)
+@test Unums.__shift_after_add(uint64(3), [o64,z64], z16) == ([z64, t64], 1, Unums.UNUM_UBIT_MASK)
 
 #test __sum_exact, which adds two exact sums, with magnitude(a) > magnitude(b)
 wone = Unum{4,6}(z16,z16,z16,z64,o64)

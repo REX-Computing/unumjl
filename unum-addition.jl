@@ -66,13 +66,13 @@ function __carried_add(carry::Uint64, v1::SuperInt, v2::SuperInt)
 end
 
 #returns a (SuperInt, int, bool) triplet:  (value, shift, falloff)
-function __shift_after_add(carry::Uint64, value::SuperInt)
+function __shift_after_add(carry::Uint64, value::SuperInt, is_ubit::Uint16)
   #cache the length of value
   l::Uint16 = length(value)
   #calculate how far we have to shift.
   shift = 64 - clz(carry) - 1
   #did we lose values off the end of the number?
-  falloff = (value & fillbits(shift, l)) != superzero(l)
+  (is_ubit == 0) && (is_ubit = (value & fillbits(shift, l)) != superzero(l))
   #shift the value over
   value = rsh(value, shift)
   #copy the carry over.
@@ -81,7 +81,7 @@ function __shift_after_add(carry::Uint64, value::SuperInt)
   else
     value |= carry << (64 - shift)
   end
-  (value, shift, falloff)
+  (value, shift, is_ubit)
 end
 
 ################################################################################
@@ -154,6 +154,8 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
 
   #generate the scratchpad by moving b.
   scratchpad = rsh(b.fraction, bit_offset)
+  #check to see if there's bits that are falling off.
+  is_ubit::Uint16 = allzeros(lsh(b.fraction, bit_offset)) ? 0 : UNUM_UBIT_MASK
 
   #don't forget b's phantom bit (1-b_dev) so it's zero if we are subnormal
   (bit_offset != 0) && (b_dev != 1) && (scratchpad |= __bit_from_top(bit_offset, l))
@@ -164,13 +166,13 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
 
   (carry, scratchpad) = __carried_add(carry, a.fraction, scratchpad)
   flags = a.flags & UNUM_SIGN_MASK
+  fsize::Uint16 = 0
 
-  #a variable that stores if we're a ubit.
-  is_ubit::Uint16 = 0
+  #how much the exponent must be shifted
   shift::Uint16 = a_dev
 
   if (carry > 1)
-    (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad)
+    (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad, is_ubit)
   end
 
   (fraction, fsize, is_ubit) = __frac_analyze(scratchpad, is_ubit, FSS)

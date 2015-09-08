@@ -141,8 +141,9 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #done. note that we don't have to throw a ubit flag on because a subtraction
   #yielding smallsubnormal should have been impossible.
   (isexpzero(a)) && return Unum{ESS,FSS}(__fsize_of_exact(fraction), max_esize(ESS), flags, fraction, z64)
-
+  
   fsize::Uint16 = 0
+  is_ubit::Uint16 = 0
   #process the remaining factors: carry, fraction, lag_bit
   if (carry == 0)
     #set shift to be as big as it can be.

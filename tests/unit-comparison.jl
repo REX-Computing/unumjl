@@ -29,6 +29,7 @@ wwd1 = Unum{4,6}(z16,        0x0005, z16, 0x8000_0000_0000_0000, 0x0000000000000
 wwd2 = Unum{4,6}(uint16(16), 0x0004, z16, 0x0000_8000_0000_0000, 0x0000000000000000) #4-subnormal form
 wwd3 = Unum{4,6}(uint16(24), 0x0003, z16, 0x0000_0080_0000_0000, 0x0000000000000000) #3-subnormal form
 wwd4 = Unum{4,6}(uint16(28), 0x0002, z16, 0x0000_0008_0000_0000, 0x0000000000000000) #2-subnormal form
+
 @test wwd0 == wwd1 && wwd1 == wwd2 && wwd2 == wwd3 && wwd3 == wwd4
 @test wwd0 == wwd2 && wwd1 == wwd3 && wwd2 == wwd4
 @test wwd0 == wwd3 && wwd1 == wwd4

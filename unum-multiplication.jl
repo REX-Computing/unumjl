@@ -121,9 +121,10 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   (_aexp + _bexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
   (_aexp + _bexp < min_exponent(ESS) - 3) && return ssn(Unum{ESS,FSS}, flags)
 
+  is_ubit::Uint16 = 0;
+  fsize::Uint16 = 0;
   #run a chunk_mult on the a and b fractions
-  (fraction, res_ulp) = __chunk_mult(a.fraction, b.fraction)
-  flags |= res_ulp
+  (fraction, is_ubit) = __chunk_mult(a.fraction, b.fraction)
   #next, steal the carried add function from addition.  We're going to need
   #to re-add the fractions back due to algebra with the phantom bit.
   #
@@ -134,16 +135,19 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   (carry, fraction) = __carried_add(carry, fraction, b.fraction)
 
   #carry may be as high as three!  So we must shift as necessary.
-  (fraction, shift, check) = __shift_after_add(carry, fraction)
-  #for now, just throw fsize as exact fsize.
-  fsize = __fsize_of_exact(fraction)
+  (fraction, shift, is_ubit) = __shift_after_add(carry, fraction, is_ubit)
+
   #the exponent is just the sum of the two exponents.
   unbiased_exp::Int16 = _aexp + _bexp + shift
   #have to repeat the overflow and underflow tests in light of carry shifts.
   (unbiased_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
   (unbiased_exp < min_exponent(ESS)) && return ssn(Unum{ESS,FSS}, flags)
   (esize, exponent) = encode_exp(unbiased_exp)
-  #deal with ubit later.
+
+  #analyze the fraction to appropriately set fsize and ubit.
+  (fraction, fsize, is_ubit) = __frac_analyze(fraction, is_ubit, FSS)
+  flags |= is_ubit
+
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
 

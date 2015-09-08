@@ -27,13 +27,13 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   frac &= high_mask
   #we may need to trim the fraction further, in which case we alter fsize.
   #also take the "zero" case and make sure we represent at least one digit.
-  fsize = (ubit == 0) ? __fsize_of_exact(frac, l) : fsize
+  fsize = (ubit == 0) ? __fsize_of_exact(frac) : fsize
   (frac, fsize, ubit)
 end
 
 #takes a peek at the fraction and decides if ubit needs to be set (if the boundary
 #is not flush with max_fss), but also decides if fsize_of_exact needs to be set.
-function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Int16)
+function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Integer)
   #two possibilities:  fss is less than 6 (and the fraction is not on a 64-bit border)
   _mfs::Int16 = max_fsize(fss)
   if (fss < 6)
