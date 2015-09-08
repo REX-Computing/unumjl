@@ -23,8 +23,8 @@ function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #zero checking
   (is_zero(a) || is_zero(b)) && return zero(Unum{ESS,FSS})
   #one checking
-  (is_one(a)) && return b
-  (is_one(b)) && return a
+  (is_unit(a)) && return (unum_unsafe(b, b.flags $ a.flags))
+  (is_unit(b)) && return (unum_unsafe(a, b.flags $ a.flags))
 
   #check to see if we're an ulp.
   if (is_ulp(a) || is_ulp(b))

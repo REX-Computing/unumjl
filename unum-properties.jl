@@ -52,7 +52,9 @@ is_strange_subnormal{ESS,FSS}(x::Unum{ESS,FSS}) = is_exp_zero(x) && (x.esize < m
 is_frac_zero{ESS,FSS}(x::Unum{ESS,FSS}) = (ESS > 6) ? allzeros(x.fraction) : (x.fraction == 0)
 
 is_zero(x::Unum) = (x.exponent == z64) && is_exact(x) && is_frac_zero(x)
-is_one(x::Unum) = (decode_exp(x) == 0) && is_frac_zero(x)
+is_unit(x::Unum) = (decode_exp(x) == 0) && is_frac_zero(x) && (x.flags & UNUM_UBIT_MASK == 0)
+is_one(x::Unum) = (decode_exp(x) == 0) && is_frac_zero(x) && (x.flags == 0)
+is_neg_one(x::Unum) = (decode_exp(x) == 0) && is_frac_zero(x) && (x.flags == UNUM_SIGN_MASK)
 #checks if the value is sss ("smaller than small subnormal")
 is_sss(x::Unum) = (x.exponent == z64) && is_ulp(x) && is_frac_zero(x)
 is_pos_sss(x::Unum) = is_positive(x) && is_sss(x)

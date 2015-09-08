@@ -61,7 +61,7 @@ pos_sss{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = sss(T)
 neg_sss{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = sss(T, UNUM_SIGN_MASK)
 export mmr, sss, pos_mmr, neg_mmr, pos_sss, neg_sss
 
-#a function that generates the "big_exact value of either the positive or neegative sign."
+#a function that generates the "big_exact value of either the positive or negative sign."
 function big_exact{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
   esize   ::Uint16 = 1 << ESS - 1
   fsize   ::Uint16 = 1 << FSS - 2
@@ -70,7 +70,7 @@ function big_exact{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
 end
 pos_big_exact{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = big_exact(T)
 neg_big_exact{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = big_exact(T, UNUM_SIGN_MASK)
-export big_exact, pos_bigexact, neg_bigexact
+export big_exact, pos_big_exact, neg_big_exact
 
 function small_exact{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
   esize   ::Uint16 = 1 << ESS - 1
@@ -79,3 +79,4 @@ function small_exact{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
 end
 pos_small_exact{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = small_exact(T)
 neg_small_exact{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = small_exact(T, UNUM_SIGN_MASK)
+export small_exact, pos_small_exact, neg_small_exact

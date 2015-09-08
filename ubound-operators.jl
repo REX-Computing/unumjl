@@ -103,3 +103,6 @@ function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
     throw(ArgumentError("some ubound had incorrect orientation."))
   end
 end
+
+################################################################################
+## division
