@@ -17,8 +17,8 @@ export calculate
 #sorts two unums by magnitude (distance from zero), and throws in the calculated
 #exponents, while we're at it.  NB.  MAGSORT ignores sign.
 function magsort{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  _aexp = decode_exp(a)
-  _bexp = decode_exp(b)
+  _aexp::Int16 = decode_exp(a)
+  _bexp::Int16 = decode_exp(b)
 
   if (_aexp < _bexp)                #first parse through the exponents
     (b, a, _bexp, _aexp)

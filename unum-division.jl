@@ -65,17 +65,14 @@ function nrd{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   bexp = decode_exp(b)
   divfactor = bexp + 1
 
-  negative = (a.flags & SIGN_MASK) != (b.flags & SIGN_MASK)
+  negative = (a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK)
 
   #reset the exponentials for both a and b, and strip the sign
   (esize, exponent) = encode_exp(aexp - divfactor)
-  a.esize = esize
-  a.exponent = exponent
-  a.flags &= ~ SIGN_MASK
+  a = Unum{ESS,FSS}(a.fsize, esize, a.flags $ ~UNUM_SIGN_MASK, a.fraction, exponent)
+
   (esize, exponent) = encode_exp(bexp - divfactor)
-  b.esize = esize
-  b.exponent = exponent
-  b.flags &= ~ SIGN_MASK
+  b = Unum{ESS,FSS}(b.fsize, esize, b.flags $ ~UNUM_SIGN_MASK, b.fraction, exponent)
 
   #consider implementing this as a lookup table.
   nr_1 = one(Unum{ESS,FSS})

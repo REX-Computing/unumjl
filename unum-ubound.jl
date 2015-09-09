@@ -8,6 +8,19 @@ immutable Ubound{ESS,FSS}
   highbound::Unum{ESS,FSS}
 end
 
+#outer constructors that take Ubounds as tell as unums
+#todo: Put in checks on these.
+function Ubound{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
+  Ubound{ESS,FSS}(a.lowbound, b)
+end
+function Ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
+  Ubound{ESS,FSS}(a, b.highbound)
+end
+function Ubound{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
+  Ubound{ESS,FSS}(a.lowbound, b.highbound)
+end
+
+
 export describe
 function describe(b::Ubound, s=" ")
   "$(bits(b.lowbound, s)) -> $(bits(b.highbound, s))"

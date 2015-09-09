@@ -43,8 +43,8 @@ function -{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
 end
 
 function -{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
-  lb = a.lowbound - b
-  hb = a.highbound - b
+  lb = a - b.lowbound
+  hb = a - b.highbound
 
   (typeof(lb) <: Ubound) && (lb = lb.lowbound)
   (typeof(hb) <: Ubound) && (hb = hb.highbound)
@@ -64,7 +64,7 @@ end
 
 function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
   #two cases.  One:  the ubound doesn't straddle zero
-  t::Ubound = isnegative(b) ? Ubound(a.highbound * b, a.lowbound * b) : Ubound(a.lowbound * b, a.highbound * b)
+  t::Ubound = is_negative(b) ? Ubound(a.highbound * b, a.lowbound * b) : Ubound(a.lowbound * b, a.highbound * b)
 
   #attempt to resolve it if we did not straddle zero
   (a.lowbound.flags & UNUM_SIGN_MASK == a.highbound.flags & UNUM_SIGN_MASK) ? ubound_resolve(t) : t
@@ -72,10 +72,10 @@ end
 
 function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
   signcode::Uint16 = 0
-  isnegative(a.lowbound)  && (signcode += 1)
-  isnegative(a.highbound) && (signcode += 2)
-  isnegative(b.lowbound)  && (signcode += 4)
-  isnegative(b.highbound) && (signcode += 8)
+  is_negative(a.lowbound)  && (signcode += 1)
+  is_negative(a.highbound) && (signcode += 2)
+  is_negative(b.lowbound)  && (signcode += 4)
+  is_negative(b.highbound) && (signcode += 8)
 
   if (signcode == 0) #everything is positive
     ubound_resolve(Ubound(a.lowbound * b.lowbound, a.highbound * b.highbound))
@@ -106,3 +106,11 @@ end
 
 ################################################################################
 ## division
+
+################################################################################
+## width
+
+function width{ESS,FSS}(b::Ubound{ESS,FSS})
+  b.highbound - b.lowbound
+end
+export width

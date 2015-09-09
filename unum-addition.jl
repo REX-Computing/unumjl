@@ -88,7 +88,7 @@ end
 ## GATEWAY OPERATION
 
 #an addition operation where a and b are ordered such that mag(a) > mag(b)
-function __add_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
+function __add_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
   a_neg = is_negative(a)
   b_neg = is_negative(b)
 
@@ -102,7 +102,7 @@ end
 ################################################################################
 ## SUM ALGORITHM
 
-function __sum_ordered(a, b, _aexp, _bexp)
+function __sum_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
   #add two values, where a has a greater magnitude than b.  Both operands have
   #matching signs, either positive or negative.  At this stage, they may both
   #be ULPs.

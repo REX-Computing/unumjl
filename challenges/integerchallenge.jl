@@ -1,7 +1,7 @@
 #integerchallenge.jl
 
-include("unum.jl")
-include("unum_optimizer.jl")
+include("../unum.jl")
+include("../unum_optimizer.jl")
 
 using Unums
 
@@ -12,9 +12,9 @@ function addtolimit(T::Type)
   for idx = 1:limit
     sum += one(T)
   end
-  println(Unums.calculate(sum))
-
+  #println(Unums.calculate(sum))
   sum
 end
 
-optimize(addtolimit, 0.1)
+r = optimize(addtolimit, 0.1, verbose = true)
+println("result:  $(float64(r))")

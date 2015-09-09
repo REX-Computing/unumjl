@@ -38,7 +38,7 @@ end
 ################################################################################
 ## DIFFERENCE ALGORITHM
 
-function __diff_ordered(a, b, _aexp, _bexp)
+function __diff_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
   #add two values, where a has a greater magnitude than b.  Both operands have
   #matching signs, either positive or negative.  At this stage, they may both
   #be ULPs.
@@ -49,15 +49,15 @@ function __diff_ordered(a, b, _aexp, _bexp)
   end
 end
 
-function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
+function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
   #a and b are ordered by magnitude and have opposing signs.
 
   #assign "exact" and "bound" a's
   (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
   (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
   #recalculate these values if necessary.
-  _baexp = is_ulp(a) ? decode_exp(bound_a) : _aexp
-  _bbexp = is_ulp(b) ? decode_exp(bound_b) : _bexp
+  _baexp::Int16 = is_ulp(a) ? decode_exp(bound_a) : _aexp
+  _bbexp::Int16 = is_ulp(b) ? decode_exp(bound_b) : _bexp
 
   #println("exact_a: $(bits(exact_a)) bound_a: $(bits(bound_a))")
   #println("exact_b: $(bits(exact_b)) bound_b: $(bits(bound_b))")
@@ -87,10 +87,12 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
 end
 
 #a subtraction operation where a and b are ordered such that mag(a) > mag(b)
-function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
+function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
+
   l::Uint16 = length(a.fraction)
   # a series of easy cases.
   (a == -b) && return zero(Unum{ESS,FSS})
+
   (is_zero(b)) && return unum_unsafe(a)
   (is_zero(a)) && return -b
 
@@ -141,13 +143,13 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #done. note that we don't have to throw a ubit flag on because a subtraction
   #yielding smallsubnormal should have been impossible.
   (is_exp_zero(a)) && return Unum{ESS,FSS}(__fsize_of_exact(fraction), max_esize(ESS), flags, fraction, z64)
-  
+
   fsize::Uint16 = 0
   is_ubit::Uint16 = 0
   #process the remaining factors: carry, fraction, lag_bit
   if (carry == 0)
     #set shift to be as big as it can be.
-    shift = clz(fraction) + 1
+    shift::Int16 = clz(fraction) + 1
     #modify _aexp here.
     if shift > (_aexp - min_exponent(ESS))
       #just push it as far as we can push it.
@@ -160,8 +162,9 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
     #regenerate the new fraction and fsize
     fraction = lsh(fraction, shift)
     fsize = __fsize_of_exact(fraction)
+
     #recalculate the exponent.
-    _aexp -= shift
+    _aexp = _aexp - shift
   else
     #the lag bit fell over, so declare inexact, if necessary, otherwise pass
     #everything
@@ -169,5 +172,6 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   end
 
   (esize, exponent) = encode_exp(_aexp)
+
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end

@@ -67,3 +67,10 @@ is_neg_mmr(x::Unum) = is_negative(x) && is_mmr(x)
 export issubnormal, is_subnormal, is_exp_zero
 export is_frac_zero, is_zero, is_sss, is_pos_sss, is_neg_sss
 export is_mmr, is_pos_mmr, is_neg_mmr
+
+function width{ESS,FSS}(x::Unum{ESS,FSS})
+  is_exact(x) && return zero(Unum{ESS,FSS})
+  #return the difference, but made exact, and with ulp and sign bits bashed away.
+  return unum_unsafe(__outward_exact(x) - __inward_exact(x), z16)
+end
+export width

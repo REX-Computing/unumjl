@@ -38,7 +38,7 @@ function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Integer)
   _mfs::Int16 = max_fsize(fss)
   if (fss < 6)
     #set the high mask
-    high_mask::Uint64 = fillbits(-(_mfs + 1), 1)
+    high_mask::Uint64 = fillbits(-(_mfs + 1), o16)
     #check if we're already a ubit, then trim to high mask.
     (is_ubit != 0) && return (fraction & high_mask, _mfs, is_ubit)
 
