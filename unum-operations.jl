@@ -59,6 +59,8 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #recalculate fsize, since this is exact, we can deal with ULPs as needed.
   fsize::Uint16 = ctz(fraction) > max_fsize(FSS) ? 0 : max_fsize(FSS) - ctz(fraction)
 
+  #println("$fsize $esize $fraction $exponent")
+
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
 
@@ -122,16 +124,17 @@ function next_exact{ESS,FSS}(x::Unum{ESS,FSS})
   is_zero(x) && return eps(Unum{ESS,FSS})
   is_pos_mmr(x) && return pos_inf(Unum{ESS,FSS})
   is_pos_inf(x) && return nan(Unum{ESS,FSS})
-  (x.flags & UNUM_SIGN_MASK != 0) && return __less_exact(x)
-  return __more_exact(x)
+  (x.flags & UNUM_SIGN_MASK != 0) && return __inward_exact(x)
+  return __outward_exact(x)
 end
+
 function prev_exact{ESS,FSS}(x::Unum{ESS,FSS})
   is_neg_inf(x) && return nan(Unum{ESS,FSS})
   is_neg_mmr(x) && return neg_inf(Unum{ESS,FSS})
   is_zero(x) && return neg_eps(Unum{ESS,FSS})
   is_pos_inf(x) && return maxreal(Unum{ESS,FSS})
-  (x.flags & UNUM_SIGN_MASK != 0) && return __more_exact(x)
-  return __less_exact(x)
+  (x.flags & UNUM_SIGN_MASK != 0) && return __outward_exact(x)
+  return __inward_exact(x)
 end
 export next_exact, prev_exact
 

@@ -126,6 +126,7 @@ function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   #recalculate these values if necessary.
   _baexp = is_ulp(a) ? decode_exp(bound_a) : _aexp
   _bbexp = is_ulp(b) ? decode_exp(bound_b) : _bexp
+
   #find the high and low bounds.  Pass this to a subsidiary function
   far_result  = __sum_exact(bound_a, bound_b, _baexp, _bbexp)
   near_result = __sum_exact(exact_a, exact_b, _aexp, _bexp)
@@ -169,7 +170,7 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   fsize::Uint16 = 0
 
   #how much the exponent must be shifted
-  shift::Uint16 = a_dev
+  shift::Uint16 = 0
 
   if (carry > 1)
     (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad, is_ubit)
@@ -198,6 +199,8 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   #another way to get overflow is: by adding just enough bits to exactly
   #make the binary value for infinity.  This should, instead, yield mmr.
   (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (fraction == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
+
+  flags |= is_ubit
 
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end

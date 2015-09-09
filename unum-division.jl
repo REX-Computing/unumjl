@@ -60,10 +60,10 @@ end
 
 function nrd{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #calculate the amount of accuracy needed roughly scales with fsizesize.
-  iters = max(FSS, 3)
+  iters = max(FSS - 1, 3)
   aexp = decode_exp(a)
   bexp = decode_exp(b)
-  divfactor = bexp + 1
+  divfactor = bexp + 2
 
   negative = (a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK)
 
@@ -80,11 +80,16 @@ function nrd{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   nr_3 = convert(Unum{ESS,FSS}, 32/17)
 
   #generate the test term for b^-1
-  x = nr_2 - nr_3 * b
+  t1 = __mult_exact(nr_3, b)
+  x = __diff_exact(magsort(nr_2, t1)...)
 
   #iteratively improve x.
   for i = 1:iters
-    x = x + (x * (nr_1 - (b * x)))
+
+    t3 = __mult_exact(b, x)
+    t4 = -__diff_exact(magsort(nr_1, t3)...)
+    t5 = __mult_exact(x, t4)
+    x = __sum_exact(magsort(x, t5)...)
   end
 
   #return a * x

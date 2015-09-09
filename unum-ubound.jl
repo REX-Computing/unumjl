@@ -1,8 +1,7 @@
 #unum-ubound.jl
 
-function __check_block_ubound(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  (a == b) && throw(ArgumentError("ubound built with equal unums"))
-  (a > b) && throw(ArgumentError("ubound built backwards"))
+function __check_block_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  (a > b) && throw(ArgumentError("ubound built backwards: $(bits(a, " ")) > $(bits(b, " "))"))
 end
 
 #basic ubound type, which contains two unums, as well as some properties of ubounds
@@ -18,13 +17,32 @@ function ubound_unsafe{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
     #check to make sure that a < b
     __check_block_ubound(a, b)
   end
-  ubound_unsafe(a, b)
+  Ubound(a, b)
+end
+function ubound_unsafe{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
+  if __unum_isdev()
+    __check_block_ubound(a.highbound, b)
+  end
+  Ubound(a.lowbound, b)
+end
+function ubound_unsafe{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
+  if __unum_isdev()
+    __check_block_ubound(a, b.lowbound)
+  end
+  Ubound(a, b.highbound)
+end
+function ubound_unsafe{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
+  if __unum_isdev()
+    __check_block_ubound(a.highbound, b.highbound)
+    __check_block_ubound(a.lowbound, b.lowbound)
+  end
+  Ubound(a.lowbound, b.highbound)
 end
 
 #safe constructors
 function ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  __check_block_ubound(a,b)
-  ubound_unsafe(a, b)
+  __check_block_ubound(a, b)
+  Ubound(a, b)
 end
 
 export Ubound, ubound, ubound_unsafe
