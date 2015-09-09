@@ -9,6 +9,19 @@ module Unums
 #this module exports the Unum Type
 export Unum
 
+#1) for release versions, this will be set to 'false'
+#2) is there a better way of doing this?
+__UNUM_DEV = true
+function __unum_development_environment()
+  global __UNUM_DEV = true
+end
+function __unum_release_environment()
+  global __UNUM_DEV = false
+end
+function __unum_isdev()
+  __UNUM_DEV
+end
+
 #bring in some important uint64 bitwise methods
 include("unum-int64op.jl")
 #helpers used in the unum type constructors andn pseudoconstructors

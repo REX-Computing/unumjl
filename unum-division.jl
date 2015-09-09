@@ -28,29 +28,29 @@ function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #dividing by smaller than small subnormal will yield the entire number line.
   if is_sss(b)
     innerbound = nrd(a, small_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
-    (sss_sign != 0) && return Ubound(neg_mmr(Unum{ESS,FSS}), innerbound)
-    return ubound_resolve(Ubound(innerbound, pos_mmr(Unum{ESS,FSS})))
+    (sss_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
+    return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
   end
 
   #should have a similar process for mmr.
   if is_mmr(b)
     outerbound = nrd(b, big_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
-    (div_sign != 0) && return Ubound(outerbound, neg_ssn(Unum{ESS,FSS}))
-    return ubound_resolve(Ubound(pos_ssn(Unum{ESS,FSS}), outerbound))
+    (div_sign != 0) && return ubound_unsafe(outerbound, neg_ssn(Unum{ESS,FSS}))
+    return ubound_resolve(ubound_unsafe(pos_ssn(Unum{ESS,FSS}), outerbound))
   end
 
   #dividing from a smaller than small subnormal
   if is_sss(a)
     outerbound = nrd(small_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), b)
-    (div_sign != 0) && return Ubound(outerbound, neg_ssn(Unum{ESS,FSS}))
-    return ubound_resolve(Ubound(pos_ssn(Unum{ESS,FSS}), outerbound))
+    (div_sign != 0) && return ubound_unsafe(outerbound, neg_ssn(Unum{ESS,FSS}))
+    return ubound_resolve(ubound_unsafe(pos_ssn(Unum{ESS,FSS}), outerbound))
   end
 
   #and a similar process for mmr
   if is_mmr(a)
     innerbound = nrd(big_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), a)
-    (sss_sign != 0) && return Ubound(neg_mmr(Unum{ESS,FSS}), innerbound)
-    return ubound_resolve(Ubound(innerbound, pos_mmr(Unum{ESS,FSS})))
+    (sss_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
+    return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
   end
 
   is_unit(b) && return unum_unsafe(a, a.flags $ b.flags)

@@ -1,25 +1,33 @@
 #unum-ubound.jl
 
+function __check_block_ubound(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  (a == b) && throw(ArgumentError("ubound built with equal unums"))
+  (a > b) && throw(ArgumentError("ubound built backwards"))
+end
+
 #basic ubound type, which contains two unums, as well as some properties of ubounds
 
-export Ubound
 immutable Ubound{ESS,FSS}
   lowbound::Unum{ESS,FSS}
   highbound::Unum{ESS,FSS}
 end
 
-#outer constructors that take Ubounds as tell as unums
-#todo: Put in checks on these.
-function Ubound{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  Ubound{ESS,FSS}(a.lowbound, b)
-end
-function Ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
-  Ubound{ESS,FSS}(a, b.highbound)
-end
-function Ubound{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
-  Ubound{ESS,FSS}(a.lowbound, b.highbound)
+#unsafe constructor
+function ubound_unsafe{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  if __unum_isdev()
+    #check to make sure that a < b
+    __check_block_ubound(a, b)
+  end
+  ubound_unsafe(a, b)
 end
 
+#safe constructors
+function ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  __check_block_ubound(a,b)
+  ubound_unsafe(a, b)
+end
+
+export Ubound, ubound, ubound_unsafe
 
 export describe
 function describe(b::Ubound, s=" ")
@@ -40,7 +48,7 @@ function open_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #match the sign masks for the case of a or b being zero.
   ulp_a = __ubound_helper(a, true)
   ulp_b = __ubound_helper(b, false)
-  Ubound(ulp_a, ulp_b)
+  ubound_unsafe(ulp_a, ulp_b)
 end
 
 #converts a Ubound into a unum, if applicable.  Otherwise, drop the ubound.

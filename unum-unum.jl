@@ -1,20 +1,8 @@
 #unum-unum.jl
 
-#1) for release versions, this will be set to 'false'
-#2) is there a better way of doing this?
-__UNUM_DEV = true
-function __unum_development_environment()
-  global __UNUM_DEV = true
-end
-function __unum_release_environment()
-  global __UNUM_DEV = false
-end
-function __unum_isdev()
-  __UNUM_DEV
-end
 #contains information about the unum type and some basic helper functions.
 
-function __check_block(ESS, FSS, fsize, esize, fraction, exponent)
+function __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
   fsize < (1 << FSS)                    || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
   esize < (1 << ESS)                    || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
   exponent < (1 << (esize + 1))         || throw(ArgumentError("exponent $(exponent) too big for esize $(esize)"))
@@ -49,7 +37,7 @@ immutable Unum{ESS, FSS} <: Real
   function Unum(fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64)
     #check to make sure fsize is within FSS, esize within ESS
     if (__unum_isdev())
-      __check_block(ESS, FSS, fsize, esize, fraction, exponent)
+      __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
     end
 
     #because fraction could be assigned an existing array, we should do a safe copy.
@@ -69,7 +57,7 @@ end
 #that relays the environment signature for the desired unum.
 function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64)
   #checks to make sure everything is safe.
-  __check_block(ESS, FSS, fsize, esize, fraction, exponent)
+  __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
 
   #mask out values outside of the flag range.
   flags &= UNUM_FLAG_MASK

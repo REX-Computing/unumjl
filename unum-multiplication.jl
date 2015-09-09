@@ -215,9 +215,9 @@ function __mmr_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
 
   #create the appropriate ubounds, directed as appropriate.
   if (sign != 0)
-    Ubound(neg_mmr(Unum{ESS,FSS}), val)
+    ubound_unsafe(neg_mmr(Unum{ESS,FSS}), val)
   else
-    Ubound(val, pos_mmr(Unum{ESS,FSS}))
+    ubound_unsafe(val, pos_mmr(Unum{ESS,FSS}))
   end
 end
 
@@ -237,8 +237,8 @@ function __sss_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
 
   #then create the appropriate ubounds, directed by the desired sign.
   if (sign != 0)
-    ubound_resolve(Ubound(val , neg_sss(Unum{ESS,FSS})))
+    ubound_resolve(ubound_unsafe(val , neg_sss(Unum{ESS,FSS})))
   else
-    ubound_resolve(Ubound(pos_sss(Unum{ESS,FSS}), val))
+    ubound_resolve(ubound_unsafe(pos_sss(Unum{ESS,FSS}), val))
   end
 end
