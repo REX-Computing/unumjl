@@ -88,7 +88,7 @@ end
 ## GATEWAY OPERATION
 
 #an addition operation where a and b are ordered such that mag(a) > mag(b)
-function __add_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
+function __add_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
   a_neg = is_negative(a)
   b_neg = is_negative(b)
 
@@ -102,7 +102,7 @@ end
 ################################################################################
 ## SUM ALGORITHM
 
-function __sum_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
+function __sum_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
   #add two values, where a has a greater magnitude than b.  Both operands have
   #matching signs, either positive or negative.  At this stage, they may both
   #be ULPs.
@@ -113,7 +113,7 @@ function __sum_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16
   end
 end
 
-function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
+function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
   #a and b are ordered by magnitude and have the same sign.
 
   #thus, if a is mmr, it can only result in mmr.
@@ -124,8 +124,8 @@ function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
 
   #recalculate these values if necessary.
-  _baexp = is_ulp(a) ? decode_exp(bound_a) : _aexp
-  _bbexp = is_ulp(b) ? decode_exp(bound_b) : _bexp
+  _baexp::Int64 = is_ulp(a) ? decode_exp(bound_a) : _aexp
+  _bbexp::Int64 = is_ulp(b) ? decode_exp(bound_b) : _bexp
 
   #find the high and low bounds.  Pass this to a subsidiary function
   far_result  = __sum_exact(bound_a, bound_b, _baexp, _bbexp)
@@ -138,7 +138,7 @@ function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp, _bexp)
   end
 end
 
-function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp)
+function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp::Int64, _bexp::Int64)
   #calculate the exact sum between two unums.  You may pass this function a unum
   #with a ubit, but it will calculate the sum as if it didn't have the ubit there
   l::Uint16 = length(a.fraction)
@@ -155,8 +155,9 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
 
   #generate the scratchpad by moving b.
   scratchpad = rsh(b.fraction, bit_offset)
+
   #check to see if there's bits that are falling off.
-  is_ubit::Uint16 = allzeros(lsh(b.fraction, bit_offset)) ? 0 : UNUM_UBIT_MASK
+  is_ubit::Uint16 = allzeros(b.fraction & fillbits(bit_offset, l)) ? 0 : UNUM_UBIT_MASK
 
   #don't forget b's phantom bit (1-b_dev) so it's zero if we are subnormal
   (bit_offset != 0) && (b_dev != 1) && (scratchpad |= __bit_from_top(bit_offset, l))
@@ -169,8 +170,8 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp, _bexp
   flags = a.flags & UNUM_SIGN_MASK
   fsize::Uint16 = 0
 
-  #how much the exponent must be shifted
-  shift::Uint16 = 0
+  #how much the exponent must be shifted.
+  shift::Uint16 = (a_dev == 0) ? 0 : carry
 
   if (carry > 1)
     (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad, is_ubit)

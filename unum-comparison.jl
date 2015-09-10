@@ -11,12 +11,12 @@ function =={ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #check if either is nan
   (isnan(a) || isnan(b)) && return false
 
-  _aexp::Int16 = decode_exp(a)
-  _bexp::Int16 = decode_exp(b)
+  _aexp::Int64 = decode_exp(a)
+  _bexp::Int64 = decode_exp(b)
   #make sure the exponents are the same, otherwise not equal unless subnormal...
   #but if one of them has a positive exponent, subnormality is impossible.
-  is_exp_zero(a) && (_aexp >= min_exponent(ESS)) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
-  is_exp_zero(b) && (_bexp >= min_exponent(ESS)) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
+  is_strange_subnormal(a) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
+  is_strange_subnormal(b) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
 
   (_aexp != _bexp) && return false
   #now that we know that the exponents are the same,
@@ -36,8 +36,8 @@ function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (_b_pos) && (!_a_pos) && return false
   (!_b_pos) && (_a_pos) && return (!(is_zero(a) && is_zero(b)))
   #resolve exponents for strange subnormals.
-  is_exp_zero(a) && (_aexp >= min_exponent(ESS)) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
-  is_exp_zero(b) && (_bexp >= min_exponent(ESS)) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
+  is_strange_subnormal(a) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
+  is_strange_subnormal(b) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
 
   was_ulp_b = is_ulp(b)
   was_ulp_b && (b = next_exact(b))

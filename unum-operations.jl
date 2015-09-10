@@ -17,8 +17,8 @@ export calculate
 #sorts two unums by magnitude (distance from zero), and throws in the calculated
 #exponents, while we're at it.  NB.  MAGSORT ignores sign.
 function magsort{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  _aexp::Int16 = decode_exp(a)
-  _bexp::Int16 = decode_exp(b)
+  _aexp::Int64 = decode_exp(a)
+  _bexp::Int64 = decode_exp(b)
 
   if (_aexp < _bexp)                #first parse through the exponents
     (b, a, _bexp, _aexp)
@@ -59,8 +59,6 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #recalculate fsize, since this is exact, we can deal with ULPs as needed.
   fsize::Uint16 = ctz(fraction) > max_fsize(FSS) ? 0 : max_fsize(FSS) - ctz(fraction)
 
-  #println("$fsize $esize $fraction $exponent")
-
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
 
@@ -68,7 +66,7 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   #resolves a unum with an "unusual exponent", i.e. when esize is not
   #max_esize.  This is an "unsafe" operation, in that it does not check
   #if the passed value is actually subnormal, or that esize isn't pushed to the brim.
-  _aexp::Int16 = decode_exp(a)
+  _aexp::Int64 = decode_exp(a)
   #don't forget to add one, because in theory we're going to want to move that
   #first one PAST the left end of the fraction value.
   _ashl::Uint16 = clz(a.fraction) + 1
@@ -100,7 +98,7 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     if is_frac_zero(a)
       #in which case just make it a bunch of ones, decrement the exponent, and
       #make sure we aren't subnormal, in which case, we just encode as subnormal.
-      _aexp = decode_exp(a)
+      _aexp::Int64 = decode_exp(a)
       fraction::SuperInt = fillbits(-(max_fsize(FSS) + 1), l)
       fsize::Uint16 = max_fsize(FSS)
       (esize, exponent) = (_aexp == min_exponent(ESS)) ? (max_esize(ESS), z64) : encode_exp(_aexp - 1)

@@ -128,8 +128,8 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   _b_sn = is_exp_zero(b)
 
   #calculate and cache _aexp and _bexp
-  _aexp::Int16 = decode_exp(a) + (_a_sn ? 1 : 0)
-  _bexp::Int16 = decode_exp(b) + (_a_sn ? 1 : 0)
+  _aexp::Int64 = decode_exp(a) + (_a_sn ? 1 : 0)
+  _bexp::Int64 = decode_exp(b) + (_a_sn ? 1 : 0)
 
   #preliminary overflow and underflow tests save us from calculations in the
   #case these are definite outcomes.

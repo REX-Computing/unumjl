@@ -38,7 +38,7 @@ end
 ################################################################################
 ## DIFFERENCE ALGORITHM
 
-function __diff_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
+function __diff_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
   #add two values, where a has a greater magnitude than b.  Both operands have
   #matching signs, either positive or negative.  At this stage, they may both
   #be ULPs.
@@ -49,22 +49,27 @@ function __diff_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int1
   end
 end
 
-function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
+function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
   #a and b are ordered by magnitude and have opposing signs.
 
   #assign "exact" and "bound" a's
   (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
   (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
   #recalculate these values if necessary.
-  _baexp::Int16 = is_ulp(a) ? decode_exp(bound_a) : _aexp
-  _bbexp::Int16 = is_ulp(b) ? decode_exp(bound_b) : _bexp
+  _baexp::Int64 = is_ulp(a) ? decode_exp(bound_a) : _aexp
+  _bbexp::Int64 = is_ulp(b) ? decode_exp(bound_b) : _bexp
 
-  #println("exact_a: $(bits(exact_a)) bound_a: $(bits(bound_a))")
-  #println("exact_b: $(bits(exact_b)) bound_b: $(bits(bound_b))")
+  if (_aexp - _bbexp > max_fsize(FSS))
+    if is_ulp(a)
+      is_negative(a) && return ubound_resolve(ubound_unsafe(a, inward_ulp(exact_a)))
+      return ubound_resolve(ubound_unsafe(inward_ulp(exact_a), a))
+    end
+    return inward_ulp(a)
+  end
 
   #do a check to see if a is almost infinite.
   if (is_mmr(a))
-    #a ubound endinc in infinity can't result in an ulp unless the lower subtracted
+    #a ubound ending in infinity can't result in an ulp unless the lower subtracted
     #value is zero, which is already tested for.
     is_mmr(b) && return open_ubound(neg_mmr(Unum{ESS,FSS}), pos_mmr(Unum{ESS,FSS}))
 
@@ -79,6 +84,11 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _
   far_result = __diff_exact(bound_a, exact_b, _baexp, _bexp)
   near_result = __diff_exact(magsort(exact_a, bound_b)...)
 
+  println(bits(a, " "))
+  println(bits(b, " "))
+  println(bits(far_result, " "))
+  println(bits(near_result, " "))
+
   if is_negative(a)
     ubound_resolve(open_ubound(far_result, near_result))
   else
@@ -87,7 +97,7 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _
 end
 
 #a subtraction operation where a and b are ordered such that mag(a) > mag(b)
-function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16, _bexp::Int16)
+function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
 
   l::Uint16 = length(a.fraction)
   # a series of easy cases.
@@ -97,7 +107,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16,
   (is_zero(a)) && return -b
 
   #reassign a to a resolved subnormal value.
-  is_exp_zero(a) && (a.esize != max_esize(ESS)) && (a = __resolve_subnormal(a))
+  is_strange_subnormal(a) && (a = __resolve_subnormal(a))
 
   #check for deviations due to subnormality.
   a_dev::Int16, carry::Uint64 = is_exp_zero(a) ? (o16, z64) : (z16, o64)
@@ -108,7 +118,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int16,
 
   if (bit_offset > max_fsize(FSS))
     #return the previous unum, but with the ubit flag thrown up.
-    return unum_unsafe(__inward_exact(a), a.flags & UNUM_UBIT_MASK)
+    return unum_unsafe(__inward_exact(a), a.flags & UNUM_SIGN_MASK)
   end
 
   #set up carry, lag bit, and flags.  Carry defaults to 1 (leading virtual bit)

@@ -43,3 +43,5 @@ wwx1 = Unum{4,6}(uint16(3), 0x0005, Unums.UNUM_UBIT_MASK, 0x8000_0000_0000_0000,
 @test wwu0 != wwd0 && wwu1 != wwd1 && wwu2 != wwd2  #test that the ubits are not the same as the exact
 @test wwu0 == wwu1 && wwu1 == wwu2 && wwu0 == wwu2  #test that the ubits are all the same as each other
 @test wwx1 != wwu0 && wwx1 != wwu1 && wwx1 != wwu2  #but not if you move the fsize so that there are more bits.
+
+@test !(zero(Unum{4,6}) > zero(Unum{4,6}))

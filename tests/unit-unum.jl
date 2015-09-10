@@ -10,7 +10,7 @@ z64 = zero(Uint64)
 f64 = uint64(-1)
 t64 = 0x8000_0000_0000_0000
 
-@test_throws ArgumentError Unums.__check_block(0, 0, o16, z16, z64, z64)
+@test_throws ArgumentError Unums.__check_block_unum(0, 0, o16, z16, z64, z64)
 
 #test that fsize error gets thrown.
 @test_throws ArgumentError unum(Unum{0,0}, o16, z16, z16, z64, z64)
