@@ -6,11 +6,26 @@
 ###############################################################################
 ## multistage carried difference engine for uint64s.
 
-function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt, lag_carry = z64)
+function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt, trail::Uint64 = z64)
   #run a difference engine across an array of 64-bit integers
+  l = length(v1)
   #"carry" will usually be one, but there are other possibilities (e.g. zero)
-
-  (carry, res)
+  if (l == 1)
+    fraction = v1 - v2 - 1
+    #decrement the carry bit if it looks like we've pulled from it.
+    (fraction <= v1) && (v2 != 0) && (carry -= 1)
+  else
+    fraction = __copy_superint(v1)
+    fraction[1] -= trail
+    for (idx = 1:(l - 1))
+      fraction[idx] -= v2[idx]
+      (fraction[idx] <= v1[idx]) && (v2[idx] != 0) && (fraction[idx + 1] -= 1)
+    end
+    #for the last fraction, we pull from carry.
+    fraction[l] -= v2[l]
+    fraction[l] <= v1[l] && (v2[l] != 0) && (carry -= 1)
+  end
+  (carry, fraction)
 end
 
 ################################################################################
@@ -84,6 +99,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
 
   #check for deviations due to subnormality.
   a_dev::Int16, carry::Uint64 = is_exp_zero(a) ? (o16, z64) : (z16, o64)
+  #set the carry.
   b_dev::Int16 = is_exp_zero(b) ? o16 : z16
 
   #calculate the bit offset
@@ -94,67 +110,71 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
     return unum_unsafe(__inward_exact(a), a.flags & UNUM_SIGN_MASK)
   end
 
-  #set up carry, lag bit, and flags.  Carry defaults to 1 (leading virtual bit)
-  #lag_bit defaults to zero, since this is an exact number.
-  lag_bit::Uint64 = 0
-  flags::Uint16 = a.flags & UNUM_SIGN_MASK
-
   if (bit_offset == 0)
-    #this is the easy case where we don't have to do much...
-    is_exp_zero(b) || (carry = 0)
-
-    (carry, fraction) = __carried_diff(carry, a.fraction, b.fraction)
+    #this is the easy case where we don't have to do much.
+    #note three cases:
+    # a -normal, b -normal       - carry = 0
+    # a -normal, b -subnormal    - carry = 1 (keeps old value)
+    # a -subnormal, b -subnormal - carry = 0 (keeps old value)
+    is_exp_zero(b) || (carry = 0) #only bash the value if b is normal.
+    scratchpad = b.fraction
   else
     #set up a scratchpad.  This will contain the 'correct' value of b in the frac
     #framework of a.  First shift all of the bits from b.
     scratchpad = b.fraction >> bit_offset
 
-    #then throw in virtual bit that corresponds to the leading digit.
-    !is_exp_zero(b) && (scratchpad |= __bit_from_top(bit_offset, l))
-
-    #first, let's isolate the "chop" region of the subtrahend b - if this is 1 then
-    #we have to carry from the main, and also set the ubit to be on.
-    allzeros(b.fraction & fillbits(bit_offset, l)) || (flags |= UNUM_UBIT_MASK; lag_bit = 1)
-    #next, we have to check the position under the lag bit, which only throws the lag bit
-    #and not (necessarily) the ubit.
-    (bitof(b.fraction, bit_offset) == 0) || (lag_bit = 1)
-    #if we found a lag bit, be sure to subtract an extra one from the scratchpad.
-    (carry, fraction) = __carried_diff(carry, a.fraction, scratchpad, lag_bit)
+    #then throw in virtual bit that corresponds to the leading digit, but only
+    #if b is normal.
+    is_exp_zero(b) || (scratchpad |= __bit_from_top(bit_offset, l))
   end
 
   #if we started with a subnormal a (which should be maximally subnormal), we are
   #done. note that we don't have to throw a ubit flag on because a subtraction
   #yielding smallsubnormal should have been impossible.
-  (is_exp_zero(a)) && return Unum{ESS,FSS}(__fsize_of_exact(fraction), max_esize(ESS), flags, fraction, z64)
+  (is_exp_zero(a)) && return Unum{ESS,FSS}(__fsize_of_exact(fraction), max_esize(ESS), a.flags & UNUM_SIGN_MASK, a.fraction - scratchpad, z64)
 
-  fsize::Uint16 = 0
-  is_ubit::Uint16 = 0
-  #process the remaining factors: carry, fraction, lag_bit
-  if (carry == 0)
-    #set shift to be as big as it can be.
-    shift::Int16 = clz(fraction) + 1
-    #modify _aexp here.
-    if shift > (_aexp - min_exponent(ESS))
-      #just push it as far as we can push it.
-      fraction = fraction << (_aexp - min_exponent(ESS))
-      fsize = __fsize_of_exact(fraction)
-      #return a subnormal fraction that appears the way it should.
-      return Unum{ESS,FSS}(fsize, max_esize(ESS), flags, fraction, z64)
-    end
 
-    #regenerate the new fraction and fsize
-    fraction = lsh(fraction, shift)
-    fsize = __fsize_of_exact(fraction)
-
-    #recalculate the exponent.
-    _aexp = _aexp - shift
+  #set up some common variables as defaults.
+  esize::Uint16 = a.esize
+  exponent::Uint64 = a.exponent
+  #here the code bifurcates.  for FSS < 6, life is much simpler, we can just
+  #use the space within the 64-bit fraction.
+  #PART ONE.  CALCULATE (carry, fraction, trail)
+  if (FSS < 6)
+    #calculate chop-off...  Include an extra bit because that's our lagging bit.
+    frac_mask = fillbits(-(1 << FSS))
+    #do the subtraction.
+    fraction = a.fraction - scratchpad
+    #check to see if we have to carry, don't forget to left shift.
+    (fraction > a.fraction) && (carry = 0; fraction << 1)
+    #set the ubit, for sure if we have material past the trailing bit.
+    is_ubit::Uint16 = ((~frac_mask & fraction) != 0) ? UNUM_UBIT_MASK : z16
+    #assign the trailing variable
+    trail::Uint64 = (is_ubit != 0) ? 1 : 0
+    #mask out all but the top of the fraction.
+    fraction = fraction & (frac_mask)
   else
-    #the lag bit fell over, so declare inexact, if necessary, otherwise pass
-    #everything
-    (lag_bit == 0) || (flags |= UNUM_UBIT_MASK)
+    #check to see if we dropped digits off the end.
+    is_ubit = (bit_offset > 0 && allzeros(fillbits(bit_offset - 1, l) & b.fraction)) ? 0 : UNUM_UBIT_MASK
+    #first figure out if there was a trailing bit.
+    trail = is_ubit != 0 ? 1 : 0
+    (carry, fraction) = __carried_diff(carry, a.fraction, scratchpad, trail)
   end
 
-  (esize, exponent) = encode_exp(_aexp)
-
-  Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
+  #PART TWO.  DEAL WITH THE CONSEQUENCES OF (carry, fraction, lag)
+  #check if we have to shift one unit to the right.
+  if (carry == 0) && (_aexp > min_exponent(ESS))
+    #shift.
+    fraction << 1
+    #shift the exponent, too.
+    (esize, exponent) = encode_exp(_aexp - 1)
+    #fill in the last bit of the fraction.
+    (trail != 0) && (fraction = __set_lsb(fraction, FSS))
+  else
+    #no shift.  If we have a trailing bit, ignore it and set the result to have UBIT flag.
+    ((fraction & __bit_from_top(1 << FSS + 1, 1)) != 0) && return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, fraction & frac_mask, a.exponent)
+  end
+  #recalculate fsize.
+  fsize::Uint16 = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)
+  Unum{ESS,FSS}(fsize, esize, a.flags | is_ubit, fraction, exponent)
 end

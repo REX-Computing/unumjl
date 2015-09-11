@@ -125,6 +125,8 @@ println(calculate(ctub6))
 println(calculate(ctu6))
 println("----")
 @test ctu5 + ctu6 != zero(Unum{4,6})
+#problem occurs due to an incorrect handling of trailing bits after shift in
+#__diff_exact.
 
 
 #corner cases on unusual values.

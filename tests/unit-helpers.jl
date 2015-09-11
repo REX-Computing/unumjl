@@ -133,3 +133,9 @@ end
 @test Unums.__frac_cells(6) == 1
 @test Unums.__frac_cells(7) == 2
 @test Unums.__frac_cells(8) == 4
+
+@test Unums.__set_lsb(zero(Uint64), 0) = 0x8000_0000_0000_0000
+@test Unums.__set_lsb(zero(Uint64), 5) = 0x0000_0001_0000_0000
+@test Unums.__set_lsb(zero(Uint64), 6) = 0x0000_0000_0000_0001
+@test Unums.__set_lsb(zeros(Uint64, 2), 7) = [0x0000_0000_0000_0001, 0x0]
+@test Unums.__set_lsb(zeros(Uint64, 4), 8) = [0x0000_0000_0000_0001, 0x0, 0x0, 0x0]

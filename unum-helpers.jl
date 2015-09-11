@@ -89,6 +89,13 @@ end
 #calculates how many words of fraction are necessary to support a certain fss
 __frac_cells(fss::Integer) = uint16(fss < 6 ? 1 : (1 << (fss - 6)))
 
+#set the lsb of a superint to 1 based on fss.  This function has undefined
+#behavior if the passed superint already has a bit set at this location.
+function __set_lsb(a::SuperInt, fss::Integer)
+  (fss > 6) && (return a + [o64, zeros(Uint64, __frac_cells(fss) - 1)])
+  return a + 1 << (64 - (1 << fss))
+end
+
 ################################################################################
 # EXPONENT ENCODING AND DECODING
 #encodes an exponent as a biased 2-tuple (esize, exponent)
