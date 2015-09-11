@@ -99,24 +99,33 @@ ctt2 = Unum{4,6}(uint16(0b110010), uint16(0b0100), z16, uint64(0b101110101101011
 @test !is_mmr(Unums.__sum_exact(ctt2, ctt2, decode_exp(ctt2), decode_exp(ctt2)))
 #result:  This was due to poorly constructed test for the maximum exponent value
 
-#9 september 2015:  Having problems with some ubound addition.
+#9 september 2015:  Having problems with some ubound addition. (throws error)
 ctub1 = Unum{4,6}(0x003f,0x0009,0x0003,0xb282a906ed2d8f0c,0x0000000000000376)
 ctub2 = Unum{4,6}(0x003f,0x0009,0x0003,0x3282a906ed2d8f01,0x0000000000000376)
 ctu1 = ubound(ctub1, ctub2)
 ctu2 = Unum{4,6}(0x0032,0x0008,0x0001,0x6beb9d225f1e6000,0x00000000000001cc)
-@test ctu1 + ctu2 == Ubound{4,6}(Unum{4,6}(0x003f,0x0009,0x0003,0xb282a906ed2d8f0b,0x0000000000000376),Unum{4,6}(0x003f,0x0009,0x0003,0x3282a906ed2d8f00,0x0000000000000376))
+@test ctu1 + ctu2 == Ubound{4,6}(Unum{4,6}(0x003f,0x0009,0x0003,0xb282a906ed2d8f0c,0x0000000000000376),Unum{4,6}(0x003f,0x0009,0x0003,0x3282a906ed2d8f00,0x0000000000000376))
 #resolved when an coding error was discovered:  UNUM_UBIT_MASK instead of UNUM_SIGN_MASK
-#10 september 2015:
-println("----")
+#10 september 2015: (throws error)
 ctub3 = Unum{4,6}(0x003f,0x0004,0x0003,0xde044b871cc5f67f,0x000000000000001d)
 ctub4 = Unum{4,6}(0x003f,0x0004,0x0003,0xde044b871cc5f67d,0x000000000000001d)
 ctu3 = Ubound{4,6}(ctub3,ctub4)
 ctu4 = Unum{4,6}(0x0032,0x0008,0x0000,0x1a757044fa76a000,0x00000000000001b8)
-println(calculate(ctub3))
-println(calculate(ctu4))
-println(decode_exp(ctub3))
-println(decode_exp(ctu4))
-@test ctu3 + ctu4 != zero(Unum{4,6})
+@test ctu3 + ctu4 == Unum{4,6}(0x003f,0x0008,0x0001,0x1a757044fa769fff,0x00000000000001b8)
+#resolved by adding a test to see if the two added values were very far apart.
+#at the ubound level in addition to at the unum level. caused a revision in the
+#previous test as well.
+#11 september 2015: (throws error)
+ctub5 = Unum{4,6}(0x003f,0x0007,0x0001,0x3db8d7e07e3733ee,0x00000000000000f1)
+ctub6 = Unum{4,6}(0x003f,0x0007,0x0001,0xbdb8d7e07e3733f3,0x00000000000000f1)
+ctu5 = Ubound(ctub5, ctub6)
+ctu6 = Unum{4,6}(0x0032,0x0007,0x0002,0x4410e89562546000,0x00000000000000f2)
+println(calculate(ctub5))
+println(calculate(ctub6))
+println(calculate(ctu6))
+println("----")
+@test ctu5 + ctu6 != zero(Unum{4,6})
+
 
 #corner cases on unusual values.
 #zero should return an identical value

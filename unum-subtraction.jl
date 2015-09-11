@@ -10,28 +10,6 @@ function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt, lag_carry = z
   #run a difference engine across an array of 64-bit integers
   #"carry" will usually be one, but there are other possibilities (e.g. zero)
 
-  #first perform a direct difference on the integer arrays.
-  res = v1 - v2
-
-  if (length(v1) == 1)
-    res -= lag_carry
-  else
-    res[1] -= lag_carry
-  end
-
-  #iterate downward from the most significant cell.  Sneakily, this loop
-  #does not execute if we have a singleton SuperInt
-  for idx = 1:length(v1) - 1
-    #if it looks like it's higher than it should be....
-    if res[idx] > v1[idx]
-      #we don't need to worry about carries because at most we can be
-      #FFF...FFF + FFF...FFF = 1FFF...FFFE
-      res[idx + 1] -= 1
-    end
-  end
-
-  #check to see if we need a carry.  Note last() can operate on scalar values
-  (last(res) > last(v1)) && (carry -= 1)
   (carry, res)
 end
 
@@ -83,11 +61,6 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _
 
   far_result = __diff_exact(bound_a, exact_b, _baexp, _bexp)
   near_result = __diff_exact(magsort(exact_a, bound_b)...)
-
-  println(bits(a, " "))
-  println(bits(b, " "))
-  println(bits(far_result, " "))
-  println(bits(near_result, " "))
 
   if is_negative(a)
     ubound_resolve(open_ubound(far_result, near_result))
