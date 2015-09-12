@@ -28,6 +28,18 @@ that may come in handy in the future.
 3) esizesize is restricted to 6, fsizesize is restricted to 16.  (in TEoE, the
   restrictions are 4, and 11, respectively - (p 349).)
 
+what this implementation does NOT do:
+
+It isn't a complete bitwise hardware simulation.  Elementary integer operations
+are implemented directly, for efficiency purposes, actual hardware should use
+"essentially these" as manifestation.
+
+The functions avoid side-effects to respect paralellism.  A future version might
+implement "modular calculation units" with pre-allocated memory that more closely
+emulates static computational requirements for hardware (this will be the strategy
+for the C version) - but doing so will explicitly not be parallel unless each
+process can be instructed to allocate its own calculation unit.
+
 Motivation:
 The motivation for implementing this in julia is two-fold:  Exploration and
 confirmation of the operating character of the bitwise operations.  Secondly,

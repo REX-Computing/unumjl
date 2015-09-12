@@ -11,9 +11,9 @@ function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt, trail::Uint64
   l = length(v1)
   #"carry" will usually be one, but there are other possibilities (e.g. zero)
   if (l == 1)
-    fraction = v1 - v2 - 1
+    fraction = v1 - v2 - ((trail != 0) ? 1 : 0)
     #decrement the carry bit if it looks like we've pulled from it.
-    (fraction <= v1) && (v2 != 0) && (carry -= 1)
+    (fraction >= v1) && (v2 != 0) && (carry -= 1)
   else
     fraction = __copy_superint(v1)
     fraction[1] -= trail
@@ -23,7 +23,7 @@ function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt, trail::Uint64
     end
     #for the last fraction, we pull from carry.
     fraction[l] -= v2[l]
-    fraction[l] <= v1[l] && (v2[l] != 0) && (carry -= 1)
+    (fraction[l] <= v1[l]) && (v2[l] != 0) && (carry -= 1)
   end
   (carry, fraction)
 end
@@ -74,14 +74,39 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _
     end
   end
 
+  println("bounda:", bits(bound_a, " "))
+  println("exactb:", bits(exact_b, " "))
+  println("exacta:", bits(exact_a, " "))
+  println("boundb:", bits(bound_b, " "))
+
   far_result = __diff_exact(bound_a, exact_b, _baexp, _bexp)
   near_result = __diff_exact(magsort(exact_a, bound_b)...)
 
+  println("far:", bits(far_result, " "))
+  println("near:", bits(near_result, " "))
+
   if is_negative(a)
+    println("hi")
     ubound_resolve(open_ubound(far_result, near_result))
   else
     ubound_resolve(open_ubound(near_result, far_result))
   end
+end
+
+#attempts to shift the fraction as far as allowed.  Returns appropriate esize
+#and exponent, and the new fraction.
+function __shift_many_zeros(fraction, _aexp, ESS, lastbit::Uint64 = z64)
+  maxshift::Int64 = _aexp - min_exponent(ESS)
+  tryshift::Int64 = clz(fraction) + 1
+  leftshift::Int64 = tryshift > maxshift ? maxshift : tryshift
+  fraction = fraction << leftshift
+
+  #tack on that last bit, if necessary.
+  (lastbit != 0) && (fraction |= (superone(length(fraction)) << (leftshift - 1)))
+
+  (esize, exponent) = tryshift > maxshift ? (max_esize(ESS), z64) : encode_exp(_aexp - leftshift)
+
+  (esize, exponent, fraction)
 end
 
 #a subtraction operation where a and b are ordered such that mag(a) > mag(b)
@@ -119,18 +144,15 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
     is_exp_zero(b) || (carry = 0) #only bash the value if b is normal.
     #do the direct subtraction.
     #This could trigger a carry in the a-normal, b-subnormal case.
+
     fraction = a.fraction - b.fraction
     #check this.
     (fraction > a.fraction) && (carry = 0)
     #a special case is that we've got a ton of leading zeros.
     if (carry == 0)
       #count how much we have to shift by....  Limit this so that we don't cross
-      #over to subnormal-land.
-      maxshift = _aexp - min_exponent(ESS)
-      tryshift = clz(fraction) + 1
-      leftshift = tryshift > maxshift ? maxshift : tryshift
-      fraction = fraction << leftshift
-      (esize, exponent) = tryshift > maxshift ? (max_esize(ESS), z64) : decode_exp(_aexp - leftshift)
+      #over to subnormal-land.  Note that this result is never going to be a ulp.
+      (esize, exponent, fraction) = __shift_many_zeros(fraction, _aexp, ESS)
       fsize = __fsize_of_exact(fraction)
       return Unum{ESS,FSS}(fsize, esize, a.flags, fraction, exponent)
     end
@@ -173,7 +195,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
     #check to see if we dropped digits off the end.
     is_ubit = (bit_offset > 0 && allzeros(fillbits(bit_offset - 1, l) & b.fraction)) ? 0 : UNUM_UBIT_MASK
     #first figure out if there was a trailing bit.
-    trail = is_ubit != 0 ? 1 : 0
+    trail = (is_ubit != 0) ? o64 : z64
     (carry, fraction) = __carried_diff(carry, a.fraction, scratchpad, trail)
   end
 
@@ -181,11 +203,15 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   #check if we have to shift one unit to the right.
   if (carry == 0) && (_aexp > min_exponent(ESS))
     #shift.
-    fraction << 1
-    #shift the exponent, too.
-    (esize, exponent) = encode_exp(_aexp - 1)
-    #fill in the last bit of the fraction.
-    (trail != 0) && (fraction = __set_lsb(fraction, FSS))
+    if (bit_offset == 1)
+      (esize, exponent, fraction) = __shift_many_zeros(fraction, _aexp, ESS, trail)
+    else
+      fraction = fraction << 1
+      #shift the exponent, too.
+      (esize, exponent) = encode_exp(_aexp - 1)
+      #fill in the last bit of the fraction.
+      (trail != 0) && (fraction = __set_lsb(fraction, FSS))
+    end
   else
     #no shift.  If we have a trailing bit, ignore it and set the result to have UBIT flag.
     ((fraction & __bit_from_top(1 << FSS + 1, 1)) != 0) && return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, fraction & frac_mask, a.exponent)

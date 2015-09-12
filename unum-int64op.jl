@@ -18,6 +18,7 @@ GI16 = Union(Uint16, Int16)
 
 #generates a superint zero for a given superint length
 superzero(l::Integer) = ((l == 1) ? z64 : zeros(Uint64, l))
+superone(l::Integer) = ((l == 1) ? o64 : [o64, zeros(Uint64, l - 1)])
 
 function __copy_superint(a::SuperInt)
   a.length == 1 && return a
