@@ -117,7 +117,23 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
     # a -normal, b -subnormal    - carry = 1 (keeps old value)
     # a -subnormal, b -subnormal - carry = 0 (keeps old value)
     is_exp_zero(b) || (carry = 0) #only bash the value if b is normal.
-    scratchpad = b.fraction
+    #do the direct subtraction.
+    #This could trigger a carry in the a-normal, b-subnormal case.
+    fraction = a.fraction - b.fraction
+    #check this.
+    (fraction > a.fraction) && (carry = 0)
+    #a special case is that we've got a ton of leading zeros.
+    if (carry == 0)
+      #count how much we have to shift by....  Limit this so that we don't cross
+      #over to subnormal-land.
+      maxshift = _aexp - min_exponent(ESS)
+      tryshift = clz(fraction) + 1
+      leftshift = tryshift > maxshift ? maxshift : tryshift
+      fraction = fraction << leftshift
+      (esize, exponent) = tryshift > maxshift ? (max_esize(ESS), z64) : decode_exp(_aexp - leftshift)
+      fsize = __fsize_of_exact(fraction)
+      return Unum{ESS,FSS}(fsize, esize, a.flags, fraction, exponent)
+    end
   else
     #set up a scratchpad.  This will contain the 'correct' value of b in the frac
     #framework of a.  First shift all of the bits from b.
