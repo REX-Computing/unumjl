@@ -60,5 +60,5 @@ while true
 
     u1 = u3
   end
-  println("$(1.0 - (sumerror + sumcrash)/sumsums)% correct, $(sumerror/sumsums)% error, $(sumcrash/sumsums)% fatal")
+  println("$(100 - 100*(sumerror + sumcrash)/sumsums)% correct, $(100 * sumerror/sumsums)% error, $(100 * sumcrash/sumsums)% fatal")
 end

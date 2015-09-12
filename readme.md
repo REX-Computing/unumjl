@@ -34,7 +34,7 @@ It isn't a complete bitwise hardware simulation.  Elementary integer operations
 are implemented directly, for efficiency purposes, actual hardware should use
 "essentially these" as manifestation.
 
-The functions avoid side-effects to respect paralellism.  A future version might
+The functions avoid side-effects to respect parallelism.  A future version might
 implement "modular calculation units" with pre-allocated memory that more closely
 emulates static computational requirements for hardware (this will be the strategy
 for the C version) - but doing so will explicitly not be parallel unless each

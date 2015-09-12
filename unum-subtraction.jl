@@ -74,19 +74,10 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _
     end
   end
 
-  println("bounda:", bits(bound_a, " "))
-  println("exactb:", bits(exact_b, " "))
-  println("exacta:", bits(exact_a, " "))
-  println("boundb:", bits(bound_b, " "))
-
   far_result = __diff_exact(bound_a, exact_b, _baexp, _bexp)
   near_result = __diff_exact(magsort(exact_a, bound_b)...)
 
-  println("far:", bits(far_result, " "))
-  println("near:", bits(near_result, " "))
-
   if is_negative(a)
-    println("hi")
     ubound_resolve(open_ubound(far_result, near_result))
   else
     ubound_resolve(open_ubound(near_result, far_result))
@@ -193,7 +184,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
     fraction = fraction & (frac_mask)
   else
     #check to see if we dropped digits off the end.
-    is_ubit = (bit_offset > 0 && allzeros(fillbits(bit_offset - 1, l) & b.fraction)) ? 0 : UNUM_UBIT_MASK
+    is_ubit = (bit_offset > 0 && allzeros(fillbits(bit_offset, l) & b.fraction)) ? 0 : UNUM_UBIT_MASK
     #first figure out if there was a trailing bit.
     trail = (is_ubit != 0) ? o64 : z64
     (carry, fraction) = __carried_diff(carry, a.fraction, scratchpad, trail)

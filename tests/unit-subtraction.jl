@@ -49,3 +49,12 @@ dx4 = decode_exp(x4)
 @test Unums.__diff_exact(x4, x3, dx4, dx3) == Unum{4,6}(0x002f,0x0006,0x0000,0x1cccdc9ccb8d0000,0x0000000000000064)
 #fixed by implementing a subroutine that also identifies this situation.  to keep
 #code DRY, created the __shift_many_zeros subroutine.
+
+#11 september 2015 - identified through continuous testing, in parallel to the
+#ubound problem as in the unit test for addition.
+x5 = Unum{4,6}(0x0032,0x0007,Unums.UNUM_SIGN_MASK,0x4410e89562546000,uint64(0xf2))
+x6 = Unum{4,6}(0x003f,0x0007,z16,0x3db8d7e07e3733ef,uint64(0xf1))
+dx5 = decode_exp(x5)
+dx6 = decode_exp(x6)
+@test Unums.__diff_exact(x5,x6,dx5,dx6) == Unum{4,6}(0x003f, 0x0007, Unums.UNUM_UBIT_MASK | Unums.UNUM_SIGN_MASK, 0x4a68f94a46718c11, uint64(0xf1))
+#resolved due to an incorrect offset in a fillbit call.
