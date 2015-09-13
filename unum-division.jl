@@ -55,12 +55,12 @@ function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 
   is_unit(b) && return unum_unsafe(a, a.flags $ b.flags)
 
-  nrd(a, b)
+  __div_exact(a, b)
 end
 
-function nrd{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #calculate the amount of accuracy needed roughly scales with fsizesize.
-  iters = max(FSS - 1, 3)
+  iters = max(FSS-2, 3)
   aexp = decode_exp(a)
   bexp = decode_exp(b)
   divfactor = bexp + 2
@@ -93,5 +93,5 @@ function nrd{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   end
 
   #return a * x
-  negative ? -(a * x) : a * x
+  negative ? -(__mult_exact(a, x)) : __mult_exact(a, x)
 end

@@ -21,8 +21,8 @@ superzero(l::Integer) = ((l == 1) ? z64 : zeros(Uint64, l))
 superone(l::Integer) = ((l == 1) ? o64 : [o64, zeros(Uint64, l - 1)])
 
 function __copy_superint(a::SuperInt)
-  a.length == 1 && return a
-  res = zeros(Uint64, a.length)
+  length(a) == 1 && return a
+  res = zeros(Uint64, length(a))
   res[:] = a
 end
 

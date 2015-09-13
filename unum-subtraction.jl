@@ -90,10 +90,10 @@ function __shift_many_zeros(fraction, _aexp, ESS, lastbit::Uint64 = z64)
   maxshift::Int64 = _aexp - min_exponent(ESS)
   tryshift::Int64 = clz(fraction) + 1
   leftshift::Int64 = tryshift > maxshift ? maxshift : tryshift
-  fraction = fraction << leftshift
+  fraction = lsh(fraction, leftshift)
 
   #tack on that last bit, if necessary.
-  (lastbit != 0) && (fraction |= (superone(length(fraction)) << (leftshift - 1)))
+  (lastbit != 0) && (fraction |= lsh(superone(length(fraction)),(leftshift - 1)))
 
   (esize, exponent) = tryshift > maxshift ? (max_esize(ESS), z64) : encode_exp(_aexp - leftshift)
 
@@ -197,7 +197,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
     if (bit_offset == 1)
       (esize, exponent, fraction) = __shift_many_zeros(fraction, _aexp, ESS, trail)
     else
-      fraction = fraction << 1
+      fraction = lsh(fraction, 1)
       #shift the exponent, too.
       (esize, exponent) = encode_exp(_aexp - 1)
       #fill in the last bit of the fraction.
