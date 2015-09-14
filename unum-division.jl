@@ -1,4 +1,4 @@
-#unum-division.jl - currently uses the newton-raphson method, but will also
+#unum-division.jl - currently uses the goldschmidt method, but will also
 #implement other division algorithms.
 
 function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
@@ -55,43 +55,48 @@ function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 
   is_unit(b) && return unum_unsafe(a, a.flags $ b.flags)
 
-  __div_exact(a, b)
+  if (is_ulp(a) || is_ulp(b))
+    __div_ulp(a, b)
+  else
+    __div_exact(a, b)
+  end
+end
+
+function __div_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+end
+
+
+
+#helper function all ones.  decides if fraction has enough ones.
+function allones(fss)
+  (fss < 6) && return ((1 << (1 << fss)) - 1) << (64 - (1 << fss))
+  (fss == 6) && return f64
+  [f64 for i = 1:__frac_cells(fss)]
 end
 
 function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #calculate the amount of accuracy needed roughly scales with fsizesize.
-  iters = max(FSS-2, 3)
-  aexp = decode_exp(a)
-  bexp = decode_exp(b)
-  divfactor = bexp + 2
+  iters = max(FSS, 3)
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+  #cache our allones values
+  _allones = allones(FSS)
 
   negative = (a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK)
 
-  #reset the exponentials for both a and b, and strip the sign
-  (esize, exponent) = encode_exp(aexp - divfactor)
-  a = Unum{ESS,FSS}(a.fsize, esize, a.flags $ ~UNUM_SIGN_MASK, a.fraction, exponent)
-
-  (esize, exponent) = encode_exp(bexp - divfactor)
-  b = Unum{ESS,FSS}(b.fsize, esize, b.flags $ ~UNUM_SIGN_MASK, b.fraction, exponent)
-
-  #consider implementing this as a lookup table.
-  nr_1 = one(Unum{ESS,FSS})
-  nr_2 = convert(Unum{ESS,FSS}, 48/17)
-  nr_3 = convert(Unum{ESS,FSS}, 32/17)
-
-  #generate the test term for b^-1
-  t1 = __mult_exact(nr_3, b)
-  x = __diff_exact(magsort(nr_2, t1)...)
+  #first bring the numerator into coherence.
+  numerator::Uint64 =
+  #next bring the denominator into coherence.
+  denominator::Uint64 =
 
   #iteratively improve x.
   for i = 1:iters
-
-    t3 = __mult_exact(b, x)
-    t4 = -__diff_exact(magsort(nr_1, t3)...)
-    t5 = __mult_exact(x, t4)
-    x = __sum_exact(magsort(x, t5)...)
+    factor::SuperInt = denominator
+    (carry, numerator, _) = sfma(carry, numerator, factor)
+    (_, denominator, junk) = sfma(z64, denominator, factor)
+    allzeros(~denominator & _allones) && break
   end
 
-  #return a * x
-  negative ? -(__mult_exact(a, x)) : __mult_exact(a, x)
+  #calculate the correct exponent
+
 end
