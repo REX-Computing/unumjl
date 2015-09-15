@@ -66,6 +66,13 @@ function sfma(carry, num1, num2)
   ((old > res ? uint64(carry + 1) : carry), res)
 end
 
+#performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
+#and number 2 has a hidden bit of exactly zero
+#(1 + a)(0 + b) = b + ab
+function smult(subdigit, num1, num2)
+  subdigit * num2 + (num1 >> 32) * (num2 >> 32) + (((num1 & rm) * (num2 >> 32)) >> 32) + (((num2 & rm) * (num1 >> 32)) >> 32)
+end
+
 function reassemble(T::Type, sign, exp_f, number)
   if T == Float64
     number = (number >> 12) | (exp_f + 1023) << 52 | sign << 63
@@ -74,7 +81,6 @@ function reassemble(T::Type, sign, exp_f, number)
   end
   last(reinterpret(T, [number]))
 end
-
 
 function calculate(carry, number)
   carry + big(number) / (big(1) << 64)
@@ -185,47 +191,94 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   #multiply the old_denominator times the current numerator, and should result
   #in the old_numerator
 
+  numerator &= 0xFFFF_FFFF_FFFF_F000
+
+  subdigit = exp_f < minexp(T, false) ? 0 : 1
+  check = (smult(subdigit, numerator, old_denominator) << (carry > 1 ? 1 : 0))
+
+  if ((check & 0xFFFF_FFFF_0000_0000) != (old_numerator & 0xFFFF_FFFF_0000_0000))
+    println("subnormal wierdness")
+    println(bits(check))
+    println(bits(old_numerator))
+    println("----")
+    println(bits(numerator))
+    println(bits(x/y))
+    exit()
+  else
+
+#  println(bits(check))
+#  println(bits(old_numerator))
+  if (check > old_numerator)
+    #println(bits(check))
+    #println(bits(old_numerator))
+    #println("prev_ulp!")
+    #exit()
+  elseif (check == old_numerator)
+    #println("exact 1!")
+  else
+    numerator += 0x0000_0000_0000_1000
+    check = (smult(subdigit, numerator, old_denominator) << (carry > 1 ? 1 : 0))
+    if (check < old_numerator)
+      println("a")
+      #println("middle_ulp!")
+    elseif (check == old_numerator)
+      #println("exact 2!")
+    else
+      println("b")
+      #println("next_ulp!")
+    end
+  end
+  end
+
+  #how do we know if it was exact?  Well, there are two possibilities.  first
+  #possibility is that new-denominator
 
   #reassemble the value.
   reassemble(T, sign, exp_f, numerator)
 end
-
+#=
 #one-time testing
 #x = reinterpret(Float32, 0b00000110001001000111001101001111)
 #y = reinterpret(Float32, 0b10000000010010100000111001111111)
 
-x = 3.0
-y = 1.5
+x = reinterpret(Float64, rand(Uint64))
+y = reinterpret(Float64, rand(Uint64))
 
-println("answer: $(x/y)")
-println("abits:", bits(x/y))
+#test exact divisions
+#y = floor(rand() * 100000)
+#q = floor(rand() * 100000)
+#x = q * y
+#println("theo. res: $(q)")
+
+#x = 3.0
+#y = 2.0
+
+println("answer:    $(x/y)")
 z = exct(x, y)
-println("ans_exp:", exponentof(x/y))
-println("clc_exp:", exponentof(z))
-println("gscalc: $z")
-println("abits:", bits(x/y))
-println("zbits:", bits(z))
+println("gscalc:    $z")
+println("abits:     ", bits(x/y))
+println("zbits:     ", bits(z))
+#println("theo. bits:", bits(q))
+=#
 
-
-#=
 #continuous testing.
 while (true)
 
-x = reinterpret(Float64, rand(Uint64))
-y = reinterpret(Float64, rand(Uint64))
-z = exct(x, y)
+  x = reinterpret(Float64, rand(Uint64))
+  y = reinterpret(Float64, rand(Uint64))
+  z = exct(x, y)
+#=
+  delta = reinterpret(Uint64,float64(x/y)) - reinterpret(Uint64, float64(z))
 
-delta = reinterpret(Uint64,float64(x/y)) - reinterpret(Uint64, float64(z))
-if (delta != 0) && (delta != 1) && (!(isnan(x / y) && isnan(z)))
-  println(bits(x/y))
-  println(bits(z))
-  println("$x / $y = $(x / y) ?= $(z)")
-  println(bits(x))
-  println(bits(y))
-  (issubnormal(x)) && println("snx")
-  (issubnormal(y)) && println("sny")
-  println("----")
-end
-
-end
+  if (delta != 0) && (delta != 1) && (!(isnan(x / y) && isnan(z)))
+    println(bits(x/y))
+    println(bits(z))
+    println("$x / $y = $(x / y) ?= $(z)")
+    println(bits(x))
+    println(bits(y))
+    (issubnormal(x)) && println("snx")
+    (issubnormal(y)) && println("sny")
+    println("----")
+  end
 =#
+end
