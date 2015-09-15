@@ -37,9 +37,9 @@ end
 
 function maskfor(T::Type)
   if (T == Float64)
-    return 0xFFFF_FFFF_FFFF_FFF0
+    return 0xFFFF_FFFF_FFFF_FF00  #56 digits suffices for Float64 (52 digits)
   elseif (T == Float32)
-    return 0xFFFF_FFE0_0000_0000  #25 digits of precision seems to suffice for a Float32
+    return 0xFFFF_FFE0_0000_0000  #27 digits of precision seems to suffice for a Float32 (23 digits)
   end
 end
 
