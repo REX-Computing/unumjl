@@ -65,7 +65,15 @@ end
 function __div_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 end
 
-
+#sfma is "simple fused multiply add".  Following assumptions hold:
+#first, number has the value 1.XXXXXXX, factor is 
+function __sfma(carry, number, factor)
+  (fracprod, _) = Unums.__chunk_mult(num1, num2)
+  (_carry, fracprod) = Unums.__carried_add(carry, num1, fracprod)
+  ((carry & 0x1) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, num2, fracprod))
+  ((carry & 0x2) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, lsh(num2, 1), fracprod))
+  (_carry, fracprod)
+end
 
 #helper function all ones.  decides if fraction has enough ones.
 function allones(fss)
@@ -75,28 +83,87 @@ function allones(fss)
 end
 
 function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  #calculate the amount of accuracy needed roughly scales with fsizesize.
-  iters = max(FSS, 3)
-  _aexp = decode_exp(a)
-  _bexp = decode_exp(b)
-  #cache our allones values
-  _allones = allones(FSS)
+  div_length::Uint16 = length(a.fraction) + ((FSS >= 6) ? 1 : 0)
+  #figure out the sign.
+  sign::Uint64 = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
 
-  negative = (a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK)
+  #calculate the exponent.
+  exp_f::Int64 = decode_exp(a) - decode_exp(b) + (issubnormal(a) ? 1 : 0) - (issubnormal(b) ? 1 : 0)
 
   #first bring the numerator into coherence.
-  numerator::Uint64 =
-  #next bring the denominator into coherence.
-  denominator::Uint64 =
+  numerator::SuperInt = (FSS >= 6) ? [z64, a.fraction] : a.fraction
+  #save the old numerator.
+  _numerator = __copy_superint(numerator)
+  if (issubnormal(a))
+    shift::Uint64 = clz(numerator) + 1
+    numerator = lsh(numerator, shift)
+    exp_f -= shift
+  end
+  carry::Uint64 = 1
 
-  #iteratively improve x.
-  for i = 1:iters
-    factor::SuperInt = denominator
-    (carry, numerator, _) = sfma(carry, numerator, factor)
-    (_, denominator, junk) = sfma(z64, denominator, factor)
-    allzeros(~denominator & _allones) && break
+  #next bring the denominator into coherence.
+  denominator::SuperInt = (FSS >= 6) ? [z64, b.fraction] : b.fraction
+  #save the old denominator.
+  _denominator = __copy_superint(denominator)
+  if issubnormal(b)
+    shift = clz(denominator)
+    denominator = lsh(denominator, shift)
+    exp_f += shift
+  else
+    #shift the phantom one over.
+    denominator = rsh(denominator, 1) | fillbits(-1, div_length)
+    exp_f -= 1
   end
 
-  #calculate the correct exponent
 
+  #bail out if the exponent is too big or too small.
+  (exp_f > max_exponent(ESS)) && return (sign != 0) ? neg_mmr(Unum{ESS,FSS}) : neg_mmr(Unum{ESS,FSS})
+  (exp_f < min_exponent(ESS) - max_fsize(FSS) - 2) && return (sign != 0) ? neg_sss(Unum{ESS,FSS}) : neg_sss(Unum{ESS,FSS})
+
+  #figure out the mask we need.
+  if (FSS < 5)
+    division_mask = fillbits(-(max_fsize(FSS) + 4), 1)
+  else
+    division_mask = [0xF000_0000_0000_0000, [f64 for idx=1:__frac_cells(FSS)]]
+  end
+
+  #iteratively improve x.
+  for (idx = 1:32)  #we will almost certainly not get to 32 iterations.
+    println(idx)
+    (_, factor) = __carried_diff(o64, ((FSS >= 6) ? zeros(Uint64, div_length) : z64), denominator)
+    (carry, numerator) = __sfma(carry, numerator, factor)
+    (_, denominator) = __sfma(z64, denominator, factor)
+    allzeros(~denominator & division_mask) && break
+    #note that we could mask out denominator and numerator with "division_mask"
+    #but we're not going to bother.
+  end
+
+  #append the carry, shift exponent as necessary.
+  if carry > 1
+    numerator = rsh(numerator, 1) | (carry & 0x1 << 63)
+    carry = 1
+    exp_f += 1
+  end
+
+  #based on the correct exponent, decide if we need to output a generic.
+  (exp_f > max_exponent(ESS)) && return (sign != 0) ? neg_mmr(Unum{ESS,FSS}) : neg_mmr(Unum{ESS,FSS})
+  (exp_f < min_exponent(ESS) - max_fsize(FSS)) && return (sign != 0) ? neg_sss(Unum{ESS,FSS}) : neg_sss(Unum{ESS,FSS})
+  (exp_f < min_exponent(ESS)) && ((exp_f, numerator) = fixsn(ESS, FSS, exp_f, numerator))
+
+  numerator &= division_mask
+  ans_subnormal = exp_f < min_exponent(ESS)
+  is_ulp = true
+
+  frac_delta = (FSS < 6) ? (t64 >> max_fsize(fss)) : [z64, o64, [z64 for idx=1:(__frac_cells(fss) - 1)]]
+  #check o__ur math to assign ULPs
+  reseq = __smult((numerator & frac_mask), _denominator, ans_subnormal)
+  resph = __smult((numerator & frac_mask) + frac_delta, _denominator, ans_subnormal)
+
+  if _numerator < reseq
+    __carried_diff(carry, numerator, frac_delta)
+  elseif _numerator == reseq
+    #decide if this is an exact result.
+  elseif _numerator > resph
+    __carried_add(carry, numerator, frac_delta)
+  end
 end

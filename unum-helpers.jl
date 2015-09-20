@@ -31,6 +31,14 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   (frac, fsize, ubit)
 end
 
+#__frac_mask: takes an FSS value and generates the corresponding superint frac_mask.
+#generally useful only for FSS values less than 6.
+function __frac_mask(fss::Integer)
+  (fss < 6) && return fillbits(-(max_fsize(fss) + 1), o16)
+  (fss = 6) && return f64
+  return [f64 for i=1:__frac_cells(fss)]
+end
+
 #takes a peek at the fraction and decides if ubit needs to be set (if the boundary
 #is not flush with max_fss), but also decides if fsize_of_exact needs to be set.
 function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Integer)
@@ -38,7 +46,7 @@ function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Integer)
   _mfs::Int16 = max_fsize(fss)
   if (fss < 6)
     #set the high mask
-    high_mask::Uint64 = fillbits(-(_mfs + 1), o16)
+    high_mask::Uint64 = __frac_mask(fss)
     #check if we're already a ubit, then trim to high mask.
     (is_ubit != 0) && return (fraction & high_mask, _mfs, is_ubit)
 

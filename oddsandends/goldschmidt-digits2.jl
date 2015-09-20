@@ -1,11 +1,10 @@
 #goldschmidt-digits.jl
 
-#goldschmidt algorithm test on Float16, Float32, Float64.  The purpose of this is to
-#determine if the understanding of iterations to complete digits is correct.
+include("../unum.jl")
+using Unums
 
-import Base.issubnormal
-issubnormal(x::Float16) = (x != 0) && ((reinterpret(Uint16, x) & 0x7c00) == 0)
-export issubnormal
+#goldschmidt algorithm test on Float16, Float32, Float64.  The purpose of this is to
+#determine if the understanding of where to put ULPs is correct.
 
 #returns a Int16 "1" if it's negative, "0" if it's positive.
 function signof(x::FloatingPoint)
@@ -61,16 +60,28 @@ end
 #has no hidden bits.
 rm = 0x0000_0000_FFFF_FFFF
 function sfma(carry, num1, num2)
-  old::Uint64 = num1
-  res::Uint64 = carry * num2 + num1 + (num1 >> 32) * (num2 >> 32) + (((num1 & rm) * (num2 >> 32)) >> 32) + (((num2 & rm) * (num1 >> 32)) >> 32)
-  ((old > res ? uint64(carry + 1) : carry), res)
+  (fracprod, _) = Unums.__chunk_mult(num1, num2)
+  (_carry, fracprod) = Unums.__carried_add(carry, num1, fracprod)
+  ((carry & 0x1) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, num2, fracprod))
+  ((carry & 0x2) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, lsh(num2, 1), fracprod))
+  (_carry, fracprod)
 end
 
 #performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
 #and number 2 has a hidden bit of exactly zero
 #(1 + a)(0 + b) = b + ab
-function smult(subdigit, num1, num2)
-  subdigit * num2 + (num1 >> 32) * (num2 >> 32) + (((num1 & rm) * (num2 >> 32)) >> 32) + (((num2 & rm) * (num1 >> 32)) >> 32)
+function smult(a::Uint64, b::Uint64, a_subnormal)
+  a = a_subnormal ? a << (clz(a) + 1) : a
+
+  (fraction, _) = Unums.__chunk_mult(a, b)
+  carry = one(Uint64)
+
+  #only perform the respective adds if the *opposing* thing is not subnormal.
+  ((carry, fraction) = Unums.__carried_add(carry, fraction, b))
+
+  #carry may be as high as three!  So we must shift as necessary.
+  (fraction, shift, is_ubit) = Unums.__shift_after_add(carry, fraction, _)
+  fraction << 1
 end
 
 function reassemble(T::Type, sign, exp_f, number)
@@ -121,7 +132,7 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   T = typeof(x)
 
   if isnan(x) || isnan(y)
-    return nan(T)
+    return (nan(T), false)
   end
 
   #figure out the sign.
@@ -133,13 +144,13 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   #figure the decimals.
   numerator::Uint64 = castfrac(x)
 
-  #save the old numerator
-  old_numerator = numerator
   if (issubnormal(x))
     shift::Uint64 = clz(numerator) + 1
     numerator = numerator << shift
     exp_f -= shift
   end
+  #save the old numerator
+  old_numerator = numerator
   #set the carry on the numerator
   carry::Uint64 = 1
 
@@ -156,13 +167,12 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   #and then save this old denominator.
   old_denominator = denominator
 
-  (exp_f > maxexp(T)) && (return (sign == 1 ? convert(T,-Inf) : inf(T)))
-  (exp_f < minexp(T, true) - 2) && (return (sign == 1 ? convert(T,-0.0) : 0.0))
+  (exp_f > maxexp(T)) && (return (sign == 1 ? convert(T,-Inf) : inf(T), false))
+  (exp_f < minexp(T, true) - 2) && (return ((sign == 1 ? convert(T,-0.0) : 0.0), false))
 
   ourfrac_mask = maskfor(T)
 
-  pass_denominator::Uint64 = 0
-
+  println("####")
   #do the goldschmidt algorithm
   for (idx = 1:32)
     factor::Uint64 = (-denominator)
@@ -178,63 +188,48 @@ function exct(x::FloatingPoint, y::FloatingPoint)
     numerator &= ourfrac_mask
   end
   if carry > 1
+    println(carry)
     numerator = numerator >> 1 | (carry & 0x1 << 63)
     exp_f += 1
   end
 
-  (exp_f > maxexp(T)) && (return (sign == 1 ? convert(T,-Inf) : inf(T)))
-  (exp_f < minexp(T, true)) && (return (sign == 1 ? convert(T,-0.0) : 0.0))
+  (exp_f > maxexp(T)) && (return ((sign == 1 ? convert(T,-Inf) : inf(T)), false))
+  (exp_f < minexp(T, true)) && (return ((sign == 1 ? convert(T,-0.0) : 0.0), false))
 
-  exp_f < minexp(T, false) && ((exp_f, numerator) = fixsn(T, exp_f, numerator))
+  (exp_f < minexp(T, false)) && ((exp_f, numerator) = fixsn(T, exp_f, numerator))
 
   #now, at this point, we have to go back and 'check our work.'
   #multiply the old_denominator times the current numerator, and should result
   #in the old_numerator
 
-  numerator &= 0xFFFF_FFFF_FFFF_F000
+  numerator &= ourfrac_mask
+  ans_subnormal = exp_f < minexp(T, false)
+  is_ulp = true
 
-  subdigit = exp_f < minexp(T, false) ? 0 : 1
-  check = (smult(subdigit, numerator, old_denominator) << (carry > 1 ? 1 : 0))
+  f_d = 0x0000_0000_0000_1000
+  f_ma = 0xFFFF_FFFF_FFFF_F000
+  #do a "remultiply" operation.  First attempt with the lower unit.
 
-  if ((check & 0xFFFF_FFFF_0000_0000) != (old_numerator & 0xFFFF_FFFF_0000_0000))
-    println("subnormal wierdness")
-    println(bits(check))
-    println(bits(old_numerator))
-    println("----")
-    println(bits(numerator))
-    println(bits(x/y))
-    exit()
-  else
+  resmh = smult((numerator & f_ma - f_d), old_denominator, ans_subnormal)
+  reseq = smult(numerator & f_ma, old_denominator, ans_subnormal)
+  resph = smult((numerator & f_ma + f_d), old_denominator, ans_subnormal)
 
-#  println(bits(check))
-#  println(bits(old_numerator))
-  if (check > old_numerator)
-    #println(bits(check))
-    #println(bits(old_numerator))
-    #println("prev_ulp!")
-    #exit()
-  elseif (check == old_numerator)
-    #println("exact 1!")
-  else
-    numerator += 0x0000_0000_0000_1000
-    check = (smult(subdigit, numerator, old_denominator) << (carry > 1 ? 1 : 0))
-    if (check < old_numerator)
-      println("a")
-      #println("middle_ulp!")
-    elseif (check == old_numerator)
-      #println("exact 2!")
-    else
-      println("b")
-      #println("next_ulp!")
-    end
-  end
+  println("refer:", bits(old_numerator))
+  println("resmh:", bits(resmh))
+  println("reseq:", bits(reseq))
+  println("resph:", bits(resph))
+
+  if (old_numerator < reseq)
+    numerator = (numerator - f_d)
+  elseif (old_numerator == reseq)
+    #need to run an ulp check here.
+    numerator = (numerator - f_d)
+  elseif (old_numerator > (resph))
+    numerator = (numerator + f_d)
   end
 
-  #how do we know if it was exact?  Well, there are two possibilities.  first
-  #possibility is that new-denominator
-
-  #reassemble the value.
-  reassemble(T, sign, exp_f, numerator)
+  #reassemble the value into the requisite floating point
+  (reassemble(T, sign, exp_f, numerator), is_ulp)
 end
 #=
 #one-time testing
@@ -262,23 +257,38 @@ println("zbits:     ", bits(z))
 =#
 
 #continuous testing.
+count = 0
+errors = 0
 while (true)
-
   x = reinterpret(Float64, rand(Uint64))
   y = reinterpret(Float64, rand(Uint64))
-  z = exct(x, y)
-#=
-  delta = reinterpret(Uint64,float64(x/y)) - reinterpret(Uint64, float64(z))
+  println("----")
+  (z, ulp) = exct(x, y)
 
-  if (delta != 0) && (delta != 1) && (!(isnan(x / y) && isnan(z)))
-    println(bits(x/y))
-    println(bits(z))
-    println("$x / $y = $(x / y) ?= $(z)")
-    println(bits(x))
-    println(bits(y))
-    (issubnormal(x)) && println("snx")
-    (issubnormal(y)) && println("sny")
-    println("----")
+  bigres = big(x) / big(y)
+  bigguess = big(z)
+
+  (isinf(z)) && continue
+
+  if ulp
+    nextfrac = big(reinterpret(Float64, (reinterpret(Uint64, z) + 1)))
+    if (abs(bigguess) > abs(bigres))
+      println("lower bound bad")
+      println(bits(z))
+      println(bits(x/y))
+      println("count, $count")
+      exit()
+    end
+    if (abs(nextfrac) < abs(bigres))
+      println("upper bound bad")
+      println(bits(z))
+      println(bits(x/y))
+      exit()
+    end
   end
-=#
+  count += 1
 end
+
+#NB:  This technique still has a vanishingly small ~(0.005%) error rate in assigning
+#the correct ULP to the quotient.  Will need to take a  more careful look at why this
+#is occurring.
