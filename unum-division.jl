@@ -81,8 +81,6 @@ end
 #and number 2 has a hidden bit of exactly zero
 #(1 + a)(0 + b) = b + ab
 function __smult(a::SuperInt, b::SuperInt, a_subnormal)
-  a = a_subnormal ? a << (clz(a) + 1) : a
-
   (fraction, _) = Unums.__chunk_mult(a, b)
   carry = one(Uint64)
 
@@ -168,17 +166,15 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #based on the correct exponent, decide if we need to output a generic.
   (exp_f > max_exponent(ESS)) && return (sign != 0) ? neg_mmr(Unum{ESS,FSS}) : neg_mmr(Unum{ESS,FSS})
   (exp_f < min_exponent(ESS) - max_fsize(FSS)) && return (sign != 0) ? neg_sss(Unum{ESS,FSS}) : neg_sss(Unum{ESS,FSS})
-  (exp_f < min_exponent(ESS)) && ((exp_f, numerator) = fixsn(ESS, FSS, exp_f, numerator))
 
   numerator &= division_mask
-  ans_subnormal = exp_f < min_exponent(ESS)
   is_ulp = UNUM_UBIT_MASK
 
   frac_delta = (FSS < 6) ? (t64 >> max_fsize(FSS)) : [z64, o64, [z64 for idx=1:(__frac_cells(FSS) - 1)]]
   frac_mask = (FSS < 6) ? (fillbits(-max_fsize(FSS), o16)) : [z64, [f64 for idx = 1:__frac_cells(fss)]]
   #check our math to assign ULPs
-  reseq = __smult((numerator & frac_mask), _denominator, ans_subnormal)
-  resph = __smult((numerator & frac_mask) + frac_delta, _denominator, ans_subnormal)
+  reseq = __smult((numerator & frac_mask), _denominator)
+  resph = __smult((numerator & frac_mask) + frac_delta, _denominator)
 
   if _numerator < reseq
     (carry, numerator) = __carried_diff(carry, numerator, frac_delta)
@@ -187,6 +183,11 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   elseif _numerator > resph
     (carry, numerator) = __carried_add(carry, numerator, frac_delta)
   end
+
+  (carry < 1) && (numerator = rsh(numerator, 1))
+  (carry > 1) && (numerator = lsh(numerator, 1))
+
+  (exp_f < min_exponent(ESS)) && ((exp_f, numerator) = fixsn(ESS, FSS, exp_f, numerator))
 
   if (FSS < 6)
     fraction = numerator & frac_mask
