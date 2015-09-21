@@ -70,8 +70,7 @@ end
 #performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
 #and number 2 has a hidden bit of exactly zero
 #(1 + a)(0 + b) = b + ab
-function smult(a::Uint64, b::Uint64, a_subnormal)
-  a = a_subnormal ? a << (clz(a) + 1) : a
+function smult(a::Uint64, b::Uint64)
 
   (fraction, _) = Unums.__chunk_mult(a, b)
   carry = one(Uint64)
@@ -171,24 +170,17 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   (exp_f < minexp(T, true) - 2) && (return ((sign == 1 ? convert(T,-0.0) : 0.0), false))
 
   ourfrac_mask = maskfor(T)
-
-  println("####")
   #do the goldschmidt algorithm
   for (idx = 1:32)
     factor::Uint64 = (-denominator)
     #simple-fused-multiply-add.
     (carry, numerator) = sfma(carry, numerator, factor)
     (_, denominator) = sfma(uint64(0), denominator, factor)
-    #println(bits(numerator))
-    #println(bits(denominator))
-
-    #~denominator == 0 && break
     (~denominator & ourfrac_mask == 0) && break
     denominator &= ourfrac_mask
     numerator &= ourfrac_mask
   end
   if carry > 1
-    println(carry)
     numerator = numerator >> 1 | (carry & 0x1 << 63)
     exp_f += 1
   end
@@ -196,7 +188,6 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   (exp_f > maxexp(T)) && (return ((sign == 1 ? convert(T,-Inf) : inf(T)), false))
   (exp_f < minexp(T, true)) && (return ((sign == 1 ? convert(T,-0.0) : 0.0), false))
 
-  (exp_f < minexp(T, false)) && ((exp_f, numerator) = fixsn(T, exp_f, numerator))
 
   #now, at this point, we have to go back and 'check our work.'
   #multiply the old_denominator times the current numerator, and should result
@@ -210,14 +201,8 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   f_ma = 0xFFFF_FFFF_FFFF_F000
   #do a "remultiply" operation.  First attempt with the lower unit.
 
-  resmh = smult((numerator & f_ma - f_d), old_denominator, ans_subnormal)
-  reseq = smult(numerator & f_ma, old_denominator, ans_subnormal)
-  resph = smult((numerator & f_ma + f_d), old_denominator, ans_subnormal)
-
-  println("refer:", bits(old_numerator))
-  println("resmh:", bits(resmh))
-  println("reseq:", bits(reseq))
-  println("resph:", bits(resph))
+  reseq = smult(numerator & f_ma, old_denominator)
+  resph = smult((numerator & f_ma + f_d), old_denominator)
 
   if (old_numerator < reseq)
     numerator = (numerator - f_d)
@@ -227,6 +212,8 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   elseif (old_numerator > (resph))
     numerator = (numerator + f_d)
   end
+
+  (exp_f < minexp(T, false)) && ((exp_f, numerator) = fixsn(T, exp_f, numerator))
 
   #reassemble the value into the requisite floating point
   (reassemble(T, sign, exp_f, numerator), is_ulp)
@@ -262,7 +249,6 @@ errors = 0
 while (true)
   x = reinterpret(Float64, rand(Uint64))
   y = reinterpret(Float64, rand(Uint64))
-  println("----")
   (z, ulp) = exct(x, y)
 
   bigres = big(x) / big(y)
@@ -274,8 +260,8 @@ while (true)
     nextfrac = big(reinterpret(Float64, (reinterpret(Uint64, z) + 1)))
     if (abs(bigguess) > abs(bigres))
       println("lower bound bad")
-      println(bits(z))
-      println(bits(x/y))
+      println("gsans:", bits(z))
+      println("fpans:", bits(x/y))
       println("count, $count")
       exit()
     end
@@ -287,6 +273,7 @@ while (true)
     end
   end
   count += 1
+  println(count)
 end
 
 #NB:  This technique still has a vanishingly small ~(0.005%) error rate in assigning

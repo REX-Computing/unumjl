@@ -58,6 +58,8 @@ function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   if (is_ulp(a) || is_ulp(b))
     __div_ulp(a, b)
   else
+    #test for power of two.
+
     __div_exact(a, b)
   end
 end
@@ -66,14 +68,32 @@ function __div_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 end
 
 #sfma is "simple fused multiply add".  Following assumptions hold:
-#first, number has the value 1.XXXXXXX, factor is 
+#first, number has the value 1.XXXXXXX, factor is
 function __sfma(carry, number, factor)
-  (fracprod, _) = Unums.__chunk_mult(num1, num2)
-  (_carry, fracprod) = Unums.__carried_add(carry, num1, fracprod)
-  ((carry & 0x1) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, num2, fracprod))
-  ((carry & 0x2) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, lsh(num2, 1), fracprod))
+  (fracprod, _) = Unums.__chunk_mult(number, factor)
+  (_carry, fracprod) = Unums.__carried_add(carry, number, fracprod)
+  ((carry & 0x1) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, factor, fracprod))
+  ((carry & 0x2) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, lsh(factor, 1), fracprod))
   (_carry, fracprod)
 end
+
+#performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
+#and number 2 has a hidden bit of exactly zero
+#(1 + a)(0 + b) = b + ab
+function __smult(a::SuperInt, b::SuperInt, a_subnormal)
+  a = a_subnormal ? a << (clz(a) + 1) : a
+
+  (fraction, _) = Unums.__chunk_mult(a, b)
+  carry = one(Uint64)
+
+  #only perform the respective adds if the *opposing* thing is not subnormal.
+  ((carry, fraction) = Unums.__carried_add(carry, fraction, b))
+
+  #carry may be as high as three!  So we must shift as necessary.
+  (fraction, shift, is_ubit) = Unums.__shift_after_add(carry, fraction, _)
+  fraction << 1
+end
+
 
 #helper function all ones.  decides if fraction has enough ones.
 function allones(fss)
@@ -93,12 +113,12 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #first bring the numerator into coherence.
   numerator::SuperInt = (FSS >= 6) ? [z64, a.fraction] : a.fraction
   #save the old numerator.
-  _numerator = __copy_superint(numerator)
   if (issubnormal(a))
     shift::Uint64 = clz(numerator) + 1
     numerator = lsh(numerator, shift)
     exp_f -= shift
   end
+  _numerator = __copy_superint(numerator)
   carry::Uint64 = 1
 
   #next bring the denominator into coherence.
@@ -152,18 +172,31 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 
   numerator &= division_mask
   ans_subnormal = exp_f < min_exponent(ESS)
-  is_ulp = true
+  is_ulp = UNUM_UBIT_MASK
 
-  frac_delta = (FSS < 6) ? (t64 >> max_fsize(fss)) : [z64, o64, [z64 for idx=1:(__frac_cells(fss) - 1)]]
-  #check o__ur math to assign ULPs
+  frac_delta = (FSS < 6) ? (t64 >> max_fsize(FSS)) : [z64, o64, [z64 for idx=1:(__frac_cells(FSS) - 1)]]
+  frac_mask = (FSS < 6) ? (fillbits(-max_fsize(FSS), o16)) : [z64, [f64 for idx = 1:__frac_cells(fss)]]
+  #check our math to assign ULPs
   reseq = __smult((numerator & frac_mask), _denominator, ans_subnormal)
   resph = __smult((numerator & frac_mask) + frac_delta, _denominator, ans_subnormal)
 
   if _numerator < reseq
-    __carried_diff(carry, numerator, frac_delta)
+    (carry, numerator) = __carried_diff(carry, numerator, frac_delta)
   elseif _numerator == reseq
     #decide if this is an exact result.
   elseif _numerator > resph
-    __carried_add(carry, numerator, frac_delta)
+    (carry, numerator) = __carried_add(carry, numerator, frac_delta)
   end
+
+  if (FSS < 6)
+    fraction = numerator & frac_mask
+  elseif (FSS == 6)
+    fraction = numerator[1]
+  else
+    fraction = numerator[1:__frac_cells(FSS)]
+  end
+
+  (esize, exponent) = encode_exp(exp_f)
+
+  Unum{ESS,FSS}(fsize, esize, sign | is_ulp, fraction, exponent)
 end
