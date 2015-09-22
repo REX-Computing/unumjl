@@ -1,11 +1,10 @@
 #goldschmidt-digits.jl
 
-#goldschmidt algorithm test on Float16, Float32, Float64.  The purpose of this is to
-#determine if the understanding of iterations to complete digits is correct.
+include("../unum.jl")
+using Unums
 
-import Base.issubnormal
-issubnormal(x::Float16) = (x != 0) && ((reinterpret(Uint16, x) & 0x7c00) == 0)
-export issubnormal
+#goldschmidt algorithm test on Float16, Float32, Float64.  The purpose of this is to
+#determine if the understanding of where to put ULPs is correct.
 
 #returns a Int16 "1" if it's negative, "0" if it's positive.
 function signof(x::FloatingPoint)
@@ -61,9 +60,27 @@ end
 #has no hidden bits.
 rm = 0x0000_0000_FFFF_FFFF
 function sfma(carry, num1, num2)
-  old::Uint64 = num1
-  res::Uint64 = carry * num2 + num1 + (num1 >> 32) * (num2 >> 32) + (((num1 & rm) * (num2 >> 32)) >> 32) + (((num2 & rm) * (num1 >> 32)) >> 32)
-  ((old > res ? uint64(carry + 1) : carry), res)
+  (fracprod, _) = Unums.__chunk_mult(num1, num2)
+  (_carry, fracprod) = Unums.__carried_add(carry, num1, fracprod)
+  ((carry & 0x1) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, num2, fracprod))
+  ((carry & 0x2) != 0) && ((_carry, fracprod) = Unums.__carried_add(_carry, lsh(num2, 1), fracprod))
+  (_carry, fracprod)
+end
+
+#performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
+#and number 2 has a hidden bit of exactly zero
+#(1 + a)(0 + b) = b + ab
+function smult(a::Uint64, b::Uint64)
+
+  (fraction, _) = Unums.__chunk_mult(a, b)
+  carry = one(Uint64)
+
+  #only perform the respective adds if the *opposing* thing is not subnormal.
+  ((carry, fraction) = Unums.__carried_add(carry, fraction, b))
+
+  #carry may be as high as three!  So we must shift as necessary.
+  (fraction, shift, is_ubit) = Unums.__shift_after_add(carry, fraction, _)
+  fraction << 1
 end
 
 function reassemble(T::Type, sign, exp_f, number)
@@ -74,7 +91,6 @@ function reassemble(T::Type, sign, exp_f, number)
   end
   last(reinterpret(T, [number]))
 end
-
 
 function calculate(carry, number)
   carry + big(number) / (big(1) << 64)
@@ -115,7 +131,7 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   T = typeof(x)
 
   if isnan(x) || isnan(y)
-    return nan(T)
+    return (nan(T), false)
   end
 
   #figure out the sign.
@@ -127,13 +143,13 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   #figure the decimals.
   numerator::Uint64 = castfrac(x)
 
-  #save the old numerator
-  old_numerator = numerator
   if (issubnormal(x))
     shift::Uint64 = clz(numerator) + 1
     numerator = numerator << shift
     exp_f -= shift
   end
+  #save the old numerator
+  old_numerator = numerator
   #set the carry on the numerator
   carry::Uint64 = 1
 
@@ -150,23 +166,16 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   #and then save this old denominator.
   old_denominator = denominator
 
-  (exp_f > maxexp(T)) && (return (sign == 1 ? convert(T,-Inf) : inf(T)))
-  (exp_f < minexp(T, true) - 2) && (return (sign == 1 ? convert(T,-0.0) : 0.0))
+  (exp_f > maxexp(T)) && (return (sign == 1 ? convert(T,-Inf) : inf(T), false))
+  (exp_f < minexp(T, true) - 2) && (return ((sign == 1 ? convert(T,-0.0) : 0.0), false))
 
   ourfrac_mask = maskfor(T)
-
-  pass_denominator::Uint64 = 0
-
   #do the goldschmidt algorithm
   for (idx = 1:32)
     factor::Uint64 = (-denominator)
     #simple-fused-multiply-add.
     (carry, numerator) = sfma(carry, numerator, factor)
     (_, denominator) = sfma(uint64(0), denominator, factor)
-    #println(bits(numerator))
-    #println(bits(denominator))
-
-    #~denominator == 0 && break
     (~denominator & ourfrac_mask == 0) && break
     denominator &= ourfrac_mask
     numerator &= ourfrac_mask
@@ -176,56 +185,97 @@ function exct(x::FloatingPoint, y::FloatingPoint)
     exp_f += 1
   end
 
-  (exp_f > maxexp(T)) && (return (sign == 1 ? convert(T,-Inf) : inf(T)))
-  (exp_f < minexp(T, true)) && (return (sign == 1 ? convert(T,-0.0) : 0.0))
+  (exp_f > maxexp(T)) && (return ((sign == 1 ? convert(T,-Inf) : inf(T)), false))
+  (exp_f < minexp(T, true)) && (return ((sign == 1 ? convert(T,-0.0) : 0.0), false))
 
-  exp_f < minexp(T, false) && ((exp_f, numerator) = fixsn(T, exp_f, numerator))
 
   #now, at this point, we have to go back and 'check our work.'
   #multiply the old_denominator times the current numerator, and should result
   #in the old_numerator
 
+  numerator &= ourfrac_mask
+  ans_subnormal = exp_f < minexp(T, false)
+  is_ulp = true
 
-  #reassemble the value.
-  reassemble(T, sign, exp_f, numerator)
+  f_d = 0x0000_0000_0000_1000
+  f_ma = 0xFFFF_FFFF_FFFF_F000
+  #do a "remultiply" operation.  First attempt with the lower unit.
+
+  reseq = smult(numerator & f_ma, old_denominator)
+  resph = smult((numerator & f_ma + f_d), old_denominator)
+
+  if (old_numerator < reseq)
+    numerator = (numerator - f_d)
+  elseif (old_numerator == reseq)
+    #need to run an ulp check here.
+    numerator = (numerator - f_d)
+  elseif (old_numerator > (resph))
+    numerator = (numerator + f_d)
+  end
+
+  (exp_f < minexp(T, false)) && ((exp_f, numerator) = fixsn(T, exp_f, numerator))
+
+  #reassemble the value into the requisite floating point
+  (reassemble(T, sign, exp_f, numerator), is_ulp)
 end
-
+#=
 #one-time testing
 #x = reinterpret(Float32, 0b00000110001001000111001101001111)
 #y = reinterpret(Float32, 0b10000000010010100000111001111111)
 
-x = 3.0
-y = 1.5
-
-println("answer: $(x/y)")
-println("abits:", bits(x/y))
-z = exct(x, y)
-println("ans_exp:", exponentof(x/y))
-println("clc_exp:", exponentof(z))
-println("gscalc: $z")
-println("abits:", bits(x/y))
-println("zbits:", bits(z))
-
-
-#=
-#continuous testing.
-while (true)
-
 x = reinterpret(Float64, rand(Uint64))
 y = reinterpret(Float64, rand(Uint64))
+
+#test exact divisions
+#y = floor(rand() * 100000)
+#q = floor(rand() * 100000)
+#x = q * y
+#println("theo. res: $(q)")
+
+#x = 3.0
+#y = 2.0
+
+println("answer:    $(x/y)")
 z = exct(x, y)
-
-delta = reinterpret(Uint64,float64(x/y)) - reinterpret(Uint64, float64(z))
-if (delta != 0) && (delta != 1) && (!(isnan(x / y) && isnan(z)))
-  println(bits(x/y))
-  println(bits(z))
-  println("$x / $y = $(x / y) ?= $(z)")
-  println(bits(x))
-  println(bits(y))
-  (issubnormal(x)) && println("snx")
-  (issubnormal(y)) && println("sny")
-  println("----")
-end
-
-end
+println("gscalc:    $z")
+println("abits:     ", bits(x/y))
+println("zbits:     ", bits(z))
+#println("theo. bits:", bits(q))
 =#
+
+#continuous testing.
+count = 0
+errors = 0
+while (true)
+  x = reinterpret(Float64, rand(Uint64))
+  y = reinterpret(Float64, rand(Uint64))
+  (z, ulp) = exct(x, y)
+
+  bigres = big(x) / big(y)
+  bigguess = big(z)
+
+  (isinf(z)) && continue
+
+  if ulp
+    nextfrac = big(reinterpret(Float64, (reinterpret(Uint64, z) + 1)))
+    if (abs(bigguess) > abs(bigres))
+      println("lower bound bad")
+      println("gsans:", bits(z))
+      println("fpans:", bits(x/y))
+      println("count, $count")
+      exit()
+    end
+    if (abs(nextfrac) < abs(bigres))
+      println("upper bound bad")
+      println(bits(z))
+      println(bits(x/y))
+      exit()
+    end
+  end
+  count += 1
+  println(count)
+end
+
+#NB:  This technique still has a vanishingly small ~(0.005%) error rate in assigning
+#the correct ULP to the quotient.  Will need to take a  more careful look at why this
+#is occurring.
