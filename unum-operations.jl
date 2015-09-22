@@ -4,9 +4,10 @@
 #literally calculate the value of the Unum.  Please don't use this for Infs and NaNs
 
 function superintval(v::SuperInt)
-  sum = big(1)
+  (typeof(v) == Uint64) && return big(v)
+  sum = big(0)
   for i = 1:length(v)
-    sum += v[i] * (1 << (i * (1 << 6)))
+    sum += v[i] * (big(1) << (i * 64))
   end
   sum
 end
@@ -15,9 +16,9 @@ function calculate(x::Unum)
   sign = (x.flags & UNUM_SIGN_MASK != 0) ? -1 : 1
   #the sub`normal case
   if (x.exponent == 0)
-    2.0^(x.exponent - 2.0^(x.esize) + 1) * sign * (superintval(x.fraction)) / 2.0^(64 * length(x.fraction))
+    2.0^(decode_exp(x) + 1) * sign * (superintval(x.fraction)) / 2.0^(64 * length(x.fraction))
   else #the normalcase
-    2.0^(x.exponent - 2.0^(x.esize)) * sign * (1 + superintval(x.fraction)) / 2.0^(64 * length(x.fraction))
+    2.0^(decode_exp(x)) * sign * (1 + superintval(x.fraction) / 2.0^(64 * length(x.fraction)))
   end
 end
 export calculate

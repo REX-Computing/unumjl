@@ -80,7 +80,7 @@ end
 #performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
 #and number 2 has a hidden bit of exactly zero
 #(1 + a)(0 + b) = b + ab
-function __smult(a::SuperInt, b::SuperInt, a_subnormal)
+function __smult(a::SuperInt, b::SuperInt)
   (fraction, _) = Unums.__chunk_mult(a, b)
   carry = one(Uint64)
 
@@ -89,7 +89,7 @@ function __smult(a::SuperInt, b::SuperInt, a_subnormal)
 
   #carry may be as high as three!  So we must shift as necessary.
   (fraction, shift, is_ubit) = Unums.__shift_after_add(carry, fraction, _)
-  fraction << 1
+  lsh(fraction, 1)
 end
 
 
@@ -103,13 +103,14 @@ end
 function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   div_length::Uint16 = length(a.fraction) + ((FSS >= 6) ? 1 : 0)
   #figure out the sign.
-  sign::Uint64 = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
+  sign::Uint16 = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
 
   #calculate the exponent.
   exp_f::Int64 = decode_exp(a) - decode_exp(b) + (issubnormal(a) ? 1 : 0) - (issubnormal(b) ? 1 : 0)
 
   #first bring the numerator into coherence.
   numerator::SuperInt = (FSS >= 6) ? [z64, a.fraction] : a.fraction
+
   #save the old numerator.
   if (issubnormal(a))
     shift::Uint64 = clz(numerator) + 1
@@ -139,15 +140,14 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (exp_f < min_exponent(ESS) - max_fsize(FSS) - 2) && return (sign != 0) ? neg_sss(Unum{ESS,FSS}) : neg_sss(Unum{ESS,FSS})
 
   #figure out the mask we need.
-  if (FSS < 5)
-    division_mask = fillbits(-(max_fsize(FSS) + 4), 1)
+  if (FSS <= 5)
+    division_mask = fillbits(-(max_fsize(FSS) + 4), o16)
   else
     division_mask = [0xF000_0000_0000_0000, [f64 for idx=1:__frac_cells(FSS)]]
   end
 
   #iteratively improve x.
   for (idx = 1:32)  #we will almost certainly not get to 32 iterations.
-    println(idx)
     (_, factor) = __carried_diff(o64, ((FSS >= 6) ? zeros(Uint64, div_length) : z64), denominator)
     (carry, numerator) = __sfma(carry, numerator, factor)
     (_, denominator) = __sfma(z64, denominator, factor)
@@ -168,10 +168,11 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (exp_f < min_exponent(ESS) - max_fsize(FSS)) && return (sign != 0) ? neg_sss(Unum{ESS,FSS}) : neg_sss(Unum{ESS,FSS})
 
   numerator &= division_mask
-  is_ulp = UNUM_UBIT_MASK
+  is_ulp::Uint16 = UNUM_UBIT_MASK
+  fsize::Uint16 = max_fsize(FSS)
 
-  frac_delta = (FSS < 6) ? (t64 >> max_fsize(FSS)) : [z64, o64, [z64 for idx=1:(__frac_cells(FSS) - 1)]]
-  frac_mask = (FSS < 6) ? (fillbits(-max_fsize(FSS), o16)) : [z64, [f64 for idx = 1:__frac_cells(fss)]]
+  frac_delta::SuperInt = (FSS < 6) ? (t64 >> max_fsize(FSS)) : [z64, o64, [z64 for idx=1:(__frac_cells(FSS) - 1)]]
+  frac_mask::SuperInt = (FSS < 6) ? (fillbits(int64(-(max_fsize(FSS) + 1)), o16)) : [z64, [f64 for idx=1:__frac_cells(FSS)]]
   #check our math to assign ULPs
   reseq = __smult((numerator & frac_mask), _denominator)
   resph = __smult((numerator & frac_mask) + frac_delta, _denominator)
