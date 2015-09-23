@@ -26,6 +26,14 @@ function __copy_superint(a::SuperInt)
   res[:] = a
 end
 
+function superbits(a::SuperInt)
+  if length(a) == 1
+    bits(a)
+  else
+    reduce((a, b) -> string(b,a), map(bits, a))
+  end
+end
+
 # a helper function for is_exp_zero, and is_frac_zero.  Optimized to be fast.
 function allzeros(a::SuperInt)
   (length(a) == 1) && return a == 0
@@ -201,10 +209,6 @@ function lsh(a::SuperInt,b::Integer)
   res
 end
 
-function <<(a::Array{Uint64, 1}, b::Uint16)
-  lsh(a,b)
-end
-
 function rsh(a::SuperInt, b::Integer)
   (typeof(a) == Uint64) && return a >> b
   #how many cells apart is our shift
@@ -225,21 +229,19 @@ function rsh(a::SuperInt, b::Integer)
   res
 end
 
-function >>(a::Array{Uint64, 1}, b::Uint16)
-  rsh(a,b)
-end
-
 function <(a::Array{Uint64,1}, b::Array{Uint64,1})
   for i = length(a):-1:1
-    (a[i] >= b[i]) && return false
+    (a[i] > b[i]) && return false
+    (a[i] < b[i]) && return true
   end
-  return true
+  return false
 end
 
 function >(a::Array{Uint64,1}, b::Array{Uint64,1})
   for i=length(a):-1:1
-    (a[i] <= b[i]) && return false
+    (a[i] < b[i]) && return false
+    (a[i] > b[i]) && return true
   end
-  return true
+  return false
 end
 export lsh, rsh

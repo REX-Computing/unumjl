@@ -122,8 +122,6 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
 
   #next bring the denominator into coherence.
   denominator::SuperInt = (FSS >= 6) ? [z64, b.fraction] : b.fraction
-  #save the old denominator.
-  _denominator = __copy_superint(denominator)
   if issubnormal(b)
     shift = clz(denominator)
     denominator = lsh(denominator, shift)
@@ -133,6 +131,8 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
     denominator = rsh(denominator, 1) | fillbits(-1, div_length)
     exp_f -= 1
   end
+  #save the old denominator.
+  _denominator = __copy_superint(denominator)
 
 
   #bail out if the exponent is too big or too small.
@@ -146,11 +146,18 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
     division_mask = [0xF000_0000_0000_0000, [f64 for idx=1:__frac_cells(FSS)]]
   end
 
+  #println("0:",superbits(numerator))
+  #println("0:",superbits(denominator))
+
   #iteratively improve x.
   for (idx = 1:32)  #we will almost certainly not get to 32 iterations.
     (_, factor) = __carried_diff(o64, ((FSS >= 6) ? zeros(Uint64, div_length) : z64), denominator)
     (carry, numerator) = __sfma(carry, numerator, factor)
     (_, denominator) = __sfma(z64, denominator, factor)
+
+    #println("$idx:",superbits(numerator))
+    #println("$idx:",superbits(denominator))
+
     allzeros(~denominator & division_mask) && break
     #note that we could mask out denominator and numerator with "division_mask"
     #but we're not going to bother.
@@ -172,16 +179,24 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   fsize::Uint16 = max_fsize(FSS)
 
   frac_delta::SuperInt = (FSS < 6) ? (t64 >> max_fsize(FSS)) : [z64, o64, [z64 for idx=1:(__frac_cells(FSS) - 1)]]
+
   frac_mask::SuperInt = (FSS < 6) ? (fillbits(int64(-(max_fsize(FSS) + 1)), o16)) : [z64, [f64 for idx=1:__frac_cells(FSS)]]
   #check our math to assign ULPs
+
   reseq = __smult((numerator & frac_mask), _denominator)
-  resph = __smult((numerator & frac_mask) + frac_delta, _denominator)
+  (_, np1) = __carried_add(z64, numerator & frac_mask, frac_delta)
+  resph = __smult(np1, _denominator)
 
   if _numerator < reseq
+    println("low")
     (carry, numerator) = __carried_diff(carry, numerator, frac_delta)
   elseif _numerator == reseq
+    println("hi mom")
     #decide if this is an exact result.
+  elseif _numerator == resph
+    println("hi dad")
   elseif _numerator > resph
+    println("high")
     (carry, numerator) = __carried_add(carry, numerator, frac_delta)
   end
 
@@ -193,9 +208,9 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   if (FSS < 6)
     fraction = numerator & frac_mask
   elseif (FSS == 6)
-    fraction = numerator[1]
+    fraction = numerator[2]
   else
-    fraction = numerator[1:__frac_cells(FSS)]
+    fraction = numerator[2:__frac_cells(FSS)]
   end
 
   (esize, exponent) = encode_exp(exp_f)

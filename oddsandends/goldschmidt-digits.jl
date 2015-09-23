@@ -246,9 +246,11 @@ println("zbits:     ", bits(z))
 #continuous testing.
 count = 0
 errors = 0
-while (true)
-  x = reinterpret(Float64, rand(Uint64))
-  y = reinterpret(Float64, rand(Uint64))
+#while (true)
+  #x = reinterpret(Float64, rand(Uint64))
+  #y = reinterpret(Float64, rand(Uint64))
+  x = 30.0
+  y = 1.5
   (z, ulp) = exct(x, y)
 
   bigres = big(x) / big(y)
@@ -274,7 +276,7 @@ while (true)
   end
   count += 1
   println(count)
-end
+#end
 
 #NB:  This technique still has a vanishingly small ~(0.005%) error rate in assigning
 #the correct ULP to the quotient.  Will need to take a  more careful look at why this

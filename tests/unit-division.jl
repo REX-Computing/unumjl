@@ -16,7 +16,26 @@
 x = convert(Unum{4,5}, 30.0)
 y = convert(Unum{4,5}, 1.5)
 z = Unums.__div_exact(x, y)
+@test calculate(z) == big(20.0)
+
+println("****")
+
+x = convert(Unum{4,6}, 30.0)
+y = convert(Unum{4,6}, 1.5)
+z = Unums.__div_exact(x, y)
+
 println(bits(z, " "))
-println(bits(z.fraction))
 println(calculate(z))
-println(convert(Float64, z))
+
+#@test calculate(z) == big(20.0)
+#=
+for (idx = 1:10)
+  x = exp(randn() * 100)
+  y = exp(randn() * 100)
+  xu = convert(Unum{4,5}, x)
+  yu = convert(Unum{4,5}, y)
+
+  Unums.__div_exact(xu, yu)
+  #x / y
+end
+=#
