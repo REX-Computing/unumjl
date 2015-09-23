@@ -16,9 +16,10 @@
 x = convert(Unum{4,5}, 30.0)
 y = convert(Unum{4,5}, 1.5)
 z = Unums.__div_exact(x, y)
-@test calculate(z) == big(20.0)
+#@test calculate(z) == big(20.0)
 
-println("****")
+println(bits(z, " "))
+println(calculate(z))
 
 x = convert(Unum{4,6}, 30.0)
 y = convert(Unum{4,6}, 1.5)

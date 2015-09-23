@@ -25,46 +25,57 @@ function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
     return inf(Unum{ESS,FSS}, div_sign)
   end
 
-  #dividing by smaller than small subnormal will yield the entire number line.
-  if is_sss(b)
-    innerbound = nrd(a, small_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
-    (sss_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
-    return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
-  end
-
-  #should have a similar process for mmr.
-  if is_mmr(b)
-    outerbound = nrd(b, big_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
-    (div_sign != 0) && return ubound_unsafe(outerbound, neg_ssn(Unum{ESS,FSS}))
-    return ubound_resolve(ubound_unsafe(pos_ssn(Unum{ESS,FSS}), outerbound))
-  end
-
-  #dividing from a smaller than small subnormal
-  if is_sss(a)
-    outerbound = nrd(small_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), b)
-    (div_sign != 0) && return ubound_unsafe(outerbound, neg_ssn(Unum{ESS,FSS}))
-    return ubound_resolve(ubound_unsafe(pos_ssn(Unum{ESS,FSS}), outerbound))
-  end
-
-  #and a similar process for mmr
-  if is_mmr(a)
-    innerbound = nrd(big_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), a)
-    (sss_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
-    return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
-  end
-
   is_unit(b) && return unum_unsafe(a, a.flags $ b.flags)
 
   if (is_ulp(a) || is_ulp(b))
     __div_ulp(a, b)
   else
-    #test for power of two.
-
     __div_exact(a, b)
   end
 end
 
 function __div_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+    #dividing by smaller than small subnormal will yield the entire number line.
+    if is_sss(b)
+      innerbound = nrd(a, small_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
+      (sss_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
+      return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
+    end
+
+    #should have a similar process for mmr.
+    if is_mmr(b)
+      outerbound = nrd(b, big_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
+      (div_sign != 0) && return ubound_unsafe(outerbound, neg_ssn(Unum{ESS,FSS}))
+      return ubound_resolve(ubound_unsafe(pos_ssn(Unum{ESS,FSS}), outerbound))
+    end
+
+    #dividing from a smaller than small subnormal
+    if is_sss(a)
+      outerbound = nrd(small_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), b)
+      (div_sign != 0) && return ubound_unsafe(outerbound, neg_ssn(Unum{ESS,FSS}))
+      return ubound_resolve(ubound_unsafe(pos_ssn(Unum{ESS,FSS}), outerbound))
+    end
+
+    #and a similar process for mmr
+    if is_mmr(a)
+      innerbound = nrd(big_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), a)
+      (sss_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
+      return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
+    end
+
+    #assign "exact" and "bound" a's
+    (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
+    (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
+
+    #find the high and low bounds.  Pass this to a subsidiary function
+    far_result  = __mult_exact(bound_a, exact_b)
+    near_result = __mult_exact(exact_a, bound_b)
+
+    if ((a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK))
+      ubound_resolve(open_ubound(far_result, near_result))
+    else
+      ubound_resolve(open_ubound(near_result, far_result))
+    end
 end
 
 #sfma is "simple fused multiply add".  Following assumptions hold:
@@ -92,6 +103,24 @@ function __smult(a::SuperInt, b::SuperInt)
   lsh(fraction, 1)
 end
 
+const __EXACT_INDEX_TABLE = [0, 0, 0, 0, 0, 0, 2, 3, 5, 9, 17, 33, 65]
+const __HALFMASK_TABLE = [0xEFFF_FFFF_FFFF_FFFF, 0xCFFF_FFFF_FFFF_FFFF, 0x0FFF_FFFF_FFFF_FFFF, 0x00FF_FFFF_FFFF_FFFF, 0x0000_FFFF_FFFF_FFFF, 0x0000_0000_FFFF_FFFF]
+
+function __check_exact(a::SuperInt, b::SuperInt, fss)
+  if (fss == 0)
+    return a == b
+  elseif (fss < 6)
+    return ((a & __HALFMASK_TABLE[fss]) == 0) && ((b & __HALFMASK_TABLE[fss]) == 0)
+  elseif (fss == 6)
+    return (a[1] == 0) && (b[1] == 0) && (a[2] & __HALFMASK_TABLE[6] == 0) && (b[2] & __HALFMASK_TABLE[6] == 0)
+  elseif (fss > 6)
+    #possibly, a is all zero.
+    for idx = 1:__EXACT_INDEX_TABLE[fss]
+      ((a[idx] != 0) || (b[idx] != 0)) && return false
+    end
+    return true
+  end
+end
 
 #helper function all ones.  decides if fraction has enough ones.
 function allones(fss)
@@ -184,20 +213,19 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #check our math to assign ULPs
 
   reseq = __smult((numerator & frac_mask), _denominator)
-  (_, np1) = __carried_add(z64, numerator & frac_mask, frac_delta)
+  (carry2, np1) = __carried_add(o64, numerator & frac_mask, frac_delta)
   resph = __smult(np1, _denominator)
 
   if _numerator < reseq
-    println("low")
     (carry, numerator) = __carried_diff(carry, numerator, frac_delta)
+  #if being exact is possible, run a check exact.
   elseif _numerator == reseq
-    println("hi mom")
-    #decide if this is an exact result.
+    __check_exact(numerator, _denominator, FSS) && (is_ulp = 0)
   elseif _numerator == resph
-    println("hi dad")
+    __check_exact(np1, _denominator, FSS) && (is_ulp = 0)
+    (carry, numerator) = (carry2, np1)
   elseif _numerator > resph
-    println("high")
-    (carry, numerator) = __carried_add(carry, numerator, frac_delta)
+    (carry, numerator) = (carry2, np1)
   end
 
   (carry < 1) && (numerator = rsh(numerator, 1))
@@ -212,6 +240,8 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   else
     fraction = numerator[2:__frac_cells(FSS)]
   end
+
+  (is_ulp & UNUM_UBIT_MASK == 0) && (fsize = __fsize_of_exact(fraction))
 
   (esize, exponent) = encode_exp(exp_f)
 

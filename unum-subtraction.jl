@@ -75,7 +75,7 @@ function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _
   end
 
   far_result = __diff_exact(bound_a, exact_b, _baexp, _bexp)
-  near_result = __diff_exact(magsort(exact_a, bound_b)...)
+  near_result = __diff_exact(exact_a, bound_b, _aexp, _bbexp)
 
   if is_negative(a)
     ubound_resolve(open_ubound(far_result, near_result))
