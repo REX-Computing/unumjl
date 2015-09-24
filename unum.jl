@@ -30,7 +30,7 @@ include("unum-helpers.jl")
 #the base unum type and its pseudoconstructors
 include("unum-unum.jl")
 #and the derived ubound type
-include("unum-ubound.jl")
+include("ubound-ubound.jl")
 
 #functions that operate on the unum type itself, and friends.
 include("unum-typeproperties.jl")
