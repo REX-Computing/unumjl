@@ -19,11 +19,11 @@ function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt, trail::Uint64
     fraction[1] -= trail
     for (idx = 1:(l - 1))
       fraction[idx] -= v2[idx]
-      (fraction[idx] <= v1[idx]) && (v2[idx] != 0) && (fraction[idx + 1] -= 1)
+      ((fraction[idx] >= v1[idx]) && (v2[idx] != 0)) && (fraction[idx + 1] -= 1)
     end
     #for the last fraction, we pull from carry.
     fraction[l] -= v2[l]
-    (fraction[l] <= v1[l]) && (v2[l] != 0) && (carry -= 1)
+    ((fraction[l] >= v1[l]) && (v2[l] != 0)) && (carry -= 1)
   end
   (carry, fraction)
 end
@@ -150,7 +150,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   else
     #set up a scratchpad.  This will contain the 'correct' value of b in the frac
     #framework of a.  First shift all of the bits from b.
-    scratchpad = b.fraction >> bit_offset
+    scratchpad = rsh(b.fraction, bit_offset)
 
     #then throw in virtual bit that corresponds to the leading digit, but only
     #if b is normal.
@@ -169,9 +169,9 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   #here the code bifurcates.  for FSS < 6, life is much simpler, we can just
   #use the space within the 64-bit fraction.
   #PART ONE.  CALCULATE (carry, fraction, trail)
+  frac_mask = __frac_mask(FSS)
   if (FSS < 6)
     #calculate chop-off...  Include an extra bit because that's our lagging bit.
-    frac_mask = fillbits(-(1 << FSS))
     #do the subtraction.
     fraction = a.fraction - scratchpad
     #check to see if we have to carry, don't forget to left shift.
@@ -206,10 +206,13 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
     fraction = fraction & frac_mask
   else
     #no shift.  If we have a trailing bit, ignore it and set the result to have UBIT flag.
-    ((fraction & __bit_from_top(1 << FSS + 1, 1)) != 0) && return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, fraction & frac_mask, a.exponent)
+    (trail != 0) && (is_ubit |= UNUM_UBIT_MASK)
+    fsize::Uint16 = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)
+    ((fraction & __bit_from_top(1 << FSS + 1, 1)) != 0) && return Unum{ESS,FSS}(fsize, a.esize, a.flags | is_ubit, fraction & frac_mask, a.exponent)
     fraction = fraction & frac_mask
   end
+
   #recalculate fsize.
-  fsize::Uint16 = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)
+  fsize = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)
   Unum{ESS,FSS}(fsize, esize, a.flags | is_ubit, fraction, exponent)
 end

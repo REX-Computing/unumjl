@@ -109,7 +109,7 @@ function trunc_frag_mult(a::Array{Uint64,1}, b::Array{Uint64,1})
     scratchpad[idx + 1] += carries[idx]
     (scratchpad[idx + 1] < carries[idx]) && (carries[idx + 1] += 1)
   end
-  reinterpret(Uint64, scratchpad[2:length(scratchpad)])
+  reinterpret(Uint64, scratchpad[2:end])
 end
 
 

@@ -7,7 +7,7 @@ function superintval(v::SuperInt)
   (typeof(v) == Uint64) && return big(v)
   sum = big(0)
   for i = 1:length(v)
-    sum += v[i] * (big(1) << (i * 64))
+    sum += big(v[i]) * (big(1) << ((i - 1) * 64))
   end
   sum
 end
@@ -60,13 +60,13 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #check the two cases.
   if (carry != 0)
     (esize, exponent) = encode_exp(decode_exp(a) + 1)
-    fraction = fraction >> o16
+    fraction = lsh(fraction, o16)
   else
     esize = a.esize
     exponent = a.exponent
   end
   #recalculate fsize, since this is exact, we can deal with ULPs as needed.
-  fsize::Uint16 = ctz(fraction) > max_fsize(FSS) ? 0 : max_fsize(FSS) - ctz(fraction)
+  fsize::Uint16 = __fsize_of_exact(fraction)
 
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
@@ -104,7 +104,6 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     #resolve a from (possibly inoptimal subnormal) to optimal subnormal or normal
     is_exp_zero(a) && (a = __resolve_subnormal(a))
     #the next step is pretty trivial.  First, check if a is all zeros.
-    println("----")
     if is_frac_zero(a)
       #in which case just make it a bunch of ones, decrement the exponent, and
       #make sure we aren't subnormal, in which case, we just encode as subnormal.
@@ -115,14 +114,10 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     else
       #even easire.  Just do a direct subtraction.
       fraction = a.fraction - __bit_from_top(max_fsize(FSS) + 1, l)
-      println("a.fraction: $(bits(a.fraction))")
-      println("bft       : $(bits(__bit_from_top(max_fsize(FSS) + 1, l)))")
-      println("hint: ", calculate(a))
       fsize = __fsize_of_exact(a.fraction)
       esize = a.esize
       exponent = a.exponent
     end
-    println("fsize: $fsize")
     Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
   end
 end

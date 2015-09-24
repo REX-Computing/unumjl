@@ -114,7 +114,8 @@ function __chunk_mult(a::SuperInt, b::SuperInt)
   (scratchpad[1] != 0) && (ulp_flag |= UNUM_UBIT_MASK)
 
   (l == 2) && return ((uint64(scratchpad[3]) << 32) | scratchpad[2], ulp_flag)
-  (reinterpret(Uint64, scratchpad[(l >> 1):length(scratchpad)]), ulp_flag)
+
+  (reinterpret(Uint64, scratchpad[2:end]), ulp_flag)
 end
 
 #performs an exact mult on two unums a and b.

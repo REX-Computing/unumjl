@@ -1,26 +1,27 @@
 #rump's formula
 
 include("../unum.jl")
-include("../unum_optimizer.jl")
 using Unums
+include("../unum_optimizer.jl")
 
 vtypes = [Float16, Float32, Float64, BigFloat]
 
-function rump(x, y)
-  333.75 * y^6 + (x^2) * (11 * x^2 * y^2 - y^6 - 121 * y^4 - 2) + 5.5 * y^8 + x / (2 * y)
+function type_rump(T, x, y)
+  __A = convert(T, 333.75)
+  __B = convert(T, 11)
+  __C = convert(T, 121)
+  __D = convert(T, 2)
+  __E = convert(T, 5.5)
+  __A * y^6 + (x^2) * (__B * x^2 * y^2 - y^6 - __C * y^4 - __D) + __E * y^8 + x / (__D * y)
 end
 
 for T in vtypes
   x = convert(T, 77617)
   y = convert(T, 33096)
 
-  z = float64(rump(x, y))
+  z = float64(type_rump(T, x, y))
 
   println("rump's formula result in $(T) : $(z)")
-end
-
-function type_rump(T, x, y)
-  convert(T, 333.75) * y^6 + (x^2) * (convert(T, 11) * x^2 * y^2 - y^6 - convert(T,121) * y^4 - convert(T,2)) + convert(T, 5.5) * y^8 + x / (convert(T,2) * y)
 end
 
 function u_rump(T)

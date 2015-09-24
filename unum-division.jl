@@ -229,7 +229,7 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   elseif (FSS == 6)
     fraction = numerator[2]
   else
-    fraction = numerator[2:__frac_cells(FSS)]
+    fraction = numerator[2:end]
   end
 
   (is_ulp & UNUM_UBIT_MASK == 0) && (fsize = __fsize_of_exact(fraction))

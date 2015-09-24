@@ -35,7 +35,7 @@ end
 #generally useful only for FSS values less than 6.
 function __frac_mask(fss::Integer)
   (fss < 6) && return fillbits(-(max_fsize(fss) + 1), o16)
-  (fss = 6) && return f64
+  (fss == 6) && return f64
   return [f64 for i=1:__frac_cells(fss)]
 end
 
