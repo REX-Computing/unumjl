@@ -180,10 +180,10 @@ function __mult_ulp{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #here.
 
   #mmr and sss have a special multiplication handler.
-  is_mmr(a) && return __mmr_mult(b, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
-  is_mmr(b) && return __mmr_mult(a, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
-  is_sss(a) && return __sss_mult(b, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
-  is_sss(b) && return __sss_mult(a, ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)))
+  is_mmr(a) && return __mmr_mult(b, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))
+  is_mmr(b) && return __mmr_mult(a, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))
+  is_sss(a) && return __sss_mult(b, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))
+  is_sss(b) && return __sss_mult(a, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))
 
   #assign "exact" and "bound" a's
   (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)

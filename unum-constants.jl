@@ -64,7 +64,7 @@ export mmr, sss, pos_mmr, neg_mmr, pos_sss, neg_sss
 #a function that generates the "big_exact value of either the positive or negative sign."
 function big_exact{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
   esize   ::Uint16 = 1 << ESS - 1
-  fsize   ::Uint16 = 1 << FSS - 2
+  fsize   ::Uint16 = 1 << FSS - 1
   max_exp ::Uint64 = 1 << (esize + 1) - 1
   Unum{ESS,FSS}(fsize, esize, signmask, fillbits(1 - (1 << FSS), __frac_cells(FSS)), max_exp)
 end

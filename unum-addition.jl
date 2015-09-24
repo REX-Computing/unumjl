@@ -47,6 +47,8 @@ end
 
 ##########################TODO:  Implement integers by converting upwards first.
 
+const __MASK_TABLE = [0x8000_0000_0000_0000, 0xC000_0000_0000_0000, 0xF000_0000_0000_0000, 0xFF00_0000_0000_0000, 0xFFFF_0000_0000_0000, 0xFFFF_FFFF_0000_0000]
+
 #performs a carried add on an unsigned integer array.
 function __carried_add(carry::Uint64, v1::SuperInt, v2::SuperInt)
   #first perform a direct sum on the integer arrays

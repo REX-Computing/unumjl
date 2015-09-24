@@ -104,6 +104,7 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     #resolve a from (possibly inoptimal subnormal) to optimal subnormal or normal
     is_exp_zero(a) && (a = __resolve_subnormal(a))
     #the next step is pretty trivial.  First, check if a is all zeros.
+    println("----")
     if is_frac_zero(a)
       #in which case just make it a bunch of ones, decrement the exponent, and
       #make sure we aren't subnormal, in which case, we just encode as subnormal.
@@ -114,10 +115,14 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     else
       #even easire.  Just do a direct subtraction.
       fraction = a.fraction - __bit_from_top(max_fsize(FSS) + 1, l)
+      println("a.fraction: $(bits(a.fraction))")
+      println("bft       : $(bits(__bit_from_top(max_fsize(FSS) + 1, l)))")
+      println("hint: ", calculate(a))
       fsize = __fsize_of_exact(a.fraction)
       esize = a.esize
       exponent = a.exponent
     end
+    println("fsize: $fsize")
     Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
   end
 end

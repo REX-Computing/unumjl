@@ -28,54 +28,48 @@ function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   is_unit(b) && return unum_unsafe(a, a.flags $ b.flags)
 
   if (is_ulp(a) || is_ulp(b))
-    __div_ulp(a, b)
+    __div_ulp(a, b, div_sign)
   else
     __div_exact(a, b)
   end
 end
 
-function __div_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-    #dividing by smaller than small subnormal will yield the entire number line.
-    if is_sss(b)
-      innerbound = nrd(a, small_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
-      (sss_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
-      return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
-    end
-
-    #should have a similar process for mmr.
-    if is_mmr(b)
-      outerbound = nrd(b, big_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
-      (div_sign != 0) && return ubound_unsafe(outerbound, neg_ssn(Unum{ESS,FSS}))
-      return ubound_resolve(ubound_unsafe(pos_ssn(Unum{ESS,FSS}), outerbound))
-    end
-
-    #dividing from a smaller than small subnormal
-    if is_sss(a)
-      outerbound = nrd(small_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), b)
-      (div_sign != 0) && return ubound_unsafe(outerbound, neg_ssn(Unum{ESS,FSS}))
-      return ubound_resolve(ubound_unsafe(pos_ssn(Unum{ESS,FSS}), outerbound))
-    end
-
-    #and a similar process for mmr
-    if is_mmr(a)
-      innerbound = nrd(big_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), a)
-      (sss_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
-      return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
-    end
-
-    #assign "exact" and "bound" a's
-    (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
-    (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
-
-    #find the high and low bounds.  Pass this to a subsidiary function
-    far_result  = __mult_exact(bound_a, exact_b)
-    near_result = __mult_exact(exact_a, bound_b)
-
-    if ((a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK))
-      ubound_resolve(open_ubound(far_result, near_result))
-    else
-      ubound_resolve(open_ubound(near_result, far_result))
-    end
+function __div_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, div_sign::Uint16)
+  #dividing by smaller than small subnormal will yield the entire number line.
+  if is_sss(b)
+    innerbound = _div_exact(a, small_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
+    (div_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
+    return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
+  end
+  #should have a similar process for mmr.
+  if is_mmr(b)
+    outerbound = __div_exact(b, big_exact(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK))
+    (div_sign != 0) && return ubound_unsafe(outerbound, neg_sss(Unum{ESS,FSS}))
+    return ubound_resolve(ubound_unsafe(pos_sss(Unum{ESS,FSS}), outerbound))
+  end
+  #dividing from a smaller than small subnormal
+  if is_sss(a)
+    outerbound = __div_exact(small_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), b)
+    (div_sign != 0) && return ubound_unsafe(outerbound, neg_sss(Unum{ESS,FSS}))
+    return ubound_resolve(ubound_unsafe(pos_sss(Unum{ESS,FSS}), outerbound))
+  end
+  #and a similar process for mmr
+  if is_mmr(a)
+    innerbound = __div_exact(big_exact(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK), a)
+    (div_sign != 0) && return ubound_unsafe(neg_mmr(Unum{ESS,FSS}), innerbound)
+    return ubound_resolve(ubound_unsafe(innerbound, pos_mmr(Unum{ESS,FSS})))
+  end
+  #assign "exact" and "bound" a's
+  (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
+  (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
+  #find the high and low bounds.  Pass this to a subsidiary function
+  far_result  = __mult_exact(bound_a, exact_b)
+  near_result = __mult_exact(exact_a, bound_b)
+  if ((a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK))
+    ubound_resolve(open_ubound(far_result, near_result))
+  else
+    ubound_resolve(open_ubound(near_result, far_result))
+  end
 end
 
 #sfma is "simple fused multiply add".  Following assumptions hold:
@@ -174,9 +168,6 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   else
     division_mask = [0xF000_0000_0000_0000, [f64 for idx=1:__frac_cells(FSS)]]
   end
-
-  #println("0:",superbits(numerator))
-  #println("0:",superbits(denominator))
 
   #iteratively improve x.
   for (idx = 1:32)  #we will almost certainly not get to 32 iterations.

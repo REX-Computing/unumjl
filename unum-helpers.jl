@@ -55,7 +55,7 @@ function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Integer)
     is_ubit = (fraction & low_mask != 0) ? UNUM_UBIT_MASK : 0
 
     fsize = (is_ubit != 0) ? _mfs : __fsize_of_exact(fraction)
-    (fraction, fsize, is_ubit)
+    (fraction & high_mask, fsize, is_ubit)
   else
     #we don't need to check for lost bits because when 6 or greater, the fractions
     #are aligned with the 64-bit boundaries.

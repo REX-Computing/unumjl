@@ -203,9 +203,11 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
       #fill in the last bit of the fraction.
       (trail != 0) && (fraction = __set_lsb(fraction, FSS))
     end
+    fraction = fraction & frac_mask
   else
     #no shift.  If we have a trailing bit, ignore it and set the result to have UBIT flag.
     ((fraction & __bit_from_top(1 << FSS + 1, 1)) != 0) && return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, fraction & frac_mask, a.exponent)
+    fraction = fraction & frac_mask
   end
   #recalculate fsize.
   fsize::Uint16 = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)

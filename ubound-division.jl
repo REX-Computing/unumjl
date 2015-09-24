@@ -11,7 +11,7 @@ function /{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
   bn = is_negative(b)
 
   (aln != ahn) && return (bn ? ubound_unsafe(a.highbound / b, a.lowbound / b) : ubound_unsafe(a.lowbound / b, a.highbound / b))
-  bn ? ubound_resolve(ubound_unsafe(a.highbound / b, a.lowbound / b) : ubound_unsafe(a.lowbound / b, a.highbound / b))
+  bn ? ubound_resolve(ubound_unsafe(a.highbound / b, a.lowbound / b)) : ubound_resolve(ubound_unsafe(a.lowbound / b, a.highbound / b))
 end
 
 function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
