@@ -22,6 +22,9 @@ function __unum_isdev()
   __UNUM_DEV
 end
 
+#create the abstract Utype type
+abstract Utype <: Real
+
 #bring in some important uint64 bitwise methods
 include("unum-int64op.jl")
 #helpers used in the unum type constructors andn pseudoconstructors
@@ -48,5 +51,9 @@ include("unum-division.jl")
 
 #h-layer stuff (human)
 include("unum-hlayer.jl")
+
+#other utilities
+include("unum-bitwalk.jl")
+include("unum-promote.jl")
 
 end #module

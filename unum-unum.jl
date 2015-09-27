@@ -10,7 +10,7 @@ function __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
 end
 
 
-immutable Unum{ESS, FSS} <: Real
+immutable Unum{ESS, FSS} <: Utype
   fsize::Uint16
   esize::Uint16
   flags::Uint16

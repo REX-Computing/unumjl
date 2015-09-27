@@ -15,6 +15,8 @@ is_ulp(x::Unum) = ((x.flags & UNUM_UBIT_MASK) != 0)
 is_exact(x::Unum) = ((x.flags & UNUM_UBIT_MASK) == 0)
 is_negative(x::Unum) = ((x.flags & UNUM_SIGN_MASK) != 0)
 is_positive(x::Unum) = ((x.flags & UNUM_SIGN_MASK) == 0)
+is_neg_def(x::Unum) = (!is_zero(x)) && is_negative(x)
+is_pos_def(x::Unum) = (!is_zero(x)) && is_positive(x)
 export is_ulp, is_exact, is_negative, is_positive
 
 #a couple of testing conditions

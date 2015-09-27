@@ -6,7 +6,7 @@ end
 
 #basic ubound type, which contains two unums, as well as some properties of ubounds
 
-immutable Ubound{ESS,FSS}
+immutable Ubound{ESS,FSS} <: Utype
   lowbound::Unum{ESS,FSS}
   highbound::Unum{ESS,FSS}
 end

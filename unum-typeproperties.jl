@@ -27,6 +27,9 @@ function esizesize(x::Unum)
 end
 export fsizesize, esizesize
 
+max_fsize{ESS,FSS}(::Type{Unum{ESS,FSS}}) = max_fsize(FSS)
+max_esize{ESS,FSS}(::Type{Unum{ESS,FSS}}) = max_esize(ESS)
+
 #a function that tells you how many bits a unum can take up in 'compressed form'
 function maxubits(T::Type)
   if T <: Unum
