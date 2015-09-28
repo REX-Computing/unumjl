@@ -6,7 +6,7 @@
 #if desired.  Returns an array with the unums that evaluate to true.
 
 function bitwalk{ESS,FSS}(bf, u::Unum{ESS,FSS}, exacts = false, bound_exacts = false)
-  is_exact(u) && throw(ArgumentError("argument must be an ulp."))
+  is_exact(u) && return [u]
   u.fsize == max_fsize(FSS) && throw(ArgumentError("argument cannot be at max fsize"))
   u_neg = is_negative(u)
   #make sure outer_exact is overridden by the exact parameter.

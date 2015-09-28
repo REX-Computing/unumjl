@@ -36,6 +36,15 @@ function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (_b_pos) && (!_a_pos) && return false
   (!_b_pos) && (_a_pos) && return (!(is_zero(a) && is_zero(b)))
   #resolve exponents for strange subnormals.
+
+  println("----")
+  println("comparison code profile")
+  println("a:", bits(a, " "))
+  println("b:", bits(b, " "))
+  println("stsn(a)? ", is_strange_subnormal(a))
+  println("stsn(b)? ", is_strange_subnormal(b))
+  println("----")
+
   is_strange_subnormal(a) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
   is_strange_subnormal(b) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
 

@@ -4,9 +4,9 @@
 include("../unum.jl")
 using Unums
 
-const plength = 2
+const plength = 3
 #const parray = [exp(100 * randn()) * (randbool() ? -1 : 1) for idx=1:plength]
-const parray = [-4.75, 1]
+const parray = [-9, 0, 1]
 
 function pwr(x::Utype, n::Integer)
   if n == 1
@@ -25,5 +25,5 @@ function polynomial(v::Utype)
   sum
 end
 
-a = solve(polynomial, 0.1, 0, 0, verbose = true)
-map((x) -> println("result:", bits(x, " ")), a)
+a = solve(polynomial, 0.001, 0, 0, verbose = true)
+map((x) -> println("result:", describe(x)), a)

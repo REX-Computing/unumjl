@@ -80,6 +80,8 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   #first one PAST the left end of the fraction value.
   _ashl::Uint16 = clz(a.fraction) + 1
 
+  is_zero(a) && return zero(Unum{ESS,FSS})
+
   if (_aexp - _ashl) >= min_exponent(ESS)
     (esize, exponent) = encode_exp(_aexp - _ashl + 1) #don't forget the +1 because decode_exp on a subnormal is
     #one off of the actual exponent.
@@ -89,7 +91,12 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   else  #then all we have to do is encode it as the deeper exponent.
     #reassign _ashl to be the most we can shift it over.
     _ashl = _aexp - min_exponent(ESS) + 1
-    Unum{ESS,FSS}(uint16(a.fsize - _ashl), uint16(1 << ESS - 1), a.flags, a.fraction << _ashl, z64)
+    #take care of the corner case where thete's a single one that we're disappearing
+    if (a.fsize + 1 == _ashl)
+      Unum{ESS,FSS}(z16, uint16(1 << ESS - 1), a.flags, z64, z64)
+    else
+      Unum{ESS,FSS}(uint16(a.fsize - _ashl), uint16(1 << ESS - 1), a.flags, a.fraction << _ashl, z64)
+    end
   end
 end
 

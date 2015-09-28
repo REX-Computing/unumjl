@@ -20,14 +20,13 @@ function expwalk(bf, ESS, FSS, rlow, rhigh, sign)
     pres2 = expwalk(bf, ESS, FSS, rhigh, rhigh, sign)
     res = [res, pres1, pres2]
   else
-    #println("l:", bits(low_ulp, " "))
-    #println("h:", bits(high_ulp, " "))
+    isnan(high_ulp) && (high_ulp = mmr(Unum{ESS,FSS}, sign))
     params = (sign != 0) ? (high_ulp, low_ulp) : (low_ulp, high_ulp)
     bres = bf(Ubound{ESS,FSS}(params...))
     if bres #then we have to try another round.
       mid = (rlow + rhigh) ÷ 2
       pres1 = expwalk(bf, ESS, FSS, rlow, mid, sign)
-      pres2 = expwalk(bf, ESS, FSS, mid, rhigh, sign)
+      pres2 = expwalk(bf, ESS, FSS, mid + 1, rhigh, sign)
       res = [res, pres1, pres2]
     end
   end
