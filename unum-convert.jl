@@ -117,7 +117,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
     esize = uint16((1 << ESS) - 1)
     exponent = z64
   elseif (unbiased_exp > max_exponent(ESS))
-    return mmr(Unum{ESS,FSS})
+    return mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK)
   else
     (esize, exponent) = encode_exp(unbiased_exp)
   end

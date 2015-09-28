@@ -1,8 +1,14 @@
 #unum-hlayer.jl - human layer things in the unum library.
 
 import Base.bits
-function describe(x::Unum)
-  bits(x, " ")
+function describe{ESS,FSS}(x::Unum{ESS, FSS})
+  dstring = is_ulp(x) ? string(calculate(prev_exact(x)), " -> ", calculate(next_exact(x))) : string("exact ", calculate(x))
+  is_pos_mmr(x) && (dstring = "mmr{$ESS, $FSS}")
+  is_neg_mmr(x) && (dstring = "-mmr{$ESS, $FSS}")
+  is_pos_sss(x) && (dstring = "sss{$ESS, $FSS}")
+  is_neg_sss(x) && (dstring = "-sss{$ESS, $FSS}")
+
+  string(bits(x, " "), " (aka ", dstring, ")")
 end
 function bits(x::Unum, space::ASCIIString = "")
   res = ""

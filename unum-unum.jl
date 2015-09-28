@@ -3,8 +3,8 @@
 #contains information about the unum type and some basic helper functions.
 
 function __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
-  fsize < (1 << FSS)                    || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
-  esize < (1 << ESS)                    || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
+  fsize < (1 << (FSS + 1))              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
+  esize < (1 << (ESS + 1))              || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
   exponent < (1 << (esize + 1))         || throw(ArgumentError("exponent $(exponent) too big for esize $(esize)"))
   length(fraction) == __frac_cells(FSS) || throw(ArgumentError("size mismatch between supplied fraction array $(length(fraction)) and expected $(__frac_cells(FSS))"))
 end
@@ -81,6 +81,8 @@ unum{ESS,FSS}(x::Unum{ESS,FSS}, subflags::Uint16) = unum(Unum{ESS,FSS}, x.fsize,
 unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}) = Unum{ESS,FSS}(x.fsize, x.esize, x.flags, x.fraction, x.exponent)
 #substituting flags
 unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}, subflags::Uint16) = Unum{ESS,FSS}(x.fsize, x.esize, subflags, x.fraction, x.exponent)
+unum_unsafe{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64) = Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
+
 
 #an "easy" constructor which is safe, and takes an unbiased exponent value, and
 #a superint value

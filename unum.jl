@@ -24,6 +24,7 @@ end
 
 #create the abstract Utype type
 abstract Utype <: Real
+export Utype
 
 #bring in some important uint64 bitwise methods
 include("unum-int64op.jl")
@@ -55,5 +56,7 @@ include("unum-hlayer.jl")
 #other utilities
 include("unum-bitwalk.jl")
 include("unum-promote.jl")
+include("unum-expwalk.jl")
+include("unum_solver.jl")
 
 end #module
