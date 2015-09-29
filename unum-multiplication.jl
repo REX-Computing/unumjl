@@ -159,8 +159,16 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   _b_sn || ((carry, fraction) = __carried_add(carry, fraction, a.fraction))
   _a_sn || ((carry, fraction) = __carried_add(carry, fraction, b.fraction))
 
-  #carry may be as high as three!  So we must shift as necessary.
-  (fraction, shift, is_ubit) = __shift_after_add(carry, fraction, is_ubit)
+  if (carry == 0)
+    #shift over the fraction as far as we need to.  (we know this isn't zero, because we did a zero check.)
+    shift::Int64 = int64(clz(fraction) + 1)
+    is_ubit = (allzeros(fraction & fillbits(shift, __frac_cells(FSS)))) ? z16 : UNUM_UBIT_MASK
+    fraction = fraction << shift
+    shift *= -1
+  else
+    #carry may be as high as three!  So we must shift as necessary.
+    (fraction, shift, is_ubit) = __shift_after_add(carry, fraction, is_ubit)
+  end
 
   #the exponent is just the sum of the two exponents.
   unbiased_exp::Int64 = _aexp + _bexp + shift
@@ -168,6 +176,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   (unbiased_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
   (unbiased_exp < min_exponent(ESS)) && return sss(Unum{ESS,FSS}, flags)
   (esize, exponent) = encode_exp(unbiased_exp)
+
 
   #analyze the fraction to appropriately set fsize and ubit.
   (fraction, fsize, is_ubit) = __frac_analyze(fraction, is_ubit, FSS)
@@ -179,6 +188,9 @@ end
 function __mult_ulp{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #because zero cannot be traversed by the ulp, we can do something very simple
   #here.
+
+  println("a:", describe(a))
+  println("b:", describe(b))
 
   #mmr and sss have a special multiplication handler.
   is_mmr(a) && return __mmr_mult(b, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))

@@ -70,8 +70,12 @@ function solve(f, lim, sess = 0, sfss = 0; verbose = false, kp = default_keep)
 
   #rj is a function that rejects a solution unum.  rj(u) == true means it will be
   #rejected.  Usually this should be used to set bounds on just how far the solver will go.
+  if verbose
+    bf(v) = spy2(spans_zero(v, f(spy1(v))))
+  else
+    bf(v) = spans_zero(v, f(v))
+  end
 
-  bf(v) = spy2(spans_zero(v, f(spy1(v))))
   bw(v) = bitwalk(bf, v, true, true)
 
   res = fullwalk(bf, sess, sfss)
