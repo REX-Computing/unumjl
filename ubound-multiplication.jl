@@ -8,7 +8,10 @@ end
 
 function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
   #two cases.  One:  the ubound doesn't straddle zero
-  t::Ubound = is_negative(b) ? ubound_unsafe(a.highbound * b, a.lowbound * b) : ubound_unsafe(a.lowbound * b, a.highbound * b)
+  lbp = a.lowbound * b
+  hbp = a.highbound * b
+
+  t::Ubound = is_negative(b) ? ubound_unsafe(hbp, lbp) : ubound_unsafe(lbp, hbp)
 
   #attempt to resolve it if we did not straddle zero
   (a.lowbound.flags & UNUM_SIGN_MASK == a.highbound.flags & UNUM_SIGN_MASK) ? ubound_resolve(t) : t

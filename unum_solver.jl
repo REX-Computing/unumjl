@@ -57,7 +57,7 @@ function bignum_relative_width(x::Unum)
 end
 
 function default_keep{ESS,FSS}(x::Unum{ESS,FSS})
-  (ESS < 6) && return true
+  (ESS < 4) && return true
   is_mmr(x) && return false
   is_sss(x) && return false
   return true

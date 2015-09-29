@@ -163,7 +163,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   (fraction, shift, is_ubit) = __shift_after_add(carry, fraction, is_ubit)
 
   #the exponent is just the sum of the two exponents.
-  unbiased_exp::Int16 = _aexp + _bexp + shift
+  unbiased_exp::Int64 = _aexp + _bexp + shift
   #have to repeat the overflow and underflow tests in light of carry shifts.
   (unbiased_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
   (unbiased_exp < min_exponent(ESS)) && return sss(Unum{ESS,FSS}, flags)

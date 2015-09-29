@@ -28,7 +28,7 @@ function polynomial(v::Utype)
   sum
 end
 
-a = solve(polynomial, tol, 0, 0, verbose = true)
+a = solve(polynomial, tol, 0, 0)#, verbose = true)
 map((x) -> println("result:", describe(x)), a)
 
 println()
