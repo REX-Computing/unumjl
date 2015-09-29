@@ -4,13 +4,16 @@
 include("../unum.jl")
 using Unums
 
-const plength = 3
+const plength = 4
 #const parray = [exp(100 * randn()) * (randbool() ? -1 : 1) for idx=1:plength]
-const parray = [-9, 0, 1]
+const parray = [6, 5, -7, 1]
+const tol = 0.0001
 
 function pwr(x::Utype, n::Integer)
   if n == 1
     x
+  elseif iseven(n)
+    sqr(pwr(x, n ÷ 2))
   else
     x * pwr(x, n - 1)
   end
@@ -25,5 +28,17 @@ function polynomial(v::Utype)
   sum
 end
 
-a = solve(polynomial, 0.001, 0, 0, verbose = true)
+a = solve(polynomial, tol, 0, 0, verbose = true)
 map((x) -> println("result:", describe(x)), a)
+
+println()
+println()
+
+print("solved polynomial: ")
+for idx=plength:-1:2
+  print(parray[idx], "x^", (idx - 1), " + ")
+end
+println(parray[1], " to relative tolerance ", tol)
+
+println("solutions: ")
+map((d) -> println(describe(d)), a)

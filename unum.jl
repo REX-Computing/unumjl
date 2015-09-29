@@ -50,6 +50,9 @@ include("unum-subtraction.jl")
 include("unum-multiplication.jl")
 include("unum-division.jl")
 
+#unary operators
+include("unum-sqrs.jl")
+
 #h-layer stuff (human)
 include("unum-hlayer.jl")
 

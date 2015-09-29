@@ -7,6 +7,7 @@ include("ubound-addition.jl")
 include("ubound-subtraction.jl")
 include("ubound-division.jl")
 include("ubound-multiplication.jl")
+include("ubound-sqrs.jl")
 
 ################################################################################
 ## width

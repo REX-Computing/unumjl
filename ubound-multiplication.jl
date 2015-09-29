@@ -52,7 +52,7 @@ function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
     ubound_unsafe(b.lowbound * a.highbound, b.lowbound * a.lowbound)
   #signcode 14 is not possible
   elseif (signcode == 15) #everything is negative
-    ubound_resolve(ubound_unsafe(a.lowbound * b.lowbound, a.highbound * b.highbound))
+    ubound_resolve(ubound_unsafe(a.highbound * b.highbound, a.lowbound * b.lowbound))
   else
     println("----")
     println(describe(a))

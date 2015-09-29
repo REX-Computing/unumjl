@@ -27,7 +27,8 @@ function promote_ess{ESS,FSS}(bf, x::Unum{ESS,FSS})
 
   is_pos_sss(x) && return [expwalk(bf, ESS+1, FSS, min_exponent(ESS + 1), min_exponent(ESS), z16),            subnormalwalk(bf, ESS+1, FSS, z16)]
   is_neg_sss(x) && return [expwalk(bf, ESS+1, FSS, min_exponent(ESS + 1), min_exponent(ESS), UNUM_SIGN_MASK), subnormalwalk(bf, ESS+1, FSS, UNUM_SIGN_MASK)]
-  return unum_unsafe(T, x.fsize, x.esize, x.flags, x.fraction, x.exponent)
+  testval = unum_unsafe(T, x.fsize, x.esize, x.flags, x.fraction, x.exponent)
+  bf(testval) ? [testval] : []
 end
 
 function promote_fss{ESS,FSS}(x::Unum{ESS,FSS})

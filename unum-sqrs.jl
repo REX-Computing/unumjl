@@ -6,3 +6,5 @@
 function sqr{ESS,FSS}(x::Unum{ESS,FSS})
   return x * x
 end
+
+export sqr

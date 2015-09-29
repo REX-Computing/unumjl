@@ -35,11 +35,6 @@ function spy2(v)
   v
 end
 
-function spy3(v)
-  print(" result: ", describe(v))
-  v
-end
-
 #runs an analysis on the result and decides if more exponent is necessary.
 function more_exponent_necessary(f, a)
   #first check to see if any of the values in the array warrant increasing the exponent.
@@ -61,11 +56,22 @@ function bignum_relative_width(x::Unum)
   abs(calculate(width(x)) / calculate(x))
 end
 
-function solve(f, lim, sess = 0, sfss = 0; verbose = false)
+function default_keep{ESS,FSS}(x::Unum{ESS,FSS})
+  (ESS < 6) && return true
+  is_mmr(x) && return false
+  is_sss(x) && return false
+  return true
+end
+
+function solve(f, lim, sess = 0, sfss = 0; verbose = false, kp = default_keep)
   #walk the number line in the starting environment.
   #compose the passed function with the spans_zero assesment to create the boolean-valued
   #analyzer function.
-  bf(v) = spy2(spans_zero(v, spy3(f(spy1(v)))))
+
+  #rj is a function that rejects a solution unum.  rj(u) == true means it will be
+  #rejected.  Usually this should be used to set bounds on just how far the solver will go.
+
+  bf(v) = spy2(spans_zero(v, f(spy1(v))))
   bw(v) = bitwalk(bf, v, true, true)
 
   res = fullwalk(bf, sess, sfss)
@@ -73,11 +79,9 @@ function solve(f, lim, sess = 0, sfss = 0; verbose = false)
   function report()
     if verbose
       println("passed solutions:")
-      map((d) -> println(describe(d)), res)
+      map((d) -> println(describe(d), " evaluates as ", describe(f(d))), res)
     end
   end
-
-  report()
 
   while (true)
     #first, check to see if we have any results.
@@ -88,7 +92,9 @@ function solve(f, lim, sess = 0, sfss = 0; verbose = false)
       report()
 
       res = mapreduce((d)->promote_ess(bf, d), vcat, [], res)
+      filter!(kp, res)
       sess += 1
+      verbose && println("investigating environment {$sess, $sfss}")
       continue
     end
 
@@ -100,14 +106,16 @@ function solve(f, lim, sess = 0, sfss = 0; verbose = false)
 
     #check to see if we are already at the maximum size, in which case, promote the fss.
     if res[1].fsize == max_fsize(sfss)
-      verbose && println("promoting fss across the result set")
+      verbose && println("promoting fss across the result set, environment {$sess, $sfss}")
       res = map(promote_fss, res)
+      filter!(kp, res)
       sfss += 1
     end
 
     report()
     #apply bitwalker across the entire set.
     res = mapreduce(bw, vcat, [], res)
+    filter!(kp, res)
   end
   res
 end
