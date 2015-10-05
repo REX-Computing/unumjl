@@ -112,6 +112,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
 
   #reassign a to a resolved subnormal value.
   is_strange_subnormal(a) && (a = __resolve_subnormal(a))
+  is_strange_subnormal(b) && (b = __resolve_subnormal(b))
 
   #check for deviations due to subnormality.
   a_dev::Int16, carry::Uint64 = is_exp_zero(a) ? (o16, z64) : (z16, o64)
@@ -147,6 +148,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
       fsize = __fsize_of_exact(fraction)
       return Unum{ESS,FSS}(fsize, esize, a.flags, fraction, exponent)
     end
+    scratchpad = fraction
   else
     #set up a scratchpad.  This will contain the 'correct' value of b in the frac
     #framework of a.  First shift all of the bits from b.

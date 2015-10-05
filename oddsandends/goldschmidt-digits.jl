@@ -246,7 +246,7 @@ println("zbits:     ", bits(z))
 #continuous testing.
 count = 0
 errors = 0
-#while (true)
+while (true)
   #x = reinterpret(Float64, rand(Uint64))
   #y = reinterpret(Float64, rand(Uint64))
   x = 30.0
@@ -275,8 +275,8 @@ errors = 0
     end
   end
   count += 1
-  println(count)
-#end
+  #println(count)
+end
 
 #NB:  This technique still has a vanishingly small ~(0.005%) error rate in assigning
 #the correct ULP to the quotient.  Will need to take a  more careful look at why this

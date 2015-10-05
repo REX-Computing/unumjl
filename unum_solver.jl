@@ -52,8 +52,8 @@ function more_exponent_necessary(f, a)
   return false
 end
 
-function bignum_relative_width(x::Unum)
-  abs(calculate(width(x)) / calculate(x))
+function bignum_width(x::Unum)
+  calculate(width(x))
 end
 
 function default_keep{ESS,FSS}(x::Unum{ESS,FSS})
@@ -81,10 +81,10 @@ function solve(f, lim, sess = 0, sfss = 0; verbose = false, kp = default_keep)
   res = fullwalk(bf, sess, sfss)
 
   function report()
-    if verbose
+    #if verbose
       println("passed solutions:")
-      map((d) -> println(describe(d), " evaluates as ", describe(f(d))), res)
-    end
+      map((d) -> println(describe(d), " evaluates as ", describe(f(d)), " width ", bignum_width(d) ), res)
+    #end
   end
 
   while (true)
@@ -103,17 +103,17 @@ function solve(f, lim, sess = 0, sfss = 0; verbose = false, kp = default_keep)
     end
 
     #calculate the worst width within the set of solution ulps.
-    worst_width = mapreduce(bignum_relative_width, max, 0.0, res)
+    worst_width = mapreduce(bignum_width, max, 0.0, res)
     verbose && println("worst width across solution set: ", worst_width)
     (worst_width < lim) && break
     verbose && println("does not satisfy criterion < ", lim)
 
     #check to see if we are already at the maximum size, in which case, promote the fss.
     if res[1].fsize == max_fsize(sfss)
+      sfss += 1
       verbose && println("promoting fss across the result set, environment {$sess, $sfss}")
       res = map(promote_fss, res)
       filter!(kp, res)
-      sfss += 1
     end
 
     report()

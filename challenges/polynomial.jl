@@ -23,7 +23,7 @@ function polynomial(v::Utype)
   T = isa(v, Ubound) ? typeof(v.lowbound) : typeof(v)
   sum = convert(T, parray[1])
   for (idx = 2:plength)
-    sum += convert(T, parray[idx]) * pwr(v , idx - 1)
+    sum += convert(T, parray[idx]) * pwr(v, idx - 1)
   end
   sum
 end

@@ -15,7 +15,7 @@ function sqr{ESS,FSS}(x::Ubound{ESS,FSS})
     l = is_subnormal(x.lowbound) ? __resolve_subnormal(x.lowbound) : x.lowbound
     h = is_subnormal(x.highbound) ? __resolve_subnormal(x.highbound) : x.highbound
     (v, _) = magsort(l, h)
-    ubound_unsafe(zero(Unum{ESS,FSS}, v * v))
+    ubound_unsafe(zero(Unum{ESS,FSS}), v * v)
   #signcode 2 is impossible
   elseif signcode == 3
     ubound_resolve(ubound_unsafe(x.highbound * x.highbound, x.lowbound * x.lowbound))
