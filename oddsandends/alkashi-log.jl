@@ -1,22 +1,37 @@
-#goldschmidt-log.jl
+#alkashi-log.jl
 
 include("../unum.jl")
 using Unums
 
-#implements an goldschmidt-like logarithm algorithm for Float64 as a testground for
+#implements an alkashi-like logarithm algorithm for Float64 as a testground for
 #doing it in unums.
 
 #returns a Int16 "1" if it's negative, "0" if it's positive.
-function signof(x::Float64)
-  ((reinterpret(Uint64, x) & 0x8000_0000_0000_0000) != 0) ? 1 : 0
+function signof(x::FloatingPoint)
+  T = typeof(x)
+  if (T == Float64)
+    return ((reinterpret(Uint64, x) & 0x8000_0000_0000_0000) != 0) ? 1 : 0
+  elseif (T == Float32)
+    return ((reinterpret(Uint32, x) & 0x8000_0000) != 0) ? 1 : 0
+  end
 end
 
-function exponentof(x::Float64)
-  int64((reinterpret(Int64, x) & 0x7FF0_0000_0000_0000) >> 52 - 1023)
+function exponentof(x::FloatingPoint)
+  T = typeof(x)
+  if (T == Float64)
+    return int64((reinterpret(Int64, x) & 0x7FF0_0000_0000_0000) >> 52 - 1023)
+  elseif (T == Float32)
+    return int64((reinterpret(Int32, x) & 0x7F80_0000) >> 23 - 127)
+  end
 end
 
-function castfrac(x::Float64)
-    (reinterpret(Uint64, x) & 0x000F_FFFF_FFFF_FFFF) << 12
+function castfrac(x::FloatingPoint)
+  T = typeof(x)
+  if (T == Float64)
+    return (reinterpret(Uint64, x) & 0x000F_FFFF_FFFF_FFFF) << 12
+  elseif (T == Float32)
+    return uint64(reinterpret(Uint32, x) & 0x007F_FFFF) << 41
+  end
 end
 
 function maskfor(T::Type)
@@ -80,7 +95,6 @@ end
 include("logtable.jl")
 #ultimately, we may need to have more digits on the end of this value for logarithm.
 const log2e = 0x71547652b82fe_000
-const __logarithm_magicnumber = 0xb8aa3b27e0000000
 
 function exlg(x::FloatingPoint)
   #exact floating point with the goldschmidt algorithm.
@@ -94,7 +108,7 @@ function exlg(x::FloatingPoint)
   exp_f::Int64 = exponentof(x) + (issubnormal(x) ? 1 : 0)
 
   #figure the decimals.
-  fraction::Uint64 = castfrac(x)
+  fraction::Uint64 = castfrac(x) << 1
 
   if (issubnormal(x))
     shift::Uint64 = clz(fraction) + 1
@@ -112,52 +126,16 @@ function exlg(x::FloatingPoint)
   #add the exponent part onto the result fraction.
   resfrac = uint64(exp_f << (lz + 1))
 
-  #do the goldschmidt-type algorithm.
-  #first, "divide by two" by doing a virtual shift left, appending the implied
-  #one onto the most significant end.
-  fraction = (fraction >> 1) | 0x8000_0000_0000_0000
-  diff::Uint64 = 0
-  d::Int64 = 0
-  m::Uint64 = 0
-  intsumdelta::Uint64 = 0
-  intsumsofar::Uint64 = 0
+  #do the goldschmidt-type algorithm
 
-  #goldschmidt-like algorithm.
-  for idx = 1:32
-    #figure the difference between the fraction we have and what's left.  This
-    #is equivalent to the operation "2 - x".  For 0.5 < x < 1.0 x(2 - x) is
-    #bounded between 0.5 and 1, so we get closer by iterative multiplication.
-    #However, because calculating the log of this value is nontrivial, we must
-    #use a lookup table which has precalculated logs for fractions f of the form
-    # f = 1.0...010....0, indexed by the place of the one.
-    diff = 0 - fraction
-    #find the place of the top bit
-    d = clz(diff)
-    #generate the value (we will do a multiply with this to keep track of our progress.)
-    m = 0x8000_0000_0000_0000 >> d
-
-    #look up the value to be added, or, if it's far enough along, just do a bitshift.
-    intsumdelta = d > 29 ? (__logarithm_magicnumber >> d) : lt64[d]
-    intsumsofar += intsumdelta
-
-    #update frac to be the product of our cumulative fraction and the 1.0...01
-    (_, fraction) = Unums.__sfma(zero(Uint64), fraction, m)
-
-    #terminating condition.
-    if m < 0x0000_0000_0000_0400
-      break
-    end
-  end
-
-  #now do a flip (if the log is positive)
-  iint::Uint64 = (sign == 0) ? -intsumsofar : intsumsofar
-  println("hi, $(bits(iint))")
-  resfrac |= iint >> resexp
-  println("rf, $(bits(resfrac))")
+  #resexp = 0
+  #resfrac = 0
   #reassemble the value into the requisite floating point
   reassemble(sign, resexp, resfrac)
 end
 
+#one-time testing
+#v = (rand(Int64) & 0xFFF0_0000_0000_0000) | (rand(Int64) & 0x0000_0000_0FFF_FFFF)
 v = rand(Int64)
 x = abs(reinterpret(Float64, v))
 z = exlg(x)

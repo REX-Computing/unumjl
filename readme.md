@@ -47,3 +47,6 @@ these functions will be implemented in C, and that will enable "shimming" of
 the various C functions for verification purposes, ultimately leading to a fast
 C library which even more closely emulates the processes that hardware will
 implement.
+
+unumjl was created by Isaac Yonemoto on behalf of Rex Computing
+this work was funded by DARPA. 
