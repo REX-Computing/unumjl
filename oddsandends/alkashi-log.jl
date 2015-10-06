@@ -91,10 +91,21 @@ function reassemble(sign::Uint64, ev::Uint64, fv::Uint64)
   reinterpret(Float64, number)
 end
 
+const t32 = 0xFFFF_FFFF_0000_0000
+const l32 = 0x0000_0000_FFFF_FFFF
 
-include("logtable.jl")
-#ultimately, we may need to have more digits on the end of this value for logarithm.
-const log2e = 0x71547652b82fe_000
+function wsqr(a::Uint64)
+  top = (a & t32) >> 32
+  bot = (a & l32)
+
+  carry = (a & 0x8000_0000_0000_0000 != 0) ? 2 : 1
+  res = a << 1
+  res2 = res + (top * top)
+  (res2 < res) && (carry += 1)
+  res3 = res2 + (bot * top) >> 31
+  (res3 < res2) && (carry += 1)
+  (carry, res3)
+end
 
 function exlg(x::FloatingPoint)
   #exact floating point with the goldschmidt algorithm.
@@ -108,7 +119,7 @@ function exlg(x::FloatingPoint)
   exp_f::Int64 = exponentof(x) + (issubnormal(x) ? 1 : 0)
 
   #figure the decimals.
-  fraction::Uint64 = castfrac(x) << 1
+  fraction::Uint64 = castfrac(x)
 
   if (issubnormal(x))
     shift::Uint64 = clz(fraction) + 1
@@ -126,8 +137,23 @@ function exlg(x::FloatingPoint)
   #add the exponent part onto the result fraction.
   resfrac = uint64(exp_f << (lz + 1))
 
-  #do the goldschmidt-type algorithm
+  bitsofar = zero(Uint64)
+  #do the alkashi-type algorithm.
+  for idx = 1:52
+    (c, q) = wsqr(fraction)
 
+    if (c == 1)
+      #do nothing.  Merely set x to y.
+      fraction = q
+    else
+      bitsofar |= (0x8000_0000_0000_0000 >> (idx - 1))
+      fraction = q >> 1
+      (c == 3) && (fraction |= (0x8000_0000_0000_0000))
+    end
+  end
+
+  iint::Uint64 = (sign == 0) ? bitsofar : -bitsofar
+  resfrac |= iint >> resexp
   #resexp = 0
   #resfrac = 0
   #reassemble the value into the requisite floating point
@@ -150,8 +176,3 @@ println("abits:     ", bits(a))
 println("zbits:     ", bits(z))
 
 println("diff:      ", reinterpret(Uint64, a) - reinterpret(Uint64, z))
-
-#######################################################
-## testing fun
-
-i2f(i) = reinterpret(Float64, (i >> 12) | 0x3FF0_0000_0000_0000)

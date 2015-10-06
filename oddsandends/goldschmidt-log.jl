@@ -151,9 +151,7 @@ function exlg(x::FloatingPoint)
 
   #now do a flip (if the log is positive)
   iint::Uint64 = (sign == 0) ? -intsumsofar : intsumsofar
-  println("hi, $(bits(iint))")
   resfrac |= iint >> resexp
-  println("rf, $(bits(resfrac))")
   #reassemble the value into the requisite floating point
   reassemble(sign, resexp, resfrac)
 end
