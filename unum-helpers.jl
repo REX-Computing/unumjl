@@ -110,12 +110,13 @@ end
 #remember msb is zero-indexed, but outputs a zero for the zero value
 function encode_exp(unbiasedexp::Integer)
   esize = (unbiasedexp == 0) ? z16 : uint16(64 - clz(uint64(abs(unbiasedexp))))
-  (esize, uint64(unbiasedexp + 1 << esize))
+  (esize, uint64(unbiasedexp + 1 << esize - 1))
 end
 #the inverse operation is finding the unbiased exponent of an Unum.
-decode_exp(esize::Uint16, exponent::Uint64) = int(exponent) - (1 << esize)
+decode_exp(esize::Uint16, exponent::Uint64) = int(exponent) - (1 << esize) + 1
+
 #maxfsize returns the the maximum fraction size for a given FSS.
 max_fsize(FSS) = uint16((1 << FSS) - 1)
 max_esize(ESS) = uint16((1 << ESS) - 1)
-max_exponent(ESS) = (1 << (1 << ESS - 1) - 1)
-min_exponent(ESS) = -(1 << (1 << ESS - 1) - 1)
+max_exponent(ESS) = 1 << (1 << ESS - 1)
+min_exponent(ESS) = -(1 << (1 << ESS - 1)) + 2
