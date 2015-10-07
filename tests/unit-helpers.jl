@@ -87,14 +87,14 @@
 
 @test Unums.max_exponent(0) == 1
 @test Unums.min_exponent(0) == 1
-@test Unums.max_exponent(1) == 4
-@test Unums.min_exponent(1) == -2
+@test Unums.max_exponent(1) == 2
+@test Unums.min_exponent(1) == 0
 @test Unums.max_exponent(2) == 8
 @test Unums.min_exponent(2) == -6
-@test Unums.max_exponent(3) == 127
-@test Unums.min_exponent(3) == -127
-@test Unums.max_exponent(4) == 32767
-@test Unums.min_exponent(4) == -32767
+@test Unums.max_exponent(3) == 128
+@test Unums.min_exponent(3) == -126
+@test Unums.max_exponent(4) == 32768
+@test Unums.min_exponent(4) == -32766
 
 #comprehensive checking of all exponents in the range -1000..1000
 
@@ -132,8 +132,8 @@ end
 @test Unums.__frac_cells(7) == 2
 @test Unums.__frac_cells(8) == 4
 
-@test Unums.__set_lsb(zero(Uint64), 0) = 0x8000_0000_0000_0000
-@test Unums.__set_lsb(zero(Uint64), 5) = 0x0000_0001_0000_0000
-@test Unums.__set_lsb(zero(Uint64), 6) = 0x0000_0000_0000_0001
-@test Unums.__set_lsb(zeros(Uint64, 2), 7) = [0x0000_0000_0000_0001, 0x0]
-@test Unums.__set_lsb(zeros(Uint64, 4), 8) = [0x0000_0000_0000_0001, 0x0, 0x0, 0x0]
+@test Unums.__set_lsb(zero(Uint64), 0) == 0x8000_0000_0000_0000
+@test Unums.__set_lsb(zero(Uint64), 5) == 0x0000_0001_0000_0000
+@test Unums.__set_lsb(zero(Uint64), 6) == 0x0000_0000_0000_0001
+@test Unums.__set_lsb(zeros(Uint64, 2), 7) == [0x0000_0000_0000_0001, 0x0]
+@test Unums.__set_lsb(zeros(Uint64, 4), 8) == [0x0000_0000_0000_0001, 0x0, 0x0, 0x0]
