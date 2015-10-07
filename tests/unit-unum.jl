@@ -27,15 +27,15 @@ walpiri_half = unum(Unum{0,0}, z16, z16, z16, f64, z64)
 @test walpiri_half.flags & Unums.UNUM_UBIT_MASK == Unums.UNUM_UBIT_MASK
 
 #test the unum_easy constructor
-easy_walpiri_one = unum_easy(Unum{0,0}, z16, t64, z64)
-@test easy_walpiri_one.fraction == t64
-@test easy_walpiri_one.fsize == 0
-@test easy_walpiri_one.flags == z16
+easy_walpiri_two = unum_easy(Unum{0,0}, z16, z64, o64)
+@test easy_walpiri_two.fraction == z64
+@test easy_walpiri_two.fsize == 0
+@test easy_walpiri_two.flags == z16
 #test that unum_easy will also take a sloppy SuperInt.
-easy_walpiri_one_oops = unum_easy(Unum{0,0}, z16, [f64, t64], z64)
-@test easy_walpiri_one_oops.fraction == t64
-@test easy_walpiri_one_oops.fsize == 0
-@test easy_walpiri_one_oops.flags == z16
+easy_walpiri_two_oops = unum_easy(Unum{0,0}, z16, [f64, z64], o64)
+@test easy_walpiri_two_oops.fraction == z64
+@test easy_walpiri_two_oops.fsize == 0
+@test easy_walpiri_two_oops.flags == z16
 
 #unset the development environment
 Unums.__unum_release_environment()

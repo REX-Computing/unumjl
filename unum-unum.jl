@@ -1,12 +1,12 @@
 #unum-unum.jl
 
-#contains information about the unum type and some basic helper functions.
+#contains information about the unum type and helper functions directly related to constructor.
 
 function __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
-  fsize < (1 << (FSS + 1))              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
-  esize < (1 << (ESS + 1))              || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
+  fsize < (1 << FSS)              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
+  esize < (1 << ESS)              || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
 
-  #when you have esize == 63 ALL THE VALUES ARE VALID
+  #when you have esize == 63 ALL THE VALUES ARE VALID, but bitshift op will do something strange.
   ((esize == 63) || exponent < (1 << (esize + 1))) || throw(ArgumentError("exponent $(exponent) too big for esize $(esize)"))
   length(fraction) == __frac_cells(FSS) || throw(ArgumentError("size mismatch between supplied fraction array $(length(fraction)) and expected $(__frac_cells(FSS))"))
 end
@@ -28,10 +28,6 @@ immutable Unum{ESS, FSS} <: Utype
   #2) is the ESS OK?
   #3) is exponent appropriate for ESS?
   #3) is the SuperInt of the correct size for ESS?
-  #
-  # In the future, these checks will be pushed to the safe unum (lower case)
-  # constructor and we may decide to make these checks conditional on a
-  # development environment variable, for performance purposes.
   #
   # the Unum constructor, then should ONLY be used when you have assurance that
   # the unum is safe (as in within the g-layer of any given calculation)
