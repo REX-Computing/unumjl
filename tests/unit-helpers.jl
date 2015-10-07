@@ -57,42 +57,40 @@
 #  esize    values     representation
 #------------------------------------
 #   0        0          <subnormal>
-#            1          0
+#            1          1
 #------------------------------------
 #   1        00         <subnormal>
-#            01         -1
-#            10         0
-#            11         1
+#            01         0
+#            10         1
+#            11         2
 #------------------------------------
 #   2        000        <subnormal>
-#            001        -3
-#            010        -2
-#            011        -1
-#            100        0
-#            101        1
-#            110        2
-#            111        3
+#            001        -2
+#            010        -1
+#            011        0
+#            100        1
+#            101        2
+#            110        3
+#            111        4
 #------------------------------------
 #   3        0000       <subnormal>
-#            0001       -7
-#            0010       -6
+#            0001       -6
+#            0010       -5
 #  etc.
 
 #spot checking exponent encoding for intent.
-@test (0, 1) == Unums.encode_exp(0)
-@test (1, 1) == Unums.encode_exp(-1)
-@test (1, 3) == Unums.encode_exp(1)
-@test (2, 1) == Unums.encode_exp(-3)
-@test (2, 6) == Unums.encode_exp(2)
-@test (3, 1) == Unums.encode_exp(-7)
-@test (3, 13) == Unums.encode_exp(5)
+@test (1, 1) == Unums.encode_exp(0)
+@test (2, 2) == Unums.encode_exp(-1)
+@test (0, 1) == Unums.encode_exp(1)
+@test (3, 4) == Unums.encode_exp(-3)
+@test (1, 3) == Unums.encode_exp(2)
 
-@test Unums.max_exponent(0) == 0
-@test Unums.min_exponent(0) == 0
-@test Unums.max_exponent(1) == 1
-@test Unums.min_exponent(1) == -1
-@test Unums.max_exponent(2) == 7
-@test Unums.min_exponent(2) == -7
+@test Unums.max_exponent(0) == 1
+@test Unums.min_exponent(0) == 1
+@test Unums.max_exponent(1) == 4
+@test Unums.min_exponent(1) == -2
+@test Unums.max_exponent(2) == 8
+@test Unums.min_exponent(2) == -6
 @test Unums.max_exponent(3) == 127
 @test Unums.min_exponent(3) == -127
 @test Unums.max_exponent(4) == 32767
