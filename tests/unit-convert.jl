@@ -8,7 +8,8 @@
 
 @test [calculate(convert(Unum{3,6},i)) for i=-50:50] == [BigFloat(i) for i = -50:50]
 @test is_mmr(mmr(Unum{0,0}))
-@test is_mmr(convert(Unum{0,0}, 2))
+@test is_mmr(convert(Unum{0,0}, 3))
+@test is_mmr(convert(Unum{1,1}, 7))
 @test is_mmr(convert(Unum{1,1}, 8))
 
 #unum to integer
@@ -120,5 +121,5 @@ f64a = [float64(seed[i]) for i = 1:100]
 @test zero(Float32) == convert(Float32, zero(Unum{4,6}))
 @test zero(Float64) == convert(Float64, zero(Unum{4,6}))
 #test that subnormals convert correctly
-@test 0.5 == convert(Float64, Unum{0,0}(z16, z16, z16, t64, z64))
+@test 1.0 == convert(Float64, Unum{0,0}(z16, z16, z16, t64, z64))
 #test converting *to* a subnormal float.

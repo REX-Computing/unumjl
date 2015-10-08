@@ -109,6 +109,8 @@ end
 #encodes an exponent as a biased 2-tuple (esize, exponent)
 #remember msb is zero-indexed, but outputs a zero for the zero value
 function encode_exp(unbiasedexp::Integer)
+  #make sure our unbiased exponent is a signed integer
+  unbiasedexp = int64(unbiasedexp)
   esize = uint16(64 - clz(uint64(abs(unbiasedexp - 1))))
   (esize, uint64(unbiasedexp + 1 << esize - 1))
 end

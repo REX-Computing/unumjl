@@ -13,10 +13,18 @@ export zero
 
 import Base.one
 function one{ESS,FSS}(::Type{Unum{ESS,FSS}})
-  Unum{ESS,FSS}(uint16(0b0), uint16(0b0), uint16(0b0), superzero(__frac_cells(FSS)), uint64(0b1))
+  if ESS == 0
+    Unum{ESS,FSS}(z16, z16, z16, supertop(__frac_cells(FSS)), z64)
+  else
+    Unum{ESS,FSS}(z16, o16, z16, superzero(__frac_cells(FSS)), o64)
+  end
 end
 function one(x::Unum)
-  Unum{fsizesize(x),esizesize(x)}(uint16(0b0), uint16(0b0), uint16(0b0), superzero(__frac_cells(FSS)), uint64(0b1))
+  if (esizesize(x) == 0)
+    Unum{fsizesize(x),esizesize(x)}(z16, z16, z16, supertop(__frac_cells(FSS)), z64)
+  else
+    Unum{fsizesize(x),esizesize(x)}(z16, o16, z16, superzero(__frac_cells(FSS)), o64)
+  end
 end
 export one
 

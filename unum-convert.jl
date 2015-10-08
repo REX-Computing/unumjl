@@ -21,6 +21,10 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
     flags = z16
   end
 
+  #the "one exception" to this is if ESS == 0 and x == 1, where 1 is a subnormal
+  #integer.
+  (ESS == 0) && (x == 1) && return Unum{ESS,FSS}(z16, z16, flags, t64, z64)
+
   #find the msb of x, this will tell us how much to move things
   msbx = 63 - clz(x)
   #do a check to see if we should release almost_infinite
@@ -29,7 +33,11 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
   #move it over.  One bit should spill over the side.
   frac = x << (64 - msbx)
   #pass the whole shebang to unum_easy.
-  unum_easy(Unum{ESS,FSS}, flags, frac, msbx)
+  r = unum_easy(Unum{ESS,FSS}, flags, frac, msbx)
+
+  #check for the "infinity hack" where we accidentally generate infinity by having
+  #just the right set of bits.
+  is_inf(r) ? mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK) : r
 end
 
 ##################################################################
@@ -125,7 +133,9 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   #for really large FSS fractions pad some zeroes in front.
   (__frac_cells(FSS) > 1) && (fraction = [zeros(Uint64, __frac_cells(FSS) - 1),fraction])
 
-  unum(Unum{ESS,FSS}, min(_fsize, max_fsize(FSS)), esize, flags, fraction, exponent)
+  r = unum(Unum{ESS,FSS}, min(_fsize, max_fsize(FSS)), esize, flags, fraction, exponent)
+  #check for the "infinity hack" where we "accidentally" create inf.
+  is_inf(r) ? mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK) : r
 end
 
 #bind to convert for multiple dispatch

@@ -87,7 +87,7 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
     #one off of the actual exponent.
     #constrain the fsize to zero.
     fsize::Uint16 = (_ashl > a.fsize) ? 0 : a.fsize - _ashl
-    Unum{ESS,FSS}(fsize, esize, a.flags, (a.fraction << _ashl), exponent)
+    Unum{ESS,FSS}(fsize, esize, a.flags, lsh(a.fraction, _ashl), exponent)
   else  #then all we have to do is encode it as the deeper exponent.
     #reassign _ashl to be the most we can shift it over.
     _ashl = _aexp - min_exponent(ESS) + 1

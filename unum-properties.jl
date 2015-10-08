@@ -33,14 +33,14 @@ import Base.isfinite
 #infinity.  is_pos_inf and is_neg_inf both are Unum-specific functions that detect
 #the expected values.
 is_inf{ESS,FSS}(x::Unum{ESS,FSS}) = is_exact(x) && (x.esize == 1 << ESS - 1) && (x.exponent == mask(1 << ESS)) && (x.fsize == 1 << FSS - 1) && (x.fraction == fillbits(-(1 << FSS), uint16(length(x.fraction))))
-is_pos_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_positive(x) && isinf(x)
-is_neg_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_negative(x) && isinf(x)
+is_pos_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_positive(x) && is_inf(x)
+is_neg_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_negative(x) && is_inf(x)
 #caution, isfinite is a rather slow algorithm
 is_finite{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent != mask(1 << ESS)) || (x.fraction != fillbits(-1 << FSS, uint16(length(x.fraction))))
 
 #aliasing and exporting
-isinf(x) = is_inf(x)                                                            #alias the unum form with the julia form
-isfinite(x) = is_finite(x)                                                      #alias the unum form with the julia form
+isinf{ESS,FSS}(x::Unum{ESS,FSS}) = is_inf(x)                                                            #alias the unum form with the julia form
+isfinite{ESS,FSS}(x::Unum{ESS,FSS}) = is_finite(x)                                                      #alias the unum form with the julia form
 export isinf, is_inf, is_pos_inf, is_neg_inf, isfinite, is_finite
 
 import Base.issubnormal
@@ -51,7 +51,7 @@ is_subnormal{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && ((ESS > 6) ? !(
 is_exp_zero{ESS,FSS}(x::Unum{ESS,FSS}) = x.exponent == z64
 is_strange_subnormal{ESS,FSS}(x::Unum{ESS,FSS}) = is_exp_zero(x) && (x.esize < max_esize(ESS))
 
-issubnormal(x) = is_subnormal(x)                                                #alias the unum-form to the julia-compliant form.
+issubnormal{ESS,FSS}(x::Unum{ESS,FSS}) = is_subnormal(x)                       #alias the unum-form to the julia-compliant form.
 #use ESS because this will be checked by the compiler, instead of at runtime.
 is_frac_zero{ESS,FSS}(x::Unum{ESS,FSS}) = (ESS > 6) ? allzeros(x.fraction) : (x.fraction == 0)
 
