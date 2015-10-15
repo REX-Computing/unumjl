@@ -1,7 +1,7 @@
-#test-warlpiri-addition.jl
+#test-warlpiri-multiplication.jl
 
 ###############################################################################
-##COMPLETE ADDITION TABLE
+##COMPLETE MULTIPLICATION TABLE
 
 #column key
 #none_ pfew_ pone_ psome ptwo_ pmany pall_ junk_ nnone n_few n_one nsome n_two nmany n_all
