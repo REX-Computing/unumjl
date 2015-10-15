@@ -120,3 +120,4 @@ function isalmostinf(b::Ubound)
 end
 
 include("ubound-operators.jl")
+include("ubound-comparison.jl")

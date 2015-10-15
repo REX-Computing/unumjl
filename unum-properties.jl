@@ -58,9 +58,9 @@ is_frac_zero{ESS,FSS}(x::Unum{ESS,FSS}) = (ESS > 6) ? allzeros(x.fraction) : (x.
 is_zero(x::Unum) = (x.exponent == z64) && is_exact(x) && is_frac_zero(x)
 
 #helper function that checks if a superint is of the form 10000...0000
-function __top_frac(i::SuperInt)
+function __top_frac{ESS,FSS}(x::Unum{ESS,FSS})
   last(x.fraction) != t64 && return false
-  for idx = 2:length(i)
+  for idx = 2:length(x.fraction)
     x.fraction[idx] != z64 && return false
   end
   return true

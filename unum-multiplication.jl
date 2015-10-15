@@ -123,6 +123,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #figure out the sign.  Xor does the trick.
   flags = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
 
+
   #cache subnormality of a and b.  Use "is_exp_zero" instead of "issubnormal"
   #to avoid the extra (not zero) check for issubnormal.
   _a_sn = is_exp_zero(a)
@@ -134,7 +135,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
 
   #preliminary overflow and underflow tests save us from calculations in the
   #case these are definite outcomes.
-  (_aexp + _bexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
+  (_aexp + _bexp > max_exponent(ESS) + 1) && return mmr(Unum{ESS,FSS}, flags)
   (_aexp + _bexp < min_exponent(ESS) - 3) && return sss(Unum{ESS,FSS}, flags)
 
   is_ubit::Uint16 = 0;
@@ -153,6 +154,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   # both subnormal:  Just ab.
 
   #set the carry to be one only if both are not subnormal.
+
   carry = (_a_sn || _b_sn) ? z64 : o64
 
   #only perform the respective adds if the *opposing* thing is not subnormal.
@@ -174,7 +176,17 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   unbiased_exp::Int64 = _aexp + _bexp + shift
   #have to repeat the overflow and underflow tests in light of carry shifts.
   (unbiased_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
-  (unbiased_exp < min_exponent(ESS)) && return sss(Unum{ESS,FSS}, flags)
+  if (unbiased_exp < min_exponent(ESS))
+    unbiased_exp < (min_exponent(ESS) - max_fsize(FSS) - 1) && return sss(Unum{ESS,FSS}, flags)
+    #regenerate the fraction as follows:  First calcluate the subnormal shift.
+    subnormshift = min_exponent(ESS) - unbiased_exp
+    #then shift the fraction and throw in the shifted top bit.
+    fraction = rsh(fraction, subnormshift) | __bit_from_top(subnormshift, length(a.fraction))
+    #run an analysis on fsize as you might normally do.
+    (fraction, fsize, is_ubit) = __frac_analyze(fraction, is_ubit, FSS)
+    flags |= is_ubit
+    return Unum{ESS,FSS}(fsize, max_esize(ESS), flags, fraction, z64)
+  end
   (esize, exponent) = encode_exp(unbiased_exp)
 
 
@@ -236,8 +248,10 @@ function __sss_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
   #by something between one and infinity.
   (decode_exp(a) < 0 && return sss(Unum{ESS,FSS}, sign))
 
+  a_sub = is_ulp(a) ? __outward_exact(a) : a
+
   #calculate value.
-  val = __mult_exact(a, small_exact(Unum{ESS,FSS}))
+  val = __mult_exact(a_sub, small_exact(Unum{ESS,FSS}))
 
   #highly unlikely, but we need to take care of this case.
   is_exact(val) && (val = inward_ulp(val))

@@ -5,7 +5,7 @@
 
 #column key
 #none_ pfew_ pone_ psome ptwo_ pmany pall_ junk_ nnone n_few n_one nsome n_two nmany n_all
-wadd = [
+wadd = Utype[
 #none_ + line
  none_ pfew_ pone_ psome ptwo_ pmany pall_ junk_ none_ n_few n_one nsome n_two nmany n_all;
 #pfew_ + line

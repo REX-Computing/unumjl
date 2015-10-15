@@ -25,16 +25,16 @@ warlpiri(flags::Integer, frac::Uint64, exp::Uint64) = Warlpiri(zero16, zero16, u
 stop_ = nan!(Warlpiri)
 n_all = neg_inf(Warlpiri)
 nmany = warlpiri(0b11, zero64, one64)
-n_two = -one(Warlpiri)
+n_two = warlpiri(0b10, zero64, one64)
 nsome = warlpiri(0b11, top64,  zero64)
-n_one = warlpiri(0b10, top64,  zero64)
+n_one = -one(Warlpiri)
 n_few = warlpiri(0b11, zero64, zero64)
 nnone = -zero(Warlpiri)
 none_ = zero(Warlpiri)
 pfew_ = warlpiri(0b1,  zero64, zero64)
-pone_ = warlpiri(0b0,  top64,  zero64)
+pone_ = one(Warlpiri)
 psome = warlpiri(0b1,  top64,  zero64)
-ptwo_ = one(Warlpiri)
+ptwo_ = warlpiri(0b0,  zero64, one64)
 pmany = warlpiri(0b1,  zero64, one64)
 pall_ = pos_inf(Warlpiri)
 junk_ = nan(Warlpiri)
@@ -62,6 +62,7 @@ junk_ = nan(Warlpiri)
 warlpiris = [none_, pfew_, pone_, psome, ptwo_, pmany, pall_, junk_, nnone, n_few, n_one, nsome, n_two, nmany, n_all]
 
 #the complete set of warlpiri ubounds
+println("----")
 na_nm = ubound(n_all, nmany)
 na_nt = ubound(n_all, n_two)
 na_ns = ubound(n_all, nsome)
@@ -152,6 +153,12 @@ pt_pa = ubound(ptwo_, pall_)
 
 pm_pa = ubound(pmany, pall_)
 
+println("one:", bits(pone_))
+println("one x one:", bits(Unums.__mult_exact(pone_, pone_)))
+#println(bits(pfew_ * pfew_))
+
+exit()
+
 #and a general purpose function for testing an operation,
 function testop(op, expected)
   #now create a matrix of warlpiris
@@ -167,6 +174,13 @@ function testop(op, expected)
     for j=1:15
       try
         res = op(warlpiris[i], warlpiris[j])
+
+#=        println("====")
+        println(bits(res))
+        println(bits(expected[i,j]))
+        println(typeof(expected[i,j]))
+        println(isequal(res, expected[i,j]))=#
+
         if !isequal(res, expected[i, j])
           println("$i, $j: $(bits(warlpiris[i])) $op $(bits(warlpiris[j])) failed as $(bits(res)); should be $(bits(expected[i,j]))")
           fails += 1
@@ -180,7 +194,8 @@ function testop(op, expected)
       end
     end
   end
-  println("$op $fails / 225 = $(fails/225)% failure!")
+  println("$op $fails / 225 = $(100 * fails/225)% failure!")
 end
 
 include("test-warlpiri-addition.jl")
+include("test-warlpiri-multiplication.jl")

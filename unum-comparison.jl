@@ -31,6 +31,11 @@ function =={ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   return true
 end
 
+function __frac_ulp{ESS,FSS}(a::Unum{ESS,FSS})
+  is_exact(a) && return superzero(length(a.fraction))
+  __bit_from_top(a.fsize, length(a.fraction))
+end
+
 function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (isnan(a) || isnan(b)) && return false
   _b_pos = (is_positive(b))
@@ -42,28 +47,27 @@ function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   is_strange_subnormal(a) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
   is_strange_subnormal(b) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
 
-  was_ulp_b = is_ulp(b)
-  was_ulp_b && (b = next_exact(b))
   #so now we know that these two have the same sign.
   (decode_exp(b) > decode_exp(a)) && return (!_a_pos)
   (decode_exp(b) < decode_exp(a)) && return _a_pos
   #check fractions.
-  (b.fraction > a.fraction) && return (!_a_pos)
-  (a.fraction < b.fraction) && return _a_pos
 
-  #now we have the same values for b as a.  Let's look at a table.
-  #domain    a     b          testable       result
-  #  pos    ulp   ulp   next(b) == exact(a)   true
-  #  pos    ulp  exact        b == exact(a)   true
-  #  pos   exact  ulp   next(b) == a          true
-  #  pos   exact exact        b == a         false
-  #  neg    ulp   ulp   next(b) == next(a)   false
-  #  neg    ulp  exact        b == next(a)   false
-  #  neg   exact  ulp   next(b) == a          true
-  #  neg   exact exact        b == a         false
+  #if the fractions are equal, then the condition is satisfied only if a is
+  #an ulp and b is exact.
+  (b.fraction == a.fraction) && return (is_exact(b) && is_ulp(a) && _a_pos)
+  #check the condition that b.fraction is less than a.fraction.  This should
+  #be xor'd to the _a_pos to give an instant failure condition.  Eg. if we are
+  #positive, then b > a means failure.
+  ((b.fraction < a.fraction) != _a_pos) && return false
 
-  _a_pos && return (is_ulp(a) || was_ulp_b)
-  return (is_exact(a) && was_ulp_b)
+  if (_a_pos) #then we aexpect b to be less than a.
+    (_, cmp) = __carried_add(z64, __frac_ulp(b), b.fraction)
+    (cmp <= a.fraction) && return true
+  else
+    (_, cmp) = __carried_add(z64, __frac_ulp(a), a.fraction)
+    (cmp <= b.fraction) && return true
+  end
+  return false
 end
 
 #hopefully the julia compiler knows what to do here.
@@ -73,6 +77,9 @@ end
 
 #make sure we have an isequal function that is equivalent to main one.
 import Base.isequal
+#note that unlike for floats, unum's is_equal considers is_equal(0.0, -0.0) => true
+#this is because in unums, zero always makes the same representation for negative
+#zero as positive zero, unlike floats which subsume the neg_mmr in, as well.
 function isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   if isnan(a) && isnan(b)
     return true
