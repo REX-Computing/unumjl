@@ -123,7 +123,6 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #figure out the sign.  Xor does the trick.
   flags = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
 
-
   #cache subnormality of a and b.  Use "is_exp_zero" instead of "issubnormal"
   #to avoid the extra (not zero) check for issubnormal.
   _a_sn = is_exp_zero(a)
@@ -131,7 +130,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
 
   #calculate and cache _aexp and _bexp
   _aexp::Int64 = decode_exp(a) + (_a_sn ? 1 : 0)
-  _bexp::Int64 = decode_exp(b) + (_a_sn ? 1 : 0)
+  _bexp::Int64 = decode_exp(b) + (_b_sn ? 1 : 0)
 
   #preliminary overflow and underflow tests save us from calculations in the
   #case these are definite outcomes.
@@ -142,6 +141,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   fsize::Uint16 = 0;
   #run a chunk_mult on the a and b fractions
   (fraction, is_ubit) = __chunk_mult(a.fraction, b.fraction)
+
   #next, steal the carried add function from addition.  We're going to need
   #to re-add the fractions back due to algebra with the phantom bit.
   #
@@ -225,7 +225,7 @@ end
 function __mmr_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
   #mmr_mult only yields something besides mmr if we are multiplying
   #by something between zero and one.
-  (decode_exp(a) >= 0) && return mmr(Unum{ESS,FSS}, sign)
+  (decode_exp(a) >= 1) && return mmr(Unum{ESS,FSS}, sign)
 
   #multiply a times the big_exact value for our unum.  This will determine
   #the inner bound for our ubound.
@@ -246,6 +246,7 @@ end
 function __sss_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
   #sss_mult only yields something besides sss if we are multiplying
   #by something between one and infinity.
+
   (decode_exp(a) < 0 && return sss(Unum{ESS,FSS}, sign))
 
   a_sub = is_ulp(a) ? __outward_exact(a) : a
