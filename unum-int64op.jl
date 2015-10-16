@@ -43,6 +43,16 @@ function allzeros(a::SuperInt)
   true
 end
 
+function justtop(a::SuperInt)
+  (length(a) == 1) && return a == t64
+  (last(a) != t64) && return false
+  for idx = (length(a)-1):-1:1
+    a[idx] != 0 && return false
+  end
+  true
+end
+
+
 #generates a mask of a certain number of bits on the right, or left if negative
 function mask(bits::Integer)
   if bits >= 0

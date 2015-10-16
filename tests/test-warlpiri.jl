@@ -152,6 +152,23 @@ pt_pa = ubound(ptwo_, pall_)
 
 pm_pa = ubound(pmany, pall_)
 
+#=
+println("====")
+a = pone_
+
+println("one:", bits(a))
+println("div:", bits(a / a))
+println("exd:", bits(Unums.__div_exact(a, a, zero(Uint16))))
+
+a = pfew_
+b = pfew_
+println(bits(a))
+println(bits(b))
+println("----")
+println(bits(a / b))
+exit()
+=#
+
 #and a general purpose function for testing an operation,
 function testop(op, expected)
   #now create a matrix of warlpiris
@@ -186,3 +203,4 @@ end
 
 include("test-warlpiri-addition.jl")
 include("test-warlpiri-multiplication.jl")
+include("test-warlpiri-division.jl")

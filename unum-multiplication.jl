@@ -9,28 +9,30 @@ function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #some obviously simple checks.
   #check for nans
   (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
+
+  #evaluate the sign of the result.
+  mult_sign::Uint16 = ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK))
+
   #check for infinities
   if (isinf(a))
-    is_zero(b) && return nan(Unum{ESS,FSS})
-    return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
+    return is_zero(b) ? nan(Unum{ESS,FSS}) : inf(Unum{ESS,FSS}, mult_sign)
   end
 
   if (isinf(b))
-    is_zero(a) && return nan(Unum{ESS,FSS})
-    return ((a.flags & UNUM_SIGN_MASK) == (b.flags & UNUM_SIGN_MASK)) ? pos_inf(Unum{ESS,FSS}) : neg_inf(Unum{ESS,FSS})
+    return is_zero(a) ? nan(Unum{ESS,FSS}) : inf(Unum{ESS,FSS}, mult_sign)
   end
 
   #zero checking
   (is_zero(a) || is_zero(b)) && return zero(Unum{ESS,FSS})
   #one checking
-  (is_unit(a)) && return (unum_unsafe(b, b.flags $ a.flags))
-  (is_unit(b)) && return (unum_unsafe(a, b.flags $ a.flags))
+  (is_unit(a)) && return (unum_unsafe(b, (b.flags & UNUM_UBIT_MASK) | mult_sign))
+  (is_unit(b)) && return (unum_unsafe(a, (a.flags & UNUM_UBIT_MASK) | mult_sign))
 
   #check to see if we're an ulp.
   if (is_ulp(a) || is_ulp(b))
-    __mult_ulp(a, b)
+    __mult_ulp(a, b, mult_sign)
   else
-    __mult_exact(a, b)
+    __mult_exact(a, b, mult_sign)
   end
 end
 
@@ -118,11 +120,24 @@ function __chunk_mult(a::SuperInt, b::SuperInt)
   (reinterpret(Uint64, scratchpad[2:end]), ulp_flag)
 end
 
-#performs an exact mult on two unums a and b.
-function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
-  #figure out the sign.  Xor does the trick.
-  flags = (a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)
+#amends a fraction to a subnormal number if necessary.
+function __amend_to_subnormal{ESS,FSS}(T::Type{Unum{ESS,FSS}}, fraction::Uint64, unbiased_exp::Integer, flags::Uint16)
+  l::Uint16 = length(fraction)
+  unbiased_exp < (min_exponent(ESS) - max_fsize(FSS) - 1) && return sss(Unum{ESS,FSS}, flags)
+  #regenerate the fraction as follows:  First calcluate the subnormal shift.
+  subnormshift = min_exponent(ESS) - unbiased_exp
+  #detect if we're going to clobber bits when we shift, store in ubit variable.
+  is_ubit::Uint16 = allzeros(fraction & fillbits(subnormshift, l)) ? 0 : UNUM_UBIT_MASK
+  #then shift the fraction and throw in the shifted top bit.
+  fraction = rsh(fraction, subnormshift) | __bit_from_top(subnormshift, l)
+  #run an analysis on fsize as you might normally do.
+  (fraction, fsize, is_ubit) = __frac_analyze(fraction, is_ubit, FSS)
+  flags |= is_ubit
+  return Unum{ESS,FSS}(fsize, max_esize(ESS), flags, fraction, z64)
+end
 
+#performs an exact mult on two unums a and b.
+function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS}, sign::Uint16)
   #cache subnormality of a and b.  Use "is_exp_zero" instead of "issubnormal"
   #to avoid the extra (not zero) check for issubnormal.
   _a_sn = is_exp_zero(a)
@@ -134,8 +149,8 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
 
   #preliminary overflow and underflow tests save us from calculations in the
   #case these are definite outcomes.
-  (_aexp + _bexp > max_exponent(ESS) + 1) && return mmr(Unum{ESS,FSS}, flags)
-  (_aexp + _bexp < min_exponent(ESS) - 3) && return sss(Unum{ESS,FSS}, flags)
+  (_aexp + _bexp > max_exponent(ESS) + 1) && return mmr(Unum{ESS,FSS}, sign)
+  (_aexp + _bexp < min_exponent(ESS) - max_fsize(FSS) - 2) && return sss(Unum{ESS,FSS}, sign)
 
   is_ubit::Uint16 = 0;
   fsize::Uint16 = 0;
@@ -175,47 +190,36 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
   #the exponent is just the sum of the two exponents.
   unbiased_exp::Int64 = _aexp + _bexp + shift
   #have to repeat the overflow and underflow tests in light of carry shifts.
-  (unbiased_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags)
-  if (unbiased_exp < min_exponent(ESS))
-    unbiased_exp < (min_exponent(ESS) - max_fsize(FSS) - 1) && return sss(Unum{ESS,FSS}, flags)
-    #regenerate the fraction as follows:  First calcluate the subnormal shift.
-    subnormshift = min_exponent(ESS) - unbiased_exp
-    #then shift the fraction and throw in the shifted top bit.
-    fraction = rsh(fraction, subnormshift) | __bit_from_top(subnormshift, length(a.fraction))
-    #run an analysis on fsize as you might normally do.
-    (fraction, fsize, is_ubit) = __frac_analyze(fraction, is_ubit, FSS)
-    flags |= is_ubit
-    return Unum{ESS,FSS}(fsize, max_esize(ESS), flags, fraction, z64)
-  end
+  (unbiased_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, sign)
+  (unbiased_exp < min_exponent(ESS)) && return __amend_to_subnormal(Unum{ESS,FSS}, fraction, unbiased_exp, is_ubit | sign)
   (esize, exponent) = encode_exp(unbiased_exp)
-
 
   #analyze the fraction to appropriately set fsize and ubit.
   (fraction, fsize, is_ubit) = __frac_analyze(fraction, is_ubit, FSS)
-  flags |= is_ubit
+  flags = sign | is_ubit
 
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
 
-function __mult_ulp{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS})
+function __mult_ulp{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS}, sign::Uint16)
   #because zero cannot be traversed by the ulp, we can do something very simple
   #here.
 
   #mmr and sss have a special multiplication handler.
-  is_mmr(a) && return __mmr_mult(b, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))
-  is_mmr(b) && return __mmr_mult(a, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))
-  is_sss(a) && return __sss_mult(b, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))
-  is_sss(b) && return __sss_mult(a, ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK)))
+  is_mmr(a) && return __mmr_mult(b, sign)
+  is_mmr(b) && return __mmr_mult(a, sign)
+  is_sss(a) && return __sss_mult(b, sign)
+  is_sss(b) && return __sss_mult(a, sign)
 
   #assign "exact" and "bound" a's
   (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
   (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
 
   #find the high and low bounds.  Pass this to a subsidiary function
-  far_result  = __mult_exact(bound_a, bound_b)
-  near_result = __mult_exact(exact_a, exact_b)
+  far_result  = __mult_exact(bound_a, bound_b, sign)
+  near_result = __mult_exact(exact_a, exact_b, sign)
 
-  if ((a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK))
+  if (sign != 0)
     ubound_resolve(open_ubound(far_result, near_result))
   else
     ubound_resolve(open_ubound(near_result, far_result))
@@ -229,7 +233,7 @@ function __mmr_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
 
   #multiply a times the big_exact value for our unum.  This will determine
   #the inner bound for our ubound.
-  val = __mult_exact(a, big_exact(Unum{ESS,FSS}))
+  val = __mult_exact(a, big_exact(Unum{ESS,FSS}), sign)
 
   #make sure there the sign bit is set correctly, and that we are using val as a
   #open lower bound, as denoted by the ubit.
@@ -237,9 +241,9 @@ function __mmr_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
 
   #create the appropriate ubounds, directed as appropriate.
   if (sign != 0)
-    ubound_unsafe(neg_mmr(Unum{ESS,FSS}), val)
+    ubound_resolve(open_ubound(neg_mmr(Unum{ESS,FSS}), val))
   else
-    ubound_unsafe(val, pos_mmr(Unum{ESS,FSS}))
+    ubound_resolve(open_ubound(val, pos_mmr(Unum{ESS,FSS})))
   end
 end
 
@@ -252,18 +256,15 @@ function __sss_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::Uint16)
   a_sub = is_ulp(a) ? __outward_exact(a) : a
 
   #calculate value.
-  val = __mult_exact(a_sub, small_exact(Unum{ESS,FSS}))
-
-  #highly unlikely, but we need to take care of this case.
-  is_exact(val) && (val = inward_ulp(val))
+  val = __mult_exact(a_sub, small_exact(Unum{ESS,FSS}), sign)
 
   #set the sign of val.
   (val.flags & UNUM_SIGN_MASK != sign) && (val = unum_unsafe(val, UNUM_UBIT_MASK | sign))
 
   #then create the appropriate ubounds, directed by the desired sign.
   if (sign != 0)
-    ubound_resolve(ubound_unsafe(val , neg_sss(Unum{ESS,FSS})))
+    ubound_resolve(open_ubound(val , neg_sss(Unum{ESS,FSS})))
   else
-    ubound_resolve(ubound_unsafe(pos_sss(Unum{ESS,FSS}), val))
+    ubound_resolve(open_ubound(pos_sss(Unum{ESS,FSS}), val))
   end
 end

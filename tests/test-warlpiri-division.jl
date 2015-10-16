@@ -13,7 +13,7 @@ wdiv = Utype[
 #pone_ / line
  junk_ ps_pm pone_ pfew_ pfew_ pfew_ none_ junk_ junk_ nm_ns n_one n_few n_few n_few none_;
 #psome / line
- junk_ ps_pm psome pf_pm pfew_ pfew_ none_ junk_ junk_ nm_ns nsome nm_nf n_few n_few none_;
+ junk_ ps_pm psome pf_ps pfew_ pfew_ none_ junk_ junk_ nm_ns nsome ns_nf n_few n_few none_;
 #ptwo_ / line
  junk_ pmany ptwo_ psome pone_ pfew_ none_ junk_ junk_ nmany n_two nsome n_one n_few none_;
 #pmany / line
@@ -29,7 +29,7 @@ wdiv = Utype[
 #n_one / line
  junk_ nm_ns n_one n_few n_few n_few none_ junk_ junk_ ps_pm pone_ pfew_ pfew_ pfew_ none_;
 #nsome / line
- junk_ nm_ns nsome nm_nf n_few n_few none_ junk_ junk_ ps_pm psome pf_pm pfew_ pfew_ none_;
+ junk_ nm_ns nsome ns_nf n_few n_few none_ junk_ junk_ ps_pm psome pf_ps pfew_ pfew_ none_;
 #n_two / line
  junk_ nmany n_two nsome n_one n_few none_ junk_ junk_ pmany ptwo_ psome pone_ pfew_ none_;
 #nmany / line
