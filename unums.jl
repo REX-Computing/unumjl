@@ -12,8 +12,8 @@ abstract Utype <: Real
 export Utype
 
 #bring in some important uint64 bitwise methods
-include("./int64op/i64o-superint.jl")
-include("./int64op/i64o-clzctz.jl")
+include("./int64op/i64o-superint.jl")       #basic superint class definition
+include("./int64op/i64o-clzctz.jl")         #clz and ctz methods.
 
 #=
 #helpers used in the unum type constructors andn pseudoconstructors

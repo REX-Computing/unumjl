@@ -14,34 +14,34 @@ function __hclz_set(o::__Unum_Option)
   #select the correct.
   if __clz_arch == "x86"
     if OS_NAME == :Linux
-      global clz = __x86_linux_asm_clz
+      global clz(n::Uint64) = __x86_linux_asm_clz(n)
       o.status = true
     end
   elseif __clz_arch == "arm"
     if OS_NAME == :Linux
-      global clz = __arm_linux_asm_clz
+      global clz(n::Uint64) = __arm_linux_asm_clz(n)
       o.status = true
     end
   else
-    global clz = __soft_clz
+    global clz(n::Uint64) = __soft_clz(n)
     o.status = false
   end
 end
 
 function __hclz_unset(o::__Unum_Option)
-  global clz = __soft_clz
+  global clz(n::Uint64) = __soft_clz(n)
   o.status = false
 end
 
 ################################################################################
 # compiled C library calls out to different assembler languages/architectures
 
-function __x86_linux_asm_clz(x::Uint64)
-  ccall((:clz, "./clz/bin/liblinuxx86clz"), Int64, (Int64,), x)
+function __x86_linux_asm_clz(n::Uint64)
+  ccall((:clz, "./clz/bin/liblinuxx86clz"), Int64, (Int64,), n)
 end
 
-function __arm_linux_asm_clz(x::Uint64)
-  ccall((:clz, "./clz/bin/liblinuxarmclz"), Int64, (Int64,), x)
+function __arm_linux_asm_clz(n::Uint64)
+  ccall((:clz, "./clz/bin/liblinuxarmclz"), Int64, (Int64,), n)
 end
 
 ################################################################################

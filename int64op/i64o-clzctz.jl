@@ -20,6 +20,17 @@ function __soft_clz(n::Uint64)
   @inbounds res + __clz_array[(n >> 60) + 1]
 end
 
+function clz(n::Array{Uint64, 1})
+  #iterate down the array starting from the most significant cell
+  res::Uint16 = 0
+  for idx = length(n):-1:1
+    #kick it to the previous clz function
+    (n[idx] != 0) && return res + clz(n[idx])
+    res += 0x0040
+  end
+  res
+end
+
 ################################################################################
 #CTZ
 
@@ -42,7 +53,21 @@ function __soft_ctz(n::Uint64)
   @inbounds res + __ctz_array[n + 1]
 end
 
+#for when it's a superint (that's not a straight Uint64)
+function ctz(n::Array{Uint64, 1})
+  #iterate down the array starting from the most significant cell
+  res::Uint16 = 0
+  for idx = 1:length(n)
+    #kick it to the previous clz function
+    (n[idx] != 0) && return res + ctz(n[idx])
+    res += 0x0040
+  end
+  res
+end
+
 ################################################################################
 # set default clz and ctz variables to the software versions by default.
-clz = __soft_clz
-ctz = __soft_ctz
+clz(n::Uint64) = __soft_clz(n)
+ctz(n::Uint64) = __soft_ctz(n)
+
+export clz, ctz

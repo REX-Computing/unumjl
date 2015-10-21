@@ -114,39 +114,6 @@ function __bit_from_top(n::Integer, l::Integer)
   res
 end
 
-#rebuild "least significant bit" and "most significant bit" as clz/ctz to make
-#conversion to assembler more straightforward.  These are very accelerated
-#binary search modules, but even these should be changed in future revs.
-
-#clz aliases the __fast_clz function, as set by the "hardware-clz" option.
-clz(n::Uint64) = __fast_clz(n)
-
-function clz(n::Array{Uint64, 1})
-  #iterate down the array starting from the most significant cell
-  res::Uint16 = 0
-  for idx = length(n):-1:1
-    #kick it to the previous clz function
-    (n[idx] != 0) && return res + __fast_clz(n[idx])
-    res += 0x0040
-  end
-  res
-end
-
-#ctz aliases the __fast_ctz function, as set by the "hardware-ctz" option.
-ctz(n::Uint64) = __fast_ctz(n)
-#for when it's a superint (that's not a straight Uint64)
-function ctz(n::Array{Uint64, 1})
-  #iterate down the array starting from the most significant cell
-  res::Uint16 = 0
-  for idx = 1:length(n)
-    #kick it to the previous clz function
-    (n[idx] != 0) && return res + __fast_ctz(n[idx])
-    res += 0x0040
-  end
-  res
-end
-export clz, ctz
-
 #calculates the fsize of f when it's an exact value.
 function __fsize_of_exact(f::SuperInt)
   #multiply the length of f by 64 and then subtract ctz
