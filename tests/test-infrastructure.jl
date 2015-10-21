@@ -1,4 +1,4 @@
-require("../unum.jl")
+require("../unums.jl")
 
 using Unums
 ################################################################################
@@ -7,6 +7,7 @@ using Base.Test
 
 #integer operations and helpers for the type constructor
 include("unit-int64op.jl")
+#=
 include("unit-helpers.jl")
 
 #type constructors
@@ -24,3 +25,4 @@ include("unit-comparison.jl")
 #include("unum-test-addition.jl")
 #include("unum-test-multiplication.jl")
 #include("unum-test-division.jl")
+=#
