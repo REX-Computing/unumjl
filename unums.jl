@@ -14,10 +14,10 @@ export Utype
 #set up the options engine for the unums system
 include("unums-options.jl")
 
-#=
-
 #bring in some important uint64 bitwise methods
-include("unum-int64op.jl")
+include("./int64op/int64op.jl")
+
+#=
 #helpers used in the unum type constructors andn pseudoconstructors
 include("unum-helpers.jl")
 
