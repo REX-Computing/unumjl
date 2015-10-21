@@ -14,6 +14,8 @@ export Utype
 #bring in some important uint64 bitwise methods
 include("./int64op/i64o-superint.jl")       #basic superint class definition
 include("./int64op/i64o-clzctz.jl")         #clz and ctz methods.
+include("./int64op/i64o-bitpatterns.jl")    #boolean functions reportingn on bit patterns
+include("./int64op/i64o-constants.jl")      #functions generating int64 constants
 
 #=
 #helpers used in the unum type constructors andn pseudoconstructors
