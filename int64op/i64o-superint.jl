@@ -3,13 +3,17 @@
 #SuperInt is an array
 
 #various helpful numbers
-const z64 = zero(Uint64)
-const o64 = one(Uint64)
-const t64 = 0x8000_0000_0000_0000
-const f64 = 0xFFFF_FFFF_FFFF_FFFF
+
+#sixteen bit numbers
 const z16 = zero(Uint16)
 const o16 = one(Uint16)
 const f16 = uint16(0xFFFF)
+
+#64 bit numbers
+const z64 = zero(Uint64)
+const o64 = one(Uint64)
+const t64 = 0x8000_0000_0000_0000               #top bit
+const f64 = 0xFFFF_FFFF_FFFF_FFFF               #full bits
 
 #note in version 0.4, this will need to change to Union{}
 SuperInt = Union(Uint64, Array{Uint64,1})
@@ -20,36 +24,14 @@ superone(l::Integer) = ((l == 1) ? o64 : [o64, zeros(Uint64, l - 1)])
 supertop(l::Integer) = ((l == 1) ? t64 : [zeros(Uint64, l - 1), t64])
 
 function __copy_superint(a::SuperInt)
-  length(a) == 1 && return a
+  isa(a, Uint64) && return a
   copy(a)
 end
 
 function superbits(a::SuperInt)
-  if length(a) == 1
-    bits(a)
-  else
-    reduce((a, b) -> string(b,a), map(bits, a))
-  end
+  isa(a, Uint64) && return bits(a)
+  reduce((a, b) -> string(b,a), map(bits, a))
 end
-
-# a helper function for is_exp_zero, and is_frac_zero.  Optimized to be fast.
-function allzeros(a::SuperInt)
-  (length(a) == 1) && return a == 0
-  for idx = length(a):-1:1
-    a[idx] != 0 && return false
-  end
-  true
-end
-
-function justtop(a::SuperInt)
-  (length(a) == 1) && return a == t64
-  (last(a) != t64) && return false
-  for idx = (length(a)-1):-1:1
-    a[idx] != 0 && return false
-  end
-  true
-end
-
 
 #generates a mask of a certain number of bits on the right, or left if negative
 function mask(bits::Integer)
