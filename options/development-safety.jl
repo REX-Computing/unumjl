@@ -32,6 +32,6 @@ end
 
 ################################################################################
 #register this option
-__IS_UNUM_DEV ? __ds_set(a) : __ds_unset(a)
 __uopt_dss = __Unum_Option(__ds_set, __ds_unset, __IS_UNUM_DEV)
+__IS_UNUM_DEV ? __ds_set(__uopt_dss) : __ds_unset(__uopt_dss)
 __UNUM_OPTIONS["development-safety"] = __uopt_dss

@@ -2,14 +2,6 @@
 
 #contains information about the unum type and helper functions directly related to constructor.
 
-function __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
-  fsize < (1 << FSS)              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
-  esize < (1 << ESS)              || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
-
-  #when you have esize == 63 ALL THE VALUES ARE VALID, but bitshift op will do something strange.
-  ((esize == 63) || exponent < (1 << (esize + 1))) || throw(ArgumentError("exponent $(exponent) too big for esize $(esize)"))
-  length(fraction) == __frac_cells(FSS) || throw(ArgumentError("size mismatch between supplied fraction array $(length(fraction)) and expected $(__frac_cells(FSS))"))
-end
 
 
 immutable Unum{ESS, FSS} <: Utype
