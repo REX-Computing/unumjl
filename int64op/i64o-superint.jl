@@ -1,6 +1,9 @@
-#unum-int64op.jl
-#various int64 operations that could be helpful across the unum implementation.
-#SuperInt is an array
+#i64o-superint.jl
+#definition of the superint union type and basic things to do with these values.
+#the superint is a union of arbitrary length Uint64 and single value Uint64.
+#operators are to be defined which seamlessly deal with all these numbers.
+
+#Superints are arranged so that the Uint64 in position 1 is the most significant
 
 #various helpful numbers
 
@@ -31,45 +34,6 @@ end
 function superbits(a::SuperInt)
   isa(a, Uint64) && return bits(a)
   reduce((a, b) -> string(b,a), map(bits, a))
-end
-
-#generates a mask of a certain number of bits on the right, or left if negative
-function mask(bits::Integer)
-  if bits >= 0
-    (bits == 64) ? uint64(-1) : uint64((1 << bits) - 1)
-  else
-    uint64(~mask(64 + bits))
-  end
-end
-#does the same, except with a unit range.
-function mask(range::UnitRange)
-  uint64((1 << (range.stop + 1)) - (1 << (range.start)))
-end
-
-#fill x least significant bits with ones.  Negative numbers fill most sig. bits
-#assume there is one cell, if no value has been passed.
-function fillbits(n::Integer, cells::Uint16 = 1)
-  #kick it to the mask function if there's only one cell.
-  if cells == 1
-    return mask(n)
-  end
-  lowlimit::Uint16 = 0
-  #generate the cells.
-  if n == ((cells << 6)) || (-n == (cells << 6))
-    #check to see if we're asking to fill the entire set of cells
-    [f64 for i=1:cells]
-  elseif n > 0
-    #cells filled from the right to the left
-    lowlimit = n >> 6
-    [[f64 for i=1:lowlimit], mask(n % 64), [z64 for i=lowlimit+2:cells]]
-  elseif n < 0
-    #cells filled from the left to the right
-    lowlimit = (-n) >> 6
-    [[z64 for i=lowlimit + 2:cells], mask(n%64), [f64 for i=1:lowlimit]]
-  else
-    #empty cells
-    zeros(Uint64, cells)
-  end
 end
 
 #bitof: extracts the bit at (0-indexed) location, using bit masking
@@ -104,60 +68,4 @@ function __fsize_of_exact(f::SuperInt)
   uint16(max(0, length(f) << 6 - ctz(f) - 1))
 end
 
-#iterative leftshift and rightshift operations on Array SuperInts
-function lsh(a::SuperInt,b::Integer)
-  (typeof(a) == Uint64) && return a << b
-  #calculate how many cells apart our two ints shall be.
-  celldiff = b >> 6
-  #calculate how much we have to shift
-  shift = b % 64
-  #as a courtesy, generate a new array so we don't clobber the old one.
-  l = length(a)
-  res = zeros(Uint64, l)
-  for (idx = l:-1:2)
-    (idx - celldiff < 2) && break
-    #leftshift it.
-    res[idx] = a[idx - celldiff] << shift
-    res[idx] |= a[idx - celldiff - 1] >> (64 - shift)
-  end
-  #then leftshift the last one.
-  res[1 + celldiff] = a[1] << shift
-  res
-end
-
-function rsh(a::SuperInt, b::Integer)
-  (typeof(a) == Uint64) && return a >> b
-  #how many cells apart is our shift
-  celldiff = (b >> 6)
-  #and how many slots we need to shift
-  shift = b % 64
-  #as a courtesy, generate a new array so we don't clobber the old one.
-  l = length(a)
-  res = zeros(Uint64, l)
-  for (idx = 1:l - 1)
-    (idx + celldiff + 1> l) && break
-    #rightshift it.
-    res[idx] = a[idx + celldiff] >> shift
-    res[idx] |= a[idx + celldiff + 1] << (64 - shift)
-  end
-  #complete the last one - it's possible that the last one is not there
-  (l - celldiff != 0) && (res[l - celldiff] = a[l] >> shift)
-  res
-end
-
-function <(a::Array{Uint64,1}, b::Array{Uint64,1})
-  for i = length(a):-1:1
-    (a[i] > b[i]) && return false
-    (a[i] < b[i]) && return true
-  end
-  return false
-end
-
-function >(a::Array{Uint64,1}, b::Array{Uint64,1})
-  for i=length(a):-1:1
-    (a[i] < b[i]) && return false
-    (a[i] > b[i]) && return true
-  end
-  return false
-end
 export lsh, rsh

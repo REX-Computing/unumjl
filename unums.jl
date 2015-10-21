@@ -16,6 +16,9 @@ include("./int64op/i64o-superint.jl")       #basic superint class definition
 include("./int64op/i64o-clzctz.jl")         #clz and ctz methods.
 include("./int64op/i64o-bitpatterns.jl")    #boolean functions reportingn on bit patterns
 include("./int64op/i64o-constants.jl")      #functions generating int64 constants
+include("./int64op/i64o-masks.jl")          #mask generating operators
+include("./int64op/i64o-shifts.jl")         #left and right shift operators
+include("./int64op/i64o-comparison.jl")     #chaining comparison operators
 
 #=
 #helpers used in the unum type constructors andn pseudoconstructors
