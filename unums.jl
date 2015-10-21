@@ -11,11 +11,9 @@ module Unums
 abstract Utype <: Real
 export Utype
 
-#set up the options engine for the unums system
-include("unums-options.jl")
-
 #bring in some important uint64 bitwise methods
-include("./int64op/int64op.jl")
+include("./int64op/i64o-superint.jl")
+include("./int64op/i64o-clzctz.jl")
 
 #=
 #helpers used in the unum type constructors andn pseudoconstructors
@@ -52,4 +50,9 @@ include("unum-promote.jl")
 include("unum-expwalk.jl")
 include("unum_solver.jl")
 =#
+
+
+#set up the options engine for the unums system, which might hotswap functions.
+include("unums-options.jl")
+
 end #module

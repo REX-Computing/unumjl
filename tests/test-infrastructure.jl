@@ -1,3 +1,6 @@
+#test-infrastructure.jl
+#tests unums infrastructure (everything except mathematical operations).
+
 require("../unums.jl")
 
 using Unums
@@ -6,7 +9,7 @@ using Unums
 using Base.Test
 
 #integer operations and helpers for the type constructor
-include("unit-int64op.jl")
+include("./unit/unit-int64op.jl")
 #=
 include("unit-helpers.jl")
 
