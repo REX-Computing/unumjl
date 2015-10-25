@@ -4,11 +4,13 @@
 ################################################################################
 #CLZ
 
+#software clz uses a lookup array to resolve the last bits, and a binary search
+#method to resolve the higher bits.
+
 __clz_array=[0x0004,0x0003,0x0002,0x0002,
              0x0001,0x0001,0x0001,0x0001,
              0x0000,0x0000,0x0000,0x0000,
              0x0000,0x0000,0x0000,0x0000]
-
 function __soft_clz(n::Uint64)
   (n == 0) && return 64
   res::Uint16 = 0
@@ -24,9 +26,9 @@ end
 function clz(n::Array{Uint64, 1})
   #iterate down the array starting from the most significant cell
   res::Uint16 = 0
-  for idx = length(n):-1:1
+  for idx = 1:length(n)
     #kick it to the previous clz function
-    (n[idx] != 0) && return res + clz(n[idx])
+    @inbounds (n[idx] != 0) && return res + clz(n[idx])
     res += 0x0040
   end
   res
@@ -35,6 +37,8 @@ end
 ################################################################################
 #CTZ
 
+#software ctz operates in nearly the same fashion, although note that the lookup
+#looks quite different.
 __ctz_array=[0x0004, 0x0000, 0x0001, 0x0000,
              0x0002, 0x0000, 0x0001, 0x0000,
              0x0003, 0x0000, 0x0001, 0x0000,
@@ -57,18 +61,19 @@ end
 
 #for when it's a superint (that's not a straight Uint64)
 function ctz(n::Array{Uint64, 1})
-  #iterate down the array starting from the most significant cell
+  #iterate down the array starting from the least significant cell (highest index)
   res::Uint16 = 0
-  for idx = 1:length(n)
+  for idx = length(n):-1:1
     #kick it to the previous clz function
-    (n[idx] != 0) && return res + ctz(n[idx])
+    @inbounds (n[idx] != 0) && return res + ctz(n[idx])
     res += 0x0040
   end
   res
 end
 
 ################################################################################
-# set default clz and ctz variables to the software versions by default.
+# set default clz and ctz variables to the software versions.  Note these could
+# get swapped out if a hardware solution is detected.
 clz(n::Uint64) = __soft_clz(n)
 ctz(n::Uint64) = __soft_ctz(n)
 

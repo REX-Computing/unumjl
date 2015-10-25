@@ -27,7 +27,7 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   frac &= high_mask
   #we may need to trim the fraction further, in which case we alter fsize.
   #also take the "zero" case and make sure we represent at least one digit.
-  fsize = (ubit == 0) ? __fsize_of_exact(frac) : fsize
+  fsize = (ubit == 0) ? __minimum_data_width(frac) : fsize
   (frac, fsize, ubit)
 end
 
@@ -54,13 +54,13 @@ function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Integer)
     low_mask::Uint64 = ~high_mask
     is_ubit = (fraction & low_mask != 0) ? UNUM_UBIT_MASK : 0
 
-    fsize = (is_ubit != 0) ? _mfs : __fsize_of_exact(fraction)
+    fsize = (is_ubit != 0) ? _mfs : __minimum_data_width(fraction)
     (fraction & high_mask, fsize, is_ubit)
   else
     #we don't need to check for lost bits because when 6 or greater, the fractions
     #are aligned with the 64-bit boundaries.
     (is_ubit != 0) && return (fraction, _mfs, is_ubit)
-    (fraction, __fsize_of_exact(fraction), is_ubit)
+    (fraction, __minimum_data_width(fraction), is_ubit)
   end
 end
 

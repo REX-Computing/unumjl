@@ -266,7 +266,7 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::Uint16)
     fraction = numerator[2:end]
   end
 
-  (is_ulp & UNUM_UBIT_MASK == 0) && (fsize = __fsize_of_exact(fraction))
+  (is_ulp & UNUM_UBIT_MASK == 0) && (fsize = __minimum_data_width(fraction))
 
   Unum{ESS,FSS}(fsize, esize, sign | is_ulp, fraction, exponent)
 end

@@ -145,7 +145,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
       #count how much we have to shift by....  Limit this so that we don't cross
       #over to subnormal-land.  Note that this result is never going to be a ulp.
       (esize, exponent, fraction) = __shift_many_zeros(fraction, _aexp, ESS)
-      fsize = __fsize_of_exact(fraction)
+      fsize = __minimum_data_width(fraction)
       return Unum{ESS,FSS}(fsize, esize, a.flags, fraction, exponent)
     end
     scratchpad = fraction
@@ -162,7 +162,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   #if we started with a subnormal a (which should be maximally subnormal), we are
   #done. note that we don't have to throw a ubit flag on because a subtraction
   #yielding smallsubnormal should have been impossible.
-  (is_exp_zero(a)) && return Unum{ESS,FSS}(__fsize_of_exact(fraction), max_esize(ESS), a.flags & UNUM_SIGN_MASK, a.fraction - scratchpad, z64)
+  (is_exp_zero(a)) && return Unum{ESS,FSS}(__minimum_data_width(fraction), max_esize(ESS), a.flags & UNUM_SIGN_MASK, a.fraction - scratchpad, z64)
 
 
   #set up some common variables as defaults.
@@ -209,12 +209,12 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   else
     #no shift.  If we have a trailing bit, ignore it and set the result to have UBIT flag.
     (trail != 0) && (is_ubit |= UNUM_UBIT_MASK)
-    fsize::Uint16 = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)
+    fsize::Uint16 = (is_ubit != 0) ? max_fsize(FSS) : __minimum_data_width(fraction)
     ((fraction & __bit_from_top(1 << FSS + 1, 1)) != 0) && return Unum{ESS,FSS}(fsize, a.esize, a.flags | is_ubit, fraction & frac_mask, a.exponent)
     fraction = fraction & frac_mask
   end
 
   #recalculate fsize.
-  fsize = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)
+  fsize = (is_ubit != 0) ? max_fsize(FSS) : __minimum_data_width(fraction)
   Unum{ESS,FSS}(fsize, esize, a.flags | is_ubit, fraction, exponent)
 end

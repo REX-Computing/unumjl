@@ -2,8 +2,6 @@
 
 #contains information about the unum type and helper functions directly related to constructor.
 
-
-
 immutable Unum{ESS, FSS} <: Utype
   fsize::Uint16
   esize::Uint16

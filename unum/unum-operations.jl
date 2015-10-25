@@ -66,7 +66,7 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     exponent = a.exponent
   end
   #recalculate fsize, since this is exact, we can deal with ULPs as needed.
-  fsize::Uint16 = __fsize_of_exact(fraction)
+  fsize::Uint16 = __minimum_data_width(fraction)
 
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
@@ -121,7 +121,7 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     else
       #even easire.  Just do a direct subtraction.
       fraction = a.fraction - __bit_from_top(max_fsize(FSS) + 1, l)
-      fsize = __fsize_of_exact(a.fraction)
+      fsize = __minimum_data_width(a.fraction)
       esize = a.esize
       exponent = a.exponent
     end

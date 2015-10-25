@@ -21,51 +21,8 @@ const f64 = 0xFFFF_FFFF_FFFF_FFFF               #full bits
 #note in version 0.4, this will need to change to Union{}
 SuperInt = Union(Uint64, Array{Uint64,1})
 
-#generates a superint zero for a given superint length
-superzero(l::Integer) = ((l == 1) ? z64 : zeros(Uint64, l))
-superone(l::Integer) = ((l == 1) ? o64 : [o64, zeros(Uint64, l - 1)])
-supertop(l::Integer) = ((l == 1) ? t64 : [zeros(Uint64, l - 1), t64])
+__copy_superint(a::Uint64) = a
+__copy_superint(a::Array{Uint64, 1}) = copy(a)
 
-function __copy_superint(a::SuperInt)
-  isa(a, Uint64) && return a
-  copy(a)
-end
-
-function superbits(a::SuperInt)
-  isa(a, Uint64) && return bits(a)
-  reduce((a, b) -> string(b,a), map(bits, a))
-end
-
-#bitof: extracts the bit at (0-indexed) location, using bit masking
-function bitof(x::Integer, bit)
-  return x & (one(x) << bit)
-end
-function bitof(x::Array{Uint64,1}, bit)
-  cell = (bit >> 6) + 1
-  offset = bit % 64
-  bitof(x[cell], offset)
-end
-#the reverse experiment is __bit_from_top.  Generates a single Uint64 array that
-#has a single bit flipped, which is the n'th bit from the msb, 1-indexed.
-function __bit_from_top(n::Integer, l::Integer)
-  (l == 1) && return (t64 >> (n - 1))
-  res = zeros(Uint64, l)
-  #calculate the cell number
-  cellidx = l - ((n - 1) >> 6)
-  #figure out what we should replace the cell with.
-  cell = uint64(t64 >> ((n - 1) % 64))
-  #do the replacement
-  res[cellidx] = cell
-  #return the result
-  res
-end
-
-#calculates the fsize of f when it's an exact value.
-function __fsize_of_exact(f::SuperInt)
-  #multiply the length of f by 64 and then subtract ctz
-  #if we're a zero, just return that, otherwise return the result minus 1.
-  #use the max() method as suggested by profiling.
-  uint16(max(0, length(f) << 6 - ctz(f) - 1))
-end
-
-export lsh, rsh
+superbits(a::Uint64) = bits(a)
+superbits(a::Array{Uint64, 1}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a)

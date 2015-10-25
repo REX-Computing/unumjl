@@ -1,6 +1,6 @@
 #max-speed-2.jl
 
-#testing the use of max versus ternary operator for uint16s for __fsize_of_exact
+#testing the use of max versus ternary operator for uint16s for __minimum_data_width
 
 const count = 1000000
 

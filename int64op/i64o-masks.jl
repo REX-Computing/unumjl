@@ -17,26 +17,35 @@ end
 
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
 #assume there is one cell, if no value has been passed.
-function fillbits(n::Integer, cells::Uint16 = 1)
+function fillbits(n::Integer, cells::Integer = 1)
   #kick it to the mask function if there's only one cell.
-  if cells == 1
-    return mask(n)
-  end
-  lowlimit::Uint16 = 0
+  (cells == 1) && return mask(n)
+
+  #allocate our filling mask.
+  res = zeros(Uint64, cells)
   #generate the cells.
   if n == ((cells << 6)) || (-n == (cells << 6))
     #check to see if we're asking to fill the entire set of cells
-    [f64 for i=1:cells]
-  elseif n > 0
-    #cells filled from the right to the left
-    lowlimit = n >> 6
-    [[f64 for i=1:lowlimit], mask(n % 64), [z64 for i=lowlimit+2:cells]]
-  elseif n < 0
-    #cells filled from the left to the right
-    lowlimit = (-n) >> 6
-    [[z64 for i=lowlimit + 2:cells], mask(n%64), [f64 for i=1:lowlimit]]
+    for idx = 1:cells; res[idx] = f64; end
+  elseif n == 0
+    #we don't have to fill up anything.
+    nothing
   else
-    #empty cells
-    zeros(Uint64, cells)
+    #first assign the border cell.
+    bordercell::Integer = n < 0 ? (abs(n) >> 6 + 1) : cells - (n >> 6)
+    #cells filled from the right to the left
+    for idx = 1:cells
+      if idx < bordercell
+        #the lower indices are populated with zeros if we're filling from lsb.
+        res[idx] = n > 0 ? z64 : f64
+      elseif idx == bordercell
+        #easily gets passed to mask.
+        res[idx] = mask(n % 64)
+      else
+        #the higher indices are populated with ones if we're filling from msb.
+        res[idx] = n > 0 ? f64 : z64
+      end
+    end
   end
+  res
 end
