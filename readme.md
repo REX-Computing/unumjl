@@ -49,4 +49,5 @@ C library which even more closely emulates the processes that hardware will
 implement.
 
 unumjl was created by Isaac Yonemoto on behalf of Rex Computing
-this work was funded by DARPA. 
+
+this work was funded by DARPA, Proposal D151-004-0070
