@@ -10,9 +10,10 @@ using Base.Test
 
 #integer operations and helpers for the type constructor
 include("./unit/unit-int64op.jl")
-#=
-include("unit-helpers.jl")
 
+#functions which directly participate in construction and validation of unums
+include("./unit/unit-helpers.jl")
+#=
 #type constructors
 include("unit-unum.jl")
 

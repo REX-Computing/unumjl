@@ -1,6 +1,9 @@
 #test-helpers.jl
 
-#test __frac_trim(frac, fsize) - this is a function solely used in the
+################################################################################
+#__frac_trim
+
+#__frac_trim(frac, fsize) - this is a function solely used in the
 #constructor. __frac_trim takes a dump of bits (frac) in superint
 #and trims it down to size according to (fsize).  NB.  fsize the variable
 #represents the actual number of fraction bits *minus one*.  outputs
@@ -22,20 +25,45 @@
 #test two-cell SuperInt with fractrim.
 @test Unums.__frac_trim([nobits, nobits], uint16(0)) == ([nobits, nobits], 0, 0)
 @test Unums.__frac_trim([nobits, nobits], uint16(127)) == ([nobits, nobits], 0, 0)
-@test Unums.__frac_trim([lsb1, nobits], uint16(0)) == ([nobits, nobits], 0, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim([lsb1, nobits], uint16(63)) == ([nobits, nobits], 63, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim([nobits, lsb1], uint16(63)) == ([nobits, lsb1], 63, 0)
+@test Unums.__frac_trim([nobits, lsb1], uint16(0)) == ([nobits, nobits], 0, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim([nobits, lsb1], uint16(63)) == ([nobits, nobits], 63, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim([lsb1, nobits], uint16(63)) == ([lsb1, nobits], 63, 0)
 #test three-cell SuperInts with fractrim.
 @test Unums.__frac_trim([nobits, nobits, nobits], uint16(0)) == ([nobits, nobits, nobits], 0, 0)
 @test Unums.__frac_trim([nobits, nobits, nobits], uint16(191)) == ([nobits, nobits, nobits], 0 ,0)
-@test Unums.__frac_trim([allbits, allbits, allbits], uint16(63)) == ([nobits, nobits, allbits], 63, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim([allbits, allbits, allbits], uint16(63)) == ([allbits, nobits, nobits], 63, Unums.UNUM_UBIT_MASK)
 @test Unums.__frac_trim([allbits, allbits, allbits], uint16(191)) == ([allbits, allbits, allbits,], 191, 0)
 
 #make sure we can't try to trim something to more bits than it has.
 @test_throws ArgumentError Unums.__frac_trim(nobits, uint16(64))
 
-#testing the frac_match, which expands or contracts a SuperInt to match the fss, and throws
-#the ubit flag if it makes sense.
+################################################################################
+#__frac_mask
+@test Unums.__frac_mask(0) == 0x8000_0000_0000_0000
+@test Unums.__frac_mask(1) == 0xC000_0000_0000_0000
+@test Unums.__frac_mask(5) == 0xFFFF_FFFF_0000_0000
+@test Unums.__frac_mask(6) == allbits
+@test Unums.__frac_mask(7) == [allbits, allbits]
+@test Unums.__frac_mask(8) == [allbits, allbits, allbits, allbits]
+
+################################################################################
+#__frac_analyze
+
+#nothing special
+@test Unums.__frac_analyze(0x8000_0000_0000_0000, zero(Uint16), 0) == (0x8000_0000_0000_0000, zero(Uint16), 0)
+#assert we are a unum.
+@test Unums.__frac_analyze(0x8000_0000_0000_0000, Unums.UNUM_UBIT_MASK, 0) == (0x8000_0000_0000_0000, Unums.UNUM_UBIT_MASK, 0)
+#result in a unum.
+@test Unums.__frac_analyze(0x8000_0000_0000_0001, zero(Uint16), 0) == (0x8000_0000_0000_0000, Unums.UNUM_UBIT_MASK, 0)
+#trims correctly
+@test Unums.__frac_analyze(0x8000_0000_0000_0000, zero(Uint16), 5) == (0x8000_0000_0000_0000, zero(Uint16), 0)
+#zero value trims to zero
+@test Unums.__frac_analyze(0x0000_0000_0000_0000, zero(Uint16), 5) == (0x0000_0000_0000_0000, zero(Uint16), 0)
+
+################################################################################
+#__frac_match
+#expands or contracts a SuperInt to match the fss, and throws the ubit flag if
+#the fraction supplied got clipped.
 
 #downshifting from a long SuperInt to a much smaller one.
 #having any bits in less significant cells will throw the ubit.
@@ -49,6 +77,30 @@
 @test Unums.__frac_match(allbits, 8) == ([nobits, nobits, nobits, allbits], 0)
 @test Unums.__frac_match([allbits, msb1], 8) == ([nobits, nobits, allbits, msb1], 0)
 
+################################################################################
+#__frac_cells
+#comprehensive test of these results.
+@test Unums.__frac_cells(0) == 1
+@test Unums.__frac_cells(1) == 1
+@test Unums.__frac_cells(2) == 1
+@test Unums.__frac_cells(3) == 1
+@test Unums.__frac_cells(4) == 1
+@test Unums.__frac_cells(5) == 1
+@test Unums.__frac_cells(6) == 1
+@test Unums.__frac_cells(7) == 2
+@test Unums.__frac_cells(8) == 4
+@test Unums.__frac_cells(9) == 8
+@test Unums.__frac_cells(10) == 16
+@test Unums.__frac_cells(11) == 32
+
+################################################################################
+#__set_lsb
+#comprehensive test of these results.
+@test Unums.__set_lsb(zero(Uint64), 0) == 0x8000_0000_0000_0000
+@test Unums.__set_lsb(zero(Uint64), 5) == 0x0000_0001_0000_0000
+@test Unums.__set_lsb(zero(Uint64), 6) == 0x0000_0000_0000_0001
+@test Unums.__set_lsb(zeros(Uint64, 2), 7) == [0x0, 0x0000_0000_0000_0001]
+@test Unums.__set_lsb(zeros(Uint64, 4), 8) == [0x0, 0x0, 0x0, 0x0000_0000_0000_0001]
 
 #test encoding and decoding exponents
 #remember, esize is the size of the exponent *minus one*.
@@ -97,7 +149,6 @@
 @test Unums.min_exponent(4) == -32766
 
 #comprehensive checking of all exponents in the range -1000..1000
-
 for e = -1000:1000
   @test e == Unums.decode_exp(Unums.encode_exp(e)...)
 end
@@ -122,18 +173,13 @@ end
 @test Unums.max_fsize(7) == 127
 @test Unums.max_fsize(8) == 255
 
-@test Unums.__frac_cells(0) == 1
-@test Unums.__frac_cells(1) == 1
-@test Unums.__frac_cells(2) == 1
-@test Unums.__frac_cells(3) == 1
-@test Unums.__frac_cells(4) == 1
-@test Unums.__frac_cells(5) == 1
-@test Unums.__frac_cells(6) == 1
-@test Unums.__frac_cells(7) == 2
-@test Unums.__frac_cells(8) == 4
-
-@test Unums.__set_lsb(zero(Uint64), 0) == 0x8000_0000_0000_0000
-@test Unums.__set_lsb(zero(Uint64), 5) == 0x0000_0001_0000_0000
-@test Unums.__set_lsb(zero(Uint64), 6) == 0x0000_0000_0000_0001
-@test Unums.__set_lsb(zeros(Uint64, 2), 7) == [0x0000_0000_0000_0001, 0x0]
-@test Unums.__set_lsb(zeros(Uint64, 4), 8) == [0x0000_0000_0000_0001, 0x0, 0x0, 0x0]
+#esize is basically the same as fsize.
+@test Unums.max_esize(0) == 0
+@test Unums.max_esize(1) == 1
+@test Unums.max_esize(2) == 3
+@test Unums.max_esize(3) == 7
+@test Unums.max_esize(4) == 15
+@test Unums.max_esize(5) == 31
+@test Unums.max_esize(6) == 63
+@test Unums.max_esize(7) == 127
+@test Unums.max_esize(8) == 255

@@ -22,7 +22,7 @@ function __frac_trim(frac::SuperInt, fsize::Uint16)
   #this needs to be in an array because that will collapse to the appropriate
   #one-dimensional array in the array case and collapse to a one-element array
   #in the single case, so that matches with the zeros() directive.
-  ubit = allzeros(low_mask & frac) ? z16 : UNUM_UBIT_MASK
+  ubit = is_all_zero(low_mask & frac) ? z16 : UNUM_UBIT_MASK
   #mask out the low bits and save that as the fraction.
   frac &= high_mask
   #we may need to trim the fraction further, in which case we alter fsize.
@@ -55,14 +55,14 @@ function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Integer)
     is_ubit = (fraction & low_mask != 0) ? UNUM_UBIT_MASK : 0
 
     fsize = (is_ubit != 0) ? _mfs : __minimum_data_width(fraction)
-    (fraction & high_mask, fsize, is_ubit)
+    (fraction & high_mask, fsize, z16)
   else
     #we don't need to check for lost bits because when 6 or greater, the fractions
     #are aligned with the 64-bit boundaries.
     (is_ubit != 0) && return (fraction, _mfs, is_ubit)
-    (fraction, __minimum_data_width(fraction), is_ubit)
+    (fraction, __minimum_data_width(fraction), z16)
   end
-end
+end 
 
 #match the fraction to fss, setting the ubit if digits were thrown out in the
 #process of trimming to fraction.
@@ -99,9 +99,11 @@ __frac_cells(fss::Integer) = uint16(fss < 6 ? 1 : (1 << (fss - 6)))
 
 #set the lsb of a superint to 1 based on fss.  This function has undefined
 #behavior if the passed superint already has a bit set at this location.
-function __set_lsb(a::SuperInt, fss::Integer)
-  (fss > 6) && (return a + [o64, zeros(Uint64, __frac_cells(fss) - 1)])
-  return a + 1 << (64 - (1 << fss))
+function __set_lsb(a::Uint64, fss::Integer)
+  return a + (1 << (64 - (1 << fss)))
+end
+function __set_lsb(a::Array{Uint64, 1}, fss::Integer)
+    return a + [zeros(Uint64, __frac_cells(fss) - 1), o64]
 end
 
 ################################################################################

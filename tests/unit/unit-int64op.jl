@@ -175,3 +175,5 @@ three16 = uint16(3)
 @test Unums.__minimum_data_width([allbits, allbits]) == 127
 @test Unums.__minimum_data_width([nobits, lsb1]) == 127
 @test Unums.__minimum_data_width([nobits, nobits, nobits, lsb1]) == 255
+
+#test __frac_mask

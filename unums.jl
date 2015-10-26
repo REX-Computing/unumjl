@@ -14,6 +14,13 @@ export Utype
 #aggregate of all of the int64-related operations
 include("./int64op/int64ops.jl")
 
+#class definition of unum.
+include("./unum/unum-unum.jl")
+#class definition of ubound
+#include("./ubound/ubound-ubound.jl")
+include("./unum/unum.jl")
+#ubound-related code
+#include("./ubound/ubound.jl")
 #=
 #helpers used in the unum type constructors andn pseudoconstructors
 include("unum-helpers.jl")
