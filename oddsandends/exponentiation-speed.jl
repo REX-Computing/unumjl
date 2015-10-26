@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #profiling speed differences between exponentiation and bitshifting.
 
 const count = 1000000

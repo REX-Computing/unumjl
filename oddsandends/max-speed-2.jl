@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #max-speed-2.jl
 
 #testing the use of max versus ternary operator for uint16s for __fsize_of_exact

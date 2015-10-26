@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #unum-addition.jl
 #Performs addition with unums.  Requires two unums to have the same
 #environment signature.  Also included here is subtraction.

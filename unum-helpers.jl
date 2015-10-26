@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #unum-helpers.jl
 #helper functions for the unum constructor, and functions that will frequently
 #be used with the constructor.

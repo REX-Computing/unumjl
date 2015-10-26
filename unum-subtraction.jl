@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #unit-subtraction.jl
 #implements addition primitives where the vectors of the two values point in
 #opposing directions.  This is organized into a separate file for convenience

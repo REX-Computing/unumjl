@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #fraczero-speed.jl
 
 #testing to see how fast we can test to see if the fraction is zero.

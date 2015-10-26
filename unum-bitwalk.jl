@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #unum-bitwalk.jl
 
 #implements a "bitwalking" functional.  Said functional takes a ulp that isn't

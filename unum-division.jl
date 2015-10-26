@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #unum-division.jl - currently uses the goldschmidt method, but will also
 #implement other division algorithms.
 

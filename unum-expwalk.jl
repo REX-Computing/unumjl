@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #expwalk.jl
 #returns a series of unums that are comprehensively tested for satisfying
 #the boolean function bf  Uses a binary search method.

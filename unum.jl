@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #unum.jl - a julia implementation of the unum
 # this file is the module definition file and also contains
 # includes for all of the components which make it work
