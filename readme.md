@@ -48,5 +48,5 @@ the various C functions for verification purposes, ultimately leading to a fast
 C library which even more closely emulates the processes that hardware will
 implement.
 
-unumjl was created by Isaac Yonemoto on behalf of Rex Computing
-this work was funded by DARPA. 
+unumjl was created by Isaac Yonemoto on behalf of [REX Computing Inc].(http://rexcomputing.com)
+this work was supported in part by DARPA Contract D15PC00135 awarded to REX Computing, Inc.
