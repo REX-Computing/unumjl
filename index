@@ -2,7 +2,7 @@ file                    unit test               status
 ----                    ---------               ------
 unum-int64op.jl         unit-int64op.jl         complete
 unum-helpers.jl         unit-helpers.jl         complete
-unum-unum.jl            unit-unum.jl            add more unit tests
+unum-unum.jl            unit-unum.jl            maybe add more unit tests
 unum-ubound.jl                                  needs unit tests
 unum-typefunctions.jl                           needs unit tests
 unum-constants.jl                               needs more constants added

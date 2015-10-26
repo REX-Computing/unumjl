@@ -47,35 +47,21 @@ end
 
 export Ubound, ubound, ubound_unsafe
 
-export describe
-function describe{ESS,FSS}(b::Ubound{ESS,FSS}, s=" ")
-  highval = is_ulp(b.highbound) ? next_exact(b.highbound) : b.highbound
-  hightext = is_pos_mmr(b.highbound) ? "mmr{$ESS, $FSS}" : string(calculate(highval))
-  hightext = is_pos_sss(b.highbound) ? "sss{$ESS, $FSS}" : hightext
-  hightext = is_neg_sss(b.highbound) ? "-sss{$ESS, $FSS}" : hightext
-  lowval = is_ulp(b.lowbound) ? prev_exact(b.lowbound) : b.lowbound
-  lowtext = is_neg_mmr(b.lowbound) ? "-mmr{$ESS, $FSS}" : string(calculate(lowval))
-  lowtext = is_pos_sss(b.lowbound) ? "sss{$ESS, $FSS}" : lowtext
-  lowtext = is_neg_sss(b.lowbound) ? "-sss{$ESS, $FSS}" : lowtext
-  string("$(bits(b.lowbound, s)) -> $(bits(b.highbound, s)) (aka ", lowtext, " -> ", hightext ," )")
-end
-import Base.bits
-bits(b::Ubound) = describe(b, "")
-export bits
-
-function __ubound_helper{ESS,FSS}(a::Unum{ESS,FSS}, lowbound::Bool)
+function __open_ubound_helper{ESS,FSS}(a::Unum{ESS,FSS}, lowbound::Bool)
   is_ulp(a) && return unum_unsafe(a)
   is_zero(a) && return sss(Unum{ESS,FSS}, lowbound ? z16 : UNUM_SIGN_MASK)
   (is_negative(a) != lowbound) ? outward_ulp(a) : inward_ulp(a)
 end
 
-#creates a open ubound from two unums, a < b
+#creates a open ubound from two unums, a < b, ensures it's open regardless of
+#whether or not the values passed are exact.
 function open_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #match the sign masks for the case of a or b being zero.
-  ulp_a = __ubound_helper(a, true)
-  ulp_b = __ubound_helper(b, false)
+  ulp_a = __open_ubound_helper(a, true)
+  ulp_b = __open_ubound_helper(b, false)
   ubound_unsafe(ulp_a, ulp_b)
 end
+export open_ubound
 
 #converts a Ubound into a unum, if applicable.  Otherwise, drop the ubound.
 function ubound_resolve{ESS,FSS}(b::Ubound{ESS,FSS})
@@ -110,14 +96,3 @@ function ubound_resolve{ESS,FSS}(b::Ubound{ESS,FSS})
 
   return b
 end
-
-function ==(a::Ubound, b::Ubound)
-  (a.lowbound == b.lowbound) && (a.highbound == b.highbound)
-end
-
-function isalmostinf(b::Ubound)
-  isalmostinf(b.lowbound) || isalmostinf(b.highbound)
-end
-
-include("ubound-operators.jl")
-include("ubound-comparison.jl")

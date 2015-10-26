@@ -50,15 +50,15 @@
 #__frac_analyze
 
 #nothing special
-@test Unums.__frac_analyze(0x8000_0000_0000_0000, zero(Uint16), 0) == (0x8000_0000_0000_0000, zero(Uint16), 0)
+@test Unums.__frac_analyze(0x8000_0000_0000_0000, zero(Uint16), 0) == (0x8000_0000_0000_0000, 0, 0)
 #assert we are a unum.
-@test Unums.__frac_analyze(0x8000_0000_0000_0000, Unums.UNUM_UBIT_MASK, 0) == (0x8000_0000_0000_0000, Unums.UNUM_UBIT_MASK, 0)
+@test Unums.__frac_analyze(0x8000_0000_0000_0000, Unums.UNUM_UBIT_MASK, 0) == (0x8000_0000_0000_0000, 0, Unums.UNUM_UBIT_MASK)
 #result in a unum.
-@test Unums.__frac_analyze(0x8000_0000_0000_0001, zero(Uint16), 0) == (0x8000_0000_0000_0000, Unums.UNUM_UBIT_MASK, 0)
+@test Unums.__frac_analyze(0x8000_0000_0000_0001, zero(Uint16), 0) == (0x8000_0000_0000_0000, 0, Unums.UNUM_UBIT_MASK)
 #trims correctly
-@test Unums.__frac_analyze(0x8000_0000_0000_0000, zero(Uint16), 5) == (0x8000_0000_0000_0000, zero(Uint16), 0)
+@test Unums.__frac_analyze(0x8000_0000_0000_0000, zero(Uint16), 5) == (0x8000_0000_0000_0000, 0, 0)
 #zero value trims to zero
-@test Unums.__frac_analyze(0x0000_0000_0000_0000, zero(Uint16), 5) == (0x0000_0000_0000_0000, zero(Uint16), 0)
+@test Unums.__frac_analyze(0x0000_0000_0000_0000, zero(Uint16), 5) == (0x0000_0000_0000_0000, 0, 0)
 
 ################################################################################
 #__frac_match

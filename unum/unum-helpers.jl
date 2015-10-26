@@ -47,22 +47,22 @@ function __frac_analyze(fraction::SuperInt, is_ubit::Uint16, fss::Integer)
   if (fss < 6)
     #set the high mask
     high_mask::Uint64 = __frac_mask(fss)
-    #check if we're already a ubit, then trim to high mask.
-    (is_ubit != 0) && return (fraction & high_mask, _mfs, is_ubit)
-
     #generate the low mask and check it out.
     low_mask::Uint64 = ~high_mask
-    is_ubit = (fraction & low_mask != 0) ? UNUM_UBIT_MASK : 0
+    is_ubit = (fraction & low_mask != 0) ? UNUM_UBIT_MASK : is_ubit
 
+    #mask out the fraction.
+    fraction = fraction & high_mask
+    
     fsize = (is_ubit != 0) ? _mfs : __minimum_data_width(fraction)
-    (fraction & high_mask, fsize, z16)
+    (fraction & high_mask, fsize, is_ubit)
   else
     #we don't need to check for lost bits because when 6 or greater, the fractions
     #are aligned with the 64-bit boundaries.
     (is_ubit != 0) && return (fraction, _mfs, is_ubit)
     (fraction, __minimum_data_width(fraction), z16)
   end
-end 
+end
 
 #match the fraction to fss, setting the ubit if digits were thrown out in the
 #process of trimming to fraction.

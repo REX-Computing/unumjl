@@ -17,7 +17,7 @@ include("./int64op/int64ops.jl")
 #class definition of unum.
 include("./unum/unum-unum.jl")
 #class definition of ubound
-#include("./ubound/ubound-ubound.jl")
+include("./ubound/ubound-ubound.jl")
 include("./unum/unum.jl")
 #ubound-related code
 #include("./ubound/ubound.jl")
