@@ -24,9 +24,7 @@ immutable Unum{ESS, FSS} <: Utype
 
   function Unum(fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64)
     #check to make sure fsize is within FSS, esize within ESS
-    if (__unum_isdev())
-      __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
-    end
+    __check_block_unum_dev(ESS, FSS, fsize, esize, fraction, exponent)
 
     #because fraction could be assigned an existing array, we should do a safe copy.
     if (__frac_cells(ESS) == 1)
@@ -39,6 +37,7 @@ immutable Unum{ESS, FSS} <: Utype
     new(fsize, esize, flags, temp_fraction, exponent)
   end
 end
+export Unum
 
 #the "unum" constructor is a safe, pruning constructor.
 #note that the first argument to the is pseudo-constructor must be a type value
@@ -70,7 +69,6 @@ unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}) = Unum{ESS,FSS}(x.fsize, x.esize, x.flags
 #substituting flags
 unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}, subflags::Uint16) = Unum{ESS,FSS}(x.fsize, x.esize, subflags, x.fraction, x.exponent)
 unum_unsafe{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64) = Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
-
 
 #an "easy" constructor which is safe, and takes an unbiased exponent value, and
 #a superint value

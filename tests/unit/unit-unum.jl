@@ -11,7 +11,6 @@ f64 = uint64(-1)
 t64 = 0x8000_0000_0000_0000
 
 @test_throws ArgumentError Unums.__check_block_unum(0, 0, o16, z16, z64, z64)
-
 #test that fsize error gets thrown.
 @test_throws ArgumentError unum(Unum{0,0}, o16, z16, z16, z64, z64)
 #test that esize error gets thrown
@@ -38,7 +37,7 @@ easy_walpiri_two_oops = unum_easy(Unum{0,0}, z16, [f64, z64], o64)
 @test easy_walpiri_two_oops.flags == z16
 
 #unset the development environment
-Unums.__unum_release_environment()
+Unums.unset_option("development-safety")
 #test that we can create unsafe unums using the unsafe constructor.
 unsafe_fsize = Unum{0,0}(o16, z16, z16, z64, z64)
 unsafe_fsize_2 = unum_unsafe(unsafe_fsize)
