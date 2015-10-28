@@ -65,4 +65,6 @@ include("unum-promote.jl")
 include("unum-expwalk.jl")
 include("unum_solver.jl")
 
+include("unum-literal.jl")
+
 end #module
