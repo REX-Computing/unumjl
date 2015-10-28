@@ -19,14 +19,17 @@ function one{ESS,FSS}(::Type{Unum{ESS,FSS}})
     Unum{ESS,FSS}(z16, o16, z16, superzero(__frac_cells(FSS)), o64)
   end
 end
-function one(x::Unum)
-  if (esizesize(x) == 0)
-    Unum{fsizesize(x),esizesize(x)}(z16, z16, z16, supertop(__frac_cells(FSS)), z64)
+function one{ESS,FSS}(x::Unum{ESS,FSS})
+  if (ESS == 0)
+    Unum{ESS, FSS}(z16, z16, z16, supertop(__frac_cells(FSS)), z64)
   else
-    Unum{fsizesize(x),esizesize(x)}(z16, o16, z16, superzero(__frac_cells(FSS)), o64)
+    Unum{ESS, FSS}(z16, o16, z16, superzero(__frac_cells(FSS)), o64)
   end
 end
-export one
+
+neg_one{ESS,FSS}(::Type{Unum{ESS,FSS}}) = unum_unsafe(one(Unum{ESS,FSS}), UNUM_SIGN_MASK)
+neg_one{ESS,FSS}(x::Type{Unum{ESS,FSS}}) = unum_unsafe(one(Unum{ESS,FSS}), UNUM_SIGN_MASK)
+export one, neg_one
 
 import Base.nan
 function nan{ESS,FSS}(::Type{Unum{ESS,FSS}})

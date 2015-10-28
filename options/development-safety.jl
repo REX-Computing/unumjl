@@ -10,13 +10,18 @@ const __IS_UNUM_DEV = true
 
 __ds_set = function(o::__Unum_Option)
   global __check_block_unum_dev = __check_block_unum
+  global __check_block_ubound_dev = __check_block_ubound
   o.status = true
 end
 
 __ds_unset = function(o::__Unum_Option)
   global __check_block_unum_dev = __check_block_unum_pass
+  global __check_block_ubound_dev = __check_block_ubound
   o.status = false
 end
+
+################################################################################
+## UNUM CHECKING SAFETY
 
 function __check_block_unum(ESS::Integer, FSS::Integer, fsize::Uint16, esize::Uint16, fraction::SuperInt, exponent::Uint64)
   fsize < (1 << FSS)              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
@@ -29,6 +34,18 @@ function __check_block_unum(ESS::Integer, FSS::Integer, fsize::Uint16, esize::Ui
 end
 
 __check_block_unum_pass(ESS::Integer, FSS::Integer, fsize::Uint16, esize::Uint16, fraction::SuperInt, exponent::Uint64) = nothing
+
+################################################################################
+## UBOUND CHECKING SAFETY
+
+
+function __check_block_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  (a > b) && throw(ArgumentError("ubound built has bad unum order: $(bits(a, " ")) > $(bits(b, " "))"))
+end
+
+__check_block_unbound_pass{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = nothing
+
+
 
 ################################################################################
 #register this option

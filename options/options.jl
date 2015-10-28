@@ -22,5 +22,5 @@ options() = collect(keys(__UNUM_OPTIONS))
 ################################################################################
 #default options to include
 
-include("./options/development-safety.jl")
-include("./options/hardware-clz.jl")
+include("./development-safety.jl")
+include("./hardware-clz.jl")

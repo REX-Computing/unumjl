@@ -20,11 +20,9 @@ include("./unum/unum-unum.jl")
 include("./ubound/ubound-ubound.jl")
 include("./unum/unum.jl")
 #ubound-related code
-#include("./ubound/ubound.jl")
-#=
-#helpers used in the unum type constructors andn pseudoconstructors
-include("unum-helpers.jl")
+include("./ubound/ubound.jl")
 
+#=
 #the base unum type and its pseudoconstructors
 include("unum-unum.jl")
 #and the derived ubound type

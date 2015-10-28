@@ -10,19 +10,23 @@ function describe{ESS,FSS}(x::Unum{ESS, FSS})
 
   string(bits(x, " "), " (aka ", dstring, ")")
 end
-function bits(x::Unum, space::ASCIIString = "")
+
+###NOTE THIS NEEDS TO BE FIXED
+
+
+function bits{ESS,FSS}(x::Unum{ESS,FSS}, space::ASCIIString = "")
   res = ""
-  for idx = 0:fsizesize(x) - 1
+  for idx = 0:FSS - 1
     res = string((x.fsize >> idx) & 0b1, res)
   end
   res = string(space, res)
-  for idx = 0:esizesize(x) - 1
+  for idx = 0:ESS - 1
     res = string((x.esize >> idx) & 0b1, res)
   end
   res = string(space, x.flags & 0b1, space, res)
   tl = length(x.fraction) * 64 - 1
   for idx = (tl-x.fsize):tl
-    res = string(bitof(x.fraction, idx) == 0 ? 0 : 1, res)
+    res = string(bits(x.fraction), res)
   end
   res = string(space, res)
   for idx = 0:x.esize

@@ -1,49 +1,68 @@
 #unum-ubound.jl
 
-function __check_block_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  (a > b) && throw(ArgumentError("ubound built backwards: $(bits(a, " ")) > $(bits(b, " "))"))
-end
-
 #basic ubound type, which contains two unums, as well as some properties of ubounds
 
 immutable Ubound{ESS,FSS} <: Utype
   lowbound::Unum{ESS,FSS}
   highbound::Unum{ESS,FSS}
-end
 
-#unsafe constructor
-function ubound_unsafe{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  if __unum_isdev()
-    #check to make sure that a < b
-    __check_block_ubound(a, b)
+  function Ubound(a, b)
+    __check_block_ubound_dev(a, b)
+    new(a, b)
   end
+end
+#springboard off of the inner constructor type to get this to work.  Yes, inner
+#constructors in julia are a little bit confusing.
+Ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = Ubound{ESS,FSS}(a,b)
+
+#unsafe constructors
+function ubound_unsafe{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   Ubound(a, b)
 end
+
 function ubound_unsafe{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  if __unum_isdev()
-    __check_block_ubound(a.highbound, b)
-  end
+  __check_block_ubound_dev(a.highbound, b)
   Ubound(a.lowbound, b)
 end
+
 function ubound_unsafe{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
-  if __unum_isdev()
-    __check_block_ubound(a, b.lowbound)
-  end
+  __check_block_ubound_dev(a, b.lowbound)
   Ubound(a, b.highbound)
 end
+
 function ubound_unsafe{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
-  if __unum_isdev()
-    __check_block_ubound(a.highbound, b.highbound)
-    __check_block_ubound(a.lowbound, b.lowbound)
-  end
+  __check_block_ubound_dev(a.highbound, b.highbound)
+  __check_block_ubound_dev(a.lowbound, b.lowbound)
   Ubound(a.lowbound, b.highbound)
 end
 
-#safe constructors
+function ubound_unsafe{ESS,FSS}(a::Ubound{ESS,FSS})
+  __check_block_ubound_dev(a.lowbound, a.highbound)
+  Ubound(a.lowbound, b.lowbound)
+end
+
+#guaranteed safe constructors
 function ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   __check_block_ubound(a, b)
   Ubound(a, b)
 end
+#=
+function ubound{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
+  __check_block_ubound(a.highbound, b)
+  ubound(a.lowbound, b)
+end
+
+function ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
+  __check_block_ubound(a, b.lowbound)
+  ubound(a, b.highbound)
+end
+
+function ubound{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
+  __check_block_ubound(a.highbound, b.highbound)
+  __check_block_ubound(a.lowbound, b.lowbound)
+  ubound(a.lowbound, b.highbound)
+end
+=#
 
 export Ubound, ubound, ubound_unsafe
 

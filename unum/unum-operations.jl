@@ -135,22 +135,37 @@ end
 #and don't have the doubleunderscore prefix.
 function next_exact{ESS,FSS}(x::Unum{ESS,FSS})
   is_neg_inf(x) && return neg_maxreal(Unum{ESS,FSS})
-  is_zero(x) && return eps(Unum{ESS,FSS})
+  is_zero(x) && return pos_sss(Unum{ESS,FSS})
   is_pos_mmr(x) && return pos_inf(Unum{ESS,FSS})
   is_pos_inf(x) && return nan(Unum{ESS,FSS})
-  (x.flags & UNUM_SIGN_MASK != 0) && return __inward_exact(x)
-  return __outward_exact(x)
+  return (x.flags & UNUM_SIGN_MASK != 0) ? __inward_exact(x) : __outward_exact(x)
 end
 
 function prev_exact{ESS,FSS}(x::Unum{ESS,FSS})
   is_neg_inf(x) && return nan(Unum{ESS,FSS})
   is_neg_mmr(x) && return neg_inf(Unum{ESS,FSS})
-  is_zero(x) && return neg_eps(Unum{ESS,FSS})
+  is_zero(x) && return neg_sss(Unum{ESS,FSS})
   is_pos_inf(x) && return maxreal(Unum{ESS,FSS})
-  (x.flags & UNUM_SIGN_MASK != 0) && return __outward_exact(x)
-  return __inward_exact(x)
+  return (x.flags & UNUM_SIGN_MASK != 0) ? __outward_exact(x) : __inward_exact(x)
 end
+
 export next_exact, prev_exact
+
+#upper_bound and lower_bound operate on the number line as a well-ordered set, so
+#they function to run tests on the input and then, if appropriate, pass to the
+#repsecting more/less function.
+
+function upper_bound{ESS,FSS}(x::Unum{ESS,FSS})
+  is_exact(x) && return x
+  return (x.flags & UNUM_SIGN_MASK != 0) ? unum_unsafe(x, x.flags & (~UNUM_UBIT_MASK)) : __outward_exact(x)
+end
+
+function lower_bound{ESS,FSS}(x::Unum{ESS,FSS})
+  is_exact(x) && return x
+  return (x.flags & UNUM_SIGN_MASK != 0) ? __outward_exact(x) : unum_unsafe(x, x.flags & (~UNUM_UBIT_MASK))
+end
+
+export upper_bound, lower_bound
 
 function outward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
   is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
@@ -158,6 +173,7 @@ function outward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
   is_neg_inf(x) && return nan(Unum{ESS,FSS})
   Unum{ESS,FSS}(max_fsize(FSS), x.esize, x.flags | UNUM_UBIT_MASK, x.fraction, x.exponent)
 end
+
 function inward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
   is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
   is_zero(x) && return nan(Unum{ESS,FSS})
