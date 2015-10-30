@@ -46,23 +46,25 @@ function ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   __check_block_ubound(a, b)
   Ubound(a, b)
 end
-#=
+
 function ubound{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  __check_block_ubound(a.highbound, b)
+  #we'll accept the ubound if the upper bound of the source ubound lies
+  #within the source unum, so long as the lower bound of the source ubound is
+  #safely away.
+  __check_block_ubound(a.highbound, upper_bound(b))
   ubound(a.lowbound, b)
 end
 
 function ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
-  __check_block_ubound(a, b.lowbound)
+  __check_block_ubound(lower_bound(a), b.lowbound)
   ubound(a, b.highbound)
 end
 
 function ubound{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
-  __check_block_ubound(a.highbound, b.highbound)
-  __check_block_ubound(a.lowbound, b.lowbound)
+  __check_block_ubound(a.highbound, upper_bound(b.highbound))
+  __check_block_ubound(lower_bound(a.lowbound), b.lowbound)
   ubound(a.lowbound, b.highbound)
 end
-=#
 
 export Ubound, ubound, ubound_unsafe
 

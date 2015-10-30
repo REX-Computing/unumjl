@@ -119,8 +119,10 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
       fsize::Uint16 = max_fsize(FSS)
       (esize, exponent) = (_aexp == min_exponent(ESS)) ? (max_esize(ESS), z64) : encode_exp(_aexp - 1)
     else
-      #even easire.  Just do a direct subtraction.
+      #even easier.  Just do a direct subtraction.
       fraction = a.fraction - __bit_from_top(max_fsize(FSS) + 1, l)
+      #don't forget to trim it down.
+      fraction &= __frac_mask(FSS)
       fsize = __minimum_data_width(a.fraction)
       esize = a.esize
       exponent = a.exponent
