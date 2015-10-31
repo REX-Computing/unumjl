@@ -110,6 +110,7 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     #check if it's a subnormal number.  If so, try to move it to the right.
     #resolve a from (possibly inoptimal subnormal) to optimal subnormal or normal
     is_exp_zero(a) && (a = __resolve_subnormal(a))
+
     #the next step is pretty trivial.  First, check if a is all zeros.
     if is_frac_zero(a)
       #in which case just make it a bunch of ones, decrement the exponent, and

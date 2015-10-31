@@ -11,12 +11,16 @@ const __IS_UNUM_DEV = true
 __ds_set = function(o::__Unum_Option)
   global __check_block_unum_dev = __check_block_unum
   global __check_block_ubound_dev = __check_block_ubound
+  global __check_block_ubound_lowerbound_dev = __check_block_ubound_lowerbound
+  global __check_block_ubound_upperbound_dev = __check_block_ubound_upperbound
   o.status = true
 end
 
 __ds_unset = function(o::__Unum_Option)
   global __check_block_unum_dev = __check_block_unum_pass
-  global __check_block_ubound_dev = __check_block_ubound
+  global __check_block_ubound_dev = __check_block_ubound_pass
+  global __check_block_ubound_lowerbound_dev = __check_block_ubound_pass
+  global __check_block_ubound_upperbound_dev = __check_block_ubound_pass
   o.status = false
 end
 
@@ -43,8 +47,10 @@ function __check_block_ubound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (a > b) && throw(ArgumentError("ubound built has bad unum order: $(bits(a, " ")) > $(bits(b, " "))"))
 end
 
-__check_block_unbound_pass{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = nothing
+__check_block_ubound_lowerbound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = __check_block_ubound(lower_bound(a), b)
+__check_block_ubound_upperbound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = __check_block_ubound(a, upper_bound(b))
 
+__check_block_ubound_pass{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = nothing
 
 
 ################################################################################

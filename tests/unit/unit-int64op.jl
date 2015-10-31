@@ -9,6 +9,13 @@ lsb6    = uint64(0x0000_0000_0000_003F)
 allbits = uint64(0xFFFF_FFFF_FFFF_FFFF)
 nobits  = uint64(0x0000_0000_0000_0000)
 
+z16 = zero(Uint16)
+o16 = one(Uint16)
+z64 = zero(Uint64)
+o64 = one(Uint64)
+f64 = 0xFFFF_FFFF_FFFF_FFFF
+t64 = 0x8000_0000_0000_0000
+
 ################################################################################
 ## SUPERINT CONSTANT GENERATION
 
@@ -176,4 +183,15 @@ three16 = uint16(3)
 @test Unums.__minimum_data_width([nobits, lsb1]) == 127
 @test Unums.__minimum_data_width([nobits, nobits, nobits, lsb1]) == 255
 
-#test __frac_mask
+#test __allones_for_length
+@test Unums.__allones_for_length(0x8000_0000_0000_0000,                  uint16(0))
+@test !Unums.__allones_for_length(z64,                                   uint16(0))
+@test Unums.__allones_for_length(0xF000_0000_0000_0000,                  uint16(3))
+@test !Unums.__allones_for_length(0xD000_0000_0000_0000,                 uint16(3))
+@test Unums.__allones_for_length(0xFFFF_0000_0000_0000,                  uint16(15))
+@test Unums.__allones_for_length(f64,                                    uint16(63))
+@test Unums.__allones_for_length([0x8000_0000_0000_0000, z64],           uint16(0))
+@test Unums.__allones_for_length([f64, z64],                             uint16(63))
+@test Unums.__allones_for_length([f64, t64],                             uint16(64))
+@test Unums.__allones_for_length([f64, 0xC000_0000_0000_0000],           uint16(65))
+@test Unums.__allones_for_length([f64, f64, 0xC000_0000_0000_0000, z64], uint16(129))
