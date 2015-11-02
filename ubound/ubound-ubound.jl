@@ -101,8 +101,10 @@ function ubound_resolve{ESS,FSS}(b::Ubound{ESS,FSS})
   is_exp_zero(bigger) && (bigger = __resolve_subnormal(bigger))
   #one easy condition is if we're inner-zero-bounded.
   if (is_exp_zero(smaller) && is_frac_zero(smaller))
+    (decode_exp(bigger) >= 0) && return b
     #check to see if the outer bound is a power of two.
     !__frac_allones(bigger.fraction, bigger.fsize) && return b
+    #figure out the appropriate fsize to represent this number.
   end
 
   #if both are identical, then we can resolve this ubound immediately
