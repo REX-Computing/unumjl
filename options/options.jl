@@ -23,4 +23,3 @@ options() = collect(keys(__UNUM_OPTIONS))
 #default options to include
 
 include("./development-safety.jl")
-include("./hardware-clz.jl")
