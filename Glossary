@@ -1,0 +1,5 @@
+Glossary of some terms:
+
+mmr(Unum) - "More than MaxReal", represents the interval (maxreal, inf).
+
+sss(Unum) - "Smaller than Smallest Subnormal", represents (0, smallsubnormal).
