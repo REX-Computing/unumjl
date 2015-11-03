@@ -43,7 +43,7 @@ u = Unums.__resolve_subnormal(x)
 
 #second example:  Take a unum at the edge of smallness and show that we can
 #resolve this into the apropriate even smaller subnormal number.
-x = Unum{2,4}(uint16(15), z16, z16, 0x0001_0000_0000_0000, z64)
+x = Unum{2,4}(UInt16(15), z16, z16, 0x0001_0000_0000_0000, z64)
 u = Unums.__resolve_subnormal(x)
 @test calculate(x) == calculate(u)
 @test u.esize == 1 << esizesize(u) - 1

@@ -27,7 +27,7 @@ end
 ################################################################################
 ## UNUM CHECKING SAFETY
 
-function __check_block_unum(ESS::Integer, FSS::Integer, fsize::Uint16, esize::Uint16, fraction::SuperInt, exponent::Uint64)
+function __check_block_unum(ESS::Integer, FSS::Integer, fsize::UInt16, esize::UInt16, fraction::SuperInt, exponent::UInt64)
   fsize < (1 << FSS)              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
   esize < (1 << ESS)              || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
 
@@ -37,7 +37,7 @@ function __check_block_unum(ESS::Integer, FSS::Integer, fsize::Uint16, esize::Ui
   nothing
 end
 
-__check_block_unum_pass(ESS::Integer, FSS::Integer, fsize::Uint16, esize::Uint16, fraction::SuperInt, exponent::Uint64) = nothing
+__check_block_unum_pass(ESS::Integer, FSS::Integer, fsize::UInt16, esize::UInt16, fraction::SuperInt, exponent::UInt64) = nothing
 
 ################################################################################
 ## UBOUND CHECKING SAFETY

@@ -13,11 +13,11 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
     return zero(Unum{ESS,FSS})
   elseif (x < 0)
     #promote the integer to int64
-    x = uint64(-x)
+    x = UInt64(-x)
     flags = UNUM_SIGN_MASK
   else
-    #promote to uint64
-    x = uint64(x)
+    #promote to UInt64
+    x = UInt64(x)
     flags = z16
   end
 
@@ -52,9 +52,9 @@ end
 
 #store floating point properties in a dict
 __fp_props = {
-  Float16 => FProp(Uint16, uint16(5),  uint16(10)),
-  Float32 => FProp(Uint32, uint16(8),  uint16(23)),
-  Float64 => FProp(Uint64, uint16(11), uint16(52))
+  Float16 => FProp(UInt16, UInt16(5),  UInt16(10)),
+  Float32 => FProp(UInt32, UInt16(8),  UInt16(23)),
+  Float64 => FProp(UInt64, UInt16(11), UInt16(52))
 }
 
 
@@ -63,7 +63,7 @@ __fp_props = {
 
 #for some reason we need a shim that provides is_exp_zero support to Float16
 import Base.issubnormal
-issubnormal(x::Float16) = (x != 0) && ((reinterpret(Uint16, x) & 0x7c00) == 0)
+issubnormal(x::Float16) = (x != 0) && ((reinterpret(UInt16, x) & 0x7c00) == 0)
 export issubnormal
 
 #helper function to convert from different floating point types.
@@ -83,7 +83,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   _ebias = 1 << (_esize - 1) - 1   #exponent bias (= _emax)
   _emin = -(_ebias) + 1           #minimum exponent
 
-  ibits = uint64(reinterpret(I, x)[1])
+  ibits = UInt64(reinterpret(I, x)[1])
 
   fraction = ibits & mask(_fsize) << (64 - _fsize)
   #make some changes to the data for subnormal numbers.
@@ -122,7 +122,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
     #punch in the one
     fraction |= ((biased_exp == 0) ? 0 : t64 >> (shift - 1))
     #set to subnormal settings.
-    esize = uint16((1 << ESS) - 1)
+    esize = UInt16((1 << ESS) - 1)
     exponent = z64
   elseif (unbiased_exp > max_exponent(ESS))
     return mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK)
@@ -131,7 +131,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   end
 
   #for really large FSS fractions pad some zeroes in front.
-  (__frac_cells(FSS) > 1) && (fraction = [zeros(Uint64, __frac_cells(FSS) - 1),fraction])
+  (__frac_cells(FSS) > 1) && (fraction = [zeros(UInt64, __frac_cells(FSS) - 1),fraction])
 
   r = unum(Unum{ESS,FSS}, min(_fsize, max_fsize(FSS)), esize, flags, fraction, exponent)
   #check for the "infinity hack" where we "accidentally" create inf.
@@ -173,7 +173,7 @@ function __u_to_f_generator(T::Type)
     #check to see if the unum is subnormal
     if is_exp_zero(x)
       #measure the msb significant bit of x.fraction and we'll move the exponent to that.
-      shift::Uint16 = clz(x.fraction) + 1
+      shift::UInt16 = clz(x.fraction) + 1
       #shift the fraction over
       fraction = x.fraction << shift
       #remember, subnormal exponents have +1 to their 'actual' exponent.

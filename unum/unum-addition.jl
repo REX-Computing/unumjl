@@ -50,7 +50,7 @@ end
 const __MASK_TABLE = [0x8000_0000_0000_0000, 0xC000_0000_0000_0000, 0xF000_0000_0000_0000, 0xFF00_0000_0000_0000, 0xFFFF_0000_0000_0000, 0xFFFF_FFFF_0000_0000]
 
 #performs a carried add on an unsigned integer array.
-function __carried_add(carry::Uint64, v1::SuperInt, v2::SuperInt)
+function __carried_add(carry::UInt64, v1::SuperInt, v2::SuperInt)
   #first perform a direct sum on the integer arrays
   res = v1 + v2
   #check to see if we need a carry.  Note last() can operate on scalar values
@@ -68,9 +68,9 @@ function __carried_add(carry::Uint64, v1::SuperInt, v2::SuperInt)
 end
 
 #returns a (SuperInt, int, bool) triplet:  (value, shift, falloff)
-function __shift_after_add(carry::Uint64, value::SuperInt, is_ubit::Uint16)
+function __shift_after_add(carry::UInt64, value::SuperInt, is_ubit::UInt16)
   #cache the length of value
-  l::Uint16 = length(value)
+  l::UInt16 = length(value)
   #calculate how far we have to shift.
   shift = 64 - clz(carry) - 1
   #did we lose values off the end of the number?
@@ -143,7 +143,7 @@ end
 function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp::Int64, _bexp::Int64)
   #calculate the exact sum between two unums.  You may pass this function a unum
   #with a ubit, but it will calculate the sum as if it didn't have the ubit there
-  l::Uint16 = length(a.fraction)
+  l::UInt16 = length(a.fraction)
   #check for deviations due to subnormality.
   a_dev = is_exp_zero(a) ? 1 : 0
   b_dev = is_exp_zero(b) ? 1 : 0
@@ -159,21 +159,21 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp::Int64
   scratchpad = rsh(b.fraction, bit_offset)
 
   #check to see if there's bits that are falling off.
-  is_ubit::Uint16 = allzeros(b.fraction & fillbits(bit_offset, l)) ? 0 : UNUM_UBIT_MASK
+  is_ubit::UInt16 = allzeros(b.fraction & fillbits(bit_offset, l)) ? 0 : UNUM_UBIT_MASK
 
   #don't forget b's phantom bit (1-b_dev) so it's zero if we are subnormal
   (bit_offset != 0) && (b_dev != 1) && (scratchpad |= __bit_from_top(bit_offset, l))
 
   #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
   #b's phantom bit if they are overlapping.
-  carry::Uint64 = (1 - a_dev) + ((bit_offset == 0) ? (1 - b_dev) : 0)
+  carry::UInt64 = (1 - a_dev) + ((bit_offset == 0) ? (1 - b_dev) : 0)
 
   (carry, scratchpad) = __carried_add(carry, a.fraction, scratchpad)
   flags = a.flags & UNUM_SIGN_MASK
-  fsize::Uint16 = 0
+  fsize::UInt16 = 0
 
   #how much the exponent must be shifted.
-  shift::Uint16 = (a_dev == 0) ? 0 : carry
+  shift::UInt16 = (a_dev == 0) ? 0 : carry
 
   if (carry > 1)
     (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad, is_ubit)

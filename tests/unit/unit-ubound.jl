@@ -8,10 +8,10 @@ Unums.set_option("development-safety")
 @test_throws ArgumentError ubound(one(Unum{0,0}), neg_one(Unum{0,0}))
 @test_throws ArgumentError ubound(one(Unum{0,0}), neg_one(Unum{0,0}))
 
-z16 = zero(Uint16)
-o16 = one(Uint16)
-z64 = zero(Uint64)
-o64 = one(Uint64)
+z16 = zero(UInt16)
+o16 = one(UInt16)
+z64 = zero(UInt64)
+o64 = one(UInt64)
 t64 = 0x8000_0000_0000_0000
 
 wtwo = Unum{0,0}(z16, z16, z16, z64, o64)
@@ -20,7 +20,7 @@ wtwo = Unum{0,0}(z16, z16, z16, z64, o64)
 #and conversely we have a problem in the other direction
 @test_throws ArgumentError ubound(one(Unum{0,0}), ubound(zero(Unum{0,0}), wtwo))
 #and check that strange, overlapping ubounds are not ok.
-wnsome = Unum{0,0}(z16, z16, uint16(3), uint64(0), uint64(0))
+wnsome = Unum{0,0}(z16, z16, UInt16(3), UInt64(0), UInt64(0))
 @test_throws ArgumentError ubound(ubound(wnsome, zero(Unum{0,0})), ubound(neg_one(Unum{0,0}), wtwo))
 
 ################################################################################

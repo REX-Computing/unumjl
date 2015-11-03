@@ -81,7 +81,7 @@ function eps{ESS,FSS}(x::Unum{ESS,FSS})
   #plus the fraction size.
   bit_order::Int16 = decode_exp(x) - max_fsize(x) - 1
   if bit_order < min_exponent(FSS)
-    disp::Uint16 = min_exponent(FSS) - bit_order - 1
+    disp::UInt16 = min_exponent(FSS) - bit_order - 1
     Unum{ESS,FSS}(disp, max_esize(ESS), z16, __bit_from_top(disp + 1, __frac_cells(FSS)), z64)
   else
     (esize, exponent) = encode_exp(bit_order)

@@ -16,11 +16,11 @@ end
 
 
 immutable Unum{ESS, FSS} <: Utype
-  fsize::Uint16
-  esize::Uint16
-  flags::Uint16
+  fsize::UInt16
+  esize::UInt16
+  flags::UInt16
   fraction::SuperInt
-  exponent::Uint64  #realistically, we won't need huge exponents
+  exponent::UInt64  #realistically, we won't need huge exponents
 
   #inner constructor makes sure that the fsize and esize agree with the fsizesize
   #and esizesize environment, and the fraction and exponent.  note the resulting
@@ -35,7 +35,7 @@ immutable Unum{ESS, FSS} <: Utype
   # the Unum constructor, then should ONLY be used when you have assurance that
   # the unum is safe (as in within the g-layer of any given calculation)
 
-  function Unum(fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64)
+  function Unum(fsize::UInt16, esize::UInt16, flags::UInt16, fraction::SuperInt, exponent::UInt64)
     #check to make sure fsize is within FSS, esize within ESS
     if (__unum_isdev())
       __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
@@ -45,7 +45,7 @@ immutable Unum{ESS, FSS} <: Utype
     if (__frac_cells(ESS) == 1)
       temp_fraction = fraction
     else
-      temp_fraction = zeros(Uint64, length(fraction))
+      temp_fraction = zeros(UInt64, length(fraction))
       temp_fraction[:] = fraction
     end
 
@@ -56,7 +56,7 @@ end
 #the "unum" constructor is a safe, pruning constructor.
 #note that the first argument to the is pseudo-constructor must be a type value
 #that relays the environment signature for the desired unum.
-function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64)
+function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::SuperInt, exponent::UInt64)
   #checks to make sure everything is safe.
   __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
 
@@ -76,18 +76,18 @@ end
 #unum copy pseudo-constructor, safe version
 unum{ESS,FSS}(x::Unum{ESS,FSS}) = unum(Unum{ESS,FSS}, x.fsize, x.esize, x.flags, x.fraction, x.exponent)
 #and a unum copy that substitutes the flags
-unum{ESS,FSS}(x::Unum{ESS,FSS}, subflags::Uint16) = unum(Unum{ESS,FSS}, x.fsize, x.esize, subflags, x.fraction, x.exponent)
+unum{ESS,FSS}(x::Unum{ESS,FSS}, subflags::UInt16) = unum(Unum{ESS,FSS}, x.fsize, x.esize, subflags, x.fraction, x.exponent)
 
 #unum copy constructor, unsafe version
 unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}) = Unum{ESS,FSS}(x.fsize, x.esize, x.flags, x.fraction, x.exponent)
 #substituting flags
-unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}, subflags::Uint16) = Unum{ESS,FSS}(x.fsize, x.esize, subflags, x.fraction, x.exponent)
-unum_unsafe{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::Uint16, esize::Uint16, flags::Uint16, fraction::SuperInt, exponent::Uint64) = Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
+unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}, subflags::UInt16) = Unum{ESS,FSS}(x.fsize, x.esize, subflags, x.fraction, x.exponent)
+unum_unsafe{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::SuperInt, exponent::UInt64) = Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 
 
 #an "easy" constructor which is safe, and takes an unbiased exponent value, and
 #a superint value
-function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::Uint16, fraction::SuperInt, exponent::Integer)
+function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction::SuperInt, exponent::Integer)
   #decode the exponent
   (esize, exponent) = encode_exp(exponent)
   #match the length of fraction to FSS, set the ubit if there's trimming that
@@ -104,15 +104,15 @@ export unum_unsafe
 export unum_easy
 
 #masks for the unum flags variable.
-const UNUM_SIGN_MASK = uint16(0x0002)
-const UNUM_UBIT_MASK = uint16(0x0001)
-const UNUM_FLAG_MASK = uint16(0x0003)
+const UNUM_SIGN_MASK = UInt16(0x0002)
+const UNUM_UBIT_MASK = UInt16(0x0001)
+const UNUM_FLAG_MASK = UInt16(0x0003)
 #nb: in the future we may implement g-layer shortcuts:
 #in our implementation, these values are sufficient criteria they describe
 #are true.  If these flags are not set, further checks must be done.
-const UNUM_NAN__MASK = uint16(0x8000)
-const UNUM_ZERO_MASK = uint16(0x4000)
-const UNUM_INF__MASK = uint16(0x2000)
-const UNUM_NINF_MASK = uint16(0x1000)
-const UNUM_sss__MASK = uint16(0x0800)
-const UNUM_SHORTCUTS = uint16(0xF800)
+const UNUM_NAN__MASK = UInt16(0x8000)
+const UNUM_ZERO_MASK = UInt16(0x4000)
+const UNUM_INF__MASK = UInt16(0x2000)
+const UNUM_NINF_MASK = UInt16(0x1000)
+const UNUM_sss__MASK = UInt16(0x0800)
+const UNUM_SHORTCUTS = UInt16(0xF800)

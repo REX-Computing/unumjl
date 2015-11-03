@@ -78,17 +78,17 @@ println(res)
 println("----")
 end
 
-testy(Uint64)
+testy(UInt64)
 testy(Int64)
-testy(Uint64)
+testy(UInt64)
 testy(Int64)
-testy(Uint64)
+testy(UInt64)
 testy(Int64)
 
 #20 Aug 2015
 #results, last section only, println(s) edited out.
 
-#running for Uint64
+#running for UInt64
 #using max()
 #elapsed time: 0.015386148 seconds
 #using max() against zero, uint

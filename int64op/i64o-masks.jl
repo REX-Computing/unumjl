@@ -5,14 +5,14 @@
 #generates a mask of a certain number of bits on the right, or left if negative
 function mask(bits::Integer)
   if bits >= 0
-    (bits == 64) ? uint64(-1) : uint64((1 << bits) - 1)
+    (bits == 64) ? UInt64(-1) : UInt64((1 << bits) - 1)
   else
-    uint64(~mask(64 + bits))
+    UInt64(~mask(64 + bits))
   end
 end
 #does the same, except with a unit range.
 function mask(range::UnitRange)
-  uint64((1 << (range.stop + 1)) - (1 << (range.start)))
+  UInt64((1 << (range.stop + 1)) - (1 << (range.start)))
 end
 
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
@@ -22,7 +22,7 @@ function fillbits(n::Integer, cells::Integer = 1)
   (cells == 1) && return mask(n)
 
   #allocate our filling mask.
-  res = zeros(Uint64, cells)
+  res = zeros(UInt64, cells)
   #generate the cells.
   if n == ((cells << 6)) || (-n == (cells << 6))
     #check to see if we're asking to fill the entire set of cells

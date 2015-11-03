@@ -1,7 +1,7 @@
 #int64ops.jl
 #collates all of the relevant int64 operations
 
-#bring in some important uint64 bitwise methods
+#bring in some important UInt64 bitwise methods
 include("./i64o-superint.jl")       #basic superint class definition
 include("./i64o-constants.jl")      #functions generating int64 constants
 include("./i64o-bitpatterns.jl")    #boolean functions reporting on bit patterns

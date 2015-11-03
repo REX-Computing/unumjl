@@ -8,16 +8,16 @@ using Unums
 using Base.Test
 
 #some useful unsigned int constants
-one16 = one(Uint16)
-one64 = one(Uint64)
-zero16 = zero(Uint16)
-zero64 = zero(Uint64)
+one16 = one(UInt16)
+one64 = one(UInt64)
+zero16 = zero(UInt16)
+zero64 = zero(UInt64)
 top64 = 0x8000_0000_0000_0000 #our representation for the fraction part is left-shifted.
 
 #create the warlpiri type.  This is a 0/0 unum.
 Warlpiri = Unum{0,0}
 #an external constructor will make things a bit easier, sadly we have to lower case this.
-warlpiri(flags::Integer, frac::Uint64, exp::Uint64) = Warlpiri(zero16, zero16, uint16(flags), frac, exp)
+warlpiri(flags::Integer, frac::UInt64, exp::UInt64) = Warlpiri(zero16, zero16, UInt16(flags), frac, exp)
 #first let's make sure that the Warlpiri unums take up four bits
 @test 4 == maxubits(Warlpiri)
 
@@ -158,7 +158,7 @@ a = pone_
 
 println("one:", bits(a))
 println("div:", bits(a / a))
-println("exd:", bits(Unums.__div_exact(a, a, zero(Uint16))))
+println("exd:", bits(Unums.__div_exact(a, a, zero(UInt16))))
 
 a = pfew_
 b = pfew_

@@ -2,7 +2,7 @@
 
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
-__minimum_data_width(n::Array{Uint64,1}) = uint16(max(0, length(n) << 6 - ctz(n) - 1))
+__minimum_data_width(n::Array{UInt64,1}) = UInt16(max(0, length(n) << 6 - ctz(n) - 1))
   #explanation of formula:
   #length(a) << 6:            total bits in the array representation
   #-ctz(f):                   how many zeros are at the end, we can trim those
@@ -12,7 +12,7 @@ __minimum_data_width(n::Array{Uint64,1}) = uint16(max(0, length(n) << 6 - ctz(n)
   #                           has width 0, not width "-1".
 
 #this is a better formula for a single-width unsigned integer representation.
-__minimum_data_width(n::Uint64) = uint16(max(0, 63 - ctz(n)))
+__minimum_data_width(n::UInt64) = UInt16(max(0, 63 - ctz(n)))
 
 #__allones_for length
 #checks to see if the object is all ones for the appropriate length.
@@ -21,9 +21,9 @@ __minimum_data_width(n::Uint64) = uint16(max(0, 63 - ctz(n)))
 
 #nb:  -9223372036854775808 is the magic int64 version of 0x8000_0000_0000_0000 and
 #we are using the arithmetic rightshift which drags leading ones aloong.
-__allones_for_length(n::Uint64, m::Uint16) = (n == uint64(-9223372036854775808 >> m))
+__allones_for_length(n::UInt64, m::UInt16) = (n == UInt64(-9223372036854775808 >> m))
 
-function __allones_for_length(n::Array{Uint64,1}, m::Uint16)
+function __allones_for_length(n::Array{UInt64,1}, m::UInt16)
   #first, calculate where our dividing line will fall.
   dividingcell::Integer = div(m, 64) + 1
   for idx = 1:length(n)
@@ -33,9 +33,9 @@ function __allones_for_length(n::Array{Uint64,1}, m::Uint16)
       (n[idx] != f64) && return false
     elseif idx == dividingcell
       #if it's on the dividing line, measure what the count will be, we can
-      #ping back to the Uint64 version, keeping in mind that zero is strange.
+      #ping back to the UInt64 version, keeping in mind that zero is strange.
       #remember to decrement by one first.
-      (__allones_for_length(n[idx], uint16(m % 64))) || return false
+      (__allones_for_length(n[idx], UInt16(m % 64))) || return false
     else
       #everything coming after the dividing line should be zeros.
       (n[idx] != z64) && return false
