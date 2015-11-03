@@ -9,7 +9,7 @@
 #unit tests methods to convert unums
 
 #TEST helper functions
-#bitof - retrieves single bits from an int64, zero indexed.
+#bitof - retrieves single bits from an Int64, zero indexed.
 
 #integer to unum
 
@@ -52,11 +52,11 @@ c64a = [calculate(convert(Unum{4,6}, float64(seed[i]))) for i = 1:100]
 @test is_zero(convert(Unum{4,6}, zero(Float64)))
 
 #test some subnormal numbers.
-f16sn = reinterpret(Float16, one(Uint16))
+f16sn = reinterpret(Float16, one(UInt16))
 @test calculate(convert(Unum{4,6}, f16sn)) == BigFloat(f16sn)
-f32sn = reinterpret(Float32, one(Uint32))
+f32sn = reinterpret(Float32, one(UInt32))
 @test calculate(convert(Unum{4,6}, f32sn)) == BigFloat(f32sn)
-f64sn = reinterpret(Float64, one(Uint64))
+f64sn = reinterpret(Float64, one(UInt64))
 @test calculate(convert(Unum{4,6}, f64sn)) == BigFloat(f64sn)
 
 #test pushing exact into a unum's subnormal range.

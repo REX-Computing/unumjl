@@ -85,7 +85,7 @@ function ubound_resolve{ESS,FSS}(b::Ubound{ESS,FSS})
   #if both are identical, then we can resolve this ubound immediately
   (b.lowbound == b.highbound) && return b.lowbound
   #cache the length of these unums
-  l::Uint16 = length(b.lowbound.fraction)
+  l::UInt16 = length(b.lowbound.fraction)
 
   #if the sign masks are not equal then we're toast.
   (is_negative(b.lowbound) != is_negative(b.highbound)) && return b
@@ -100,12 +100,12 @@ function ubound_resolve{ESS,FSS}(b::Ubound{ESS,FSS})
     if (bigger.fraction == 0) && (bigger.exponent == smaller.exponent + 1)
       #check to see if the smaller fraction is all ones.
       eligible = smaller.fraction == fillbits(-(smaller.fsize + 1), l)
-      trim::Uint16 = 0
+      trim::UInt16 = 0
     elseif smaller.fsize > bigger.fsize #mask out the lower bits
-      eligible = (smaller.fraction & fillbits(bigger.fsize, l)) == zeros(Uint64, l)
+      eligible = (smaller.fraction & fillbits(bigger.fsize, l)) == zeros(UInt64, l)
       trim = bigger.fsize
     else
-      eligible = ((bigger.fraction & fillbits(smaller.fsize, l)) == zeros(Uint64, l))
+      eligible = ((bigger.fraction & fillbits(smaller.fsize, l)) == zeros(UInt64, l))
       trim = smaller.fsize
     end
     (eligible) ? Unum{ESS,FSS}(trim, smaller.esize, smaller.flags, smaller.fraction, smaller.exponent) : b

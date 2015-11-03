@@ -7,7 +7,7 @@
 #literally calculate the value of the Unum.  Please don't use this for Infs and NaNs
 
 function superintval(v::SuperInt)
-  (typeof(v) == Uint64) && return big(v)
+  (typeof(v) == UInt64) && return big(v)
   sum = big(0)
   for i = 1:length(v)
     sum += big(v[i]) * (big(1) << ((i - 1) * 64))
@@ -69,7 +69,7 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
     exponent = a.exponent
   end
   #recalculate fsize, since this is exact, we can deal with ULPs as needed.
-  fsize::Uint16 = __fsize_of_exact(fraction)
+  fsize::UInt16 = __fsize_of_exact(fraction)
 
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
@@ -81,7 +81,7 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   _aexp::Int64 = decode_exp(a)
   #don't forget to add one, because in theory we're going to want to move that
   #first one PAST the left end of the fraction value.
-  _ashl::Uint16 = clz(a.fraction) + 1
+  _ashl::UInt16 = clz(a.fraction) + 1
 
   is_zero(a) && return zero(Unum{ESS,FSS})
 
@@ -89,23 +89,23 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
     (esize, exponent) = encode_exp(_aexp - _ashl + 1) #don't forget the +1 because decode_exp on a subnormal is
     #one off of the actual exponent.
     #constrain the fsize to zero.
-    fsize::Uint16 = (_ashl > a.fsize) ? 0 : a.fsize - _ashl
+    fsize::UInt16 = (_ashl > a.fsize) ? 0 : a.fsize - _ashl
     Unum{ESS,FSS}(fsize, esize, a.flags, lsh(a.fraction, _ashl), exponent)
   else  #then all we have to do is encode it as the deeper exponent.
     #reassign _ashl to be the most we can shift it over.
     _ashl = _aexp - min_exponent(ESS) + 1
     #take care of the corner case where thete's a single one that we're disappearing
     if (a.fsize + 1 == _ashl)
-      Unum{ESS,FSS}(z16, uint16(1 << ESS - 1), a.flags, z64, z64)
+      Unum{ESS,FSS}(z16, UInt16(1 << ESS - 1), a.flags, z64, z64)
     else
-      Unum{ESS,FSS}(uint16(a.fsize - _ashl), uint16(1 << ESS - 1), a.flags, a.fraction << _ashl, z64)
+      Unum{ESS,FSS}(UInt16(a.fsize - _ashl), UInt16(1 << ESS - 1), a.flags, a.fraction << _ashl, z64)
     end
   end
 end
 
 function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #TODO:  throw in a zero check here.  Maybe?
-  l::Uint16 = length(a.fraction)
+  l::UInt16 = length(a.fraction)
   if (is_ulp(a))
     #all we have to do is strip the ubit mask.
     unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK)
@@ -119,7 +119,7 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
       #make sure we aren't subnormal, in which case, we just encode as subnormal.
       _aexp::Int64 = decode_exp(a)
       fraction::SuperInt = fillbits(-(max_fsize(FSS) + 1), l)
-      fsize::Uint16 = max_fsize(FSS)
+      fsize::UInt16 = max_fsize(FSS)
       (esize, exponent) = (_aexp == min_exponent(ESS)) ? (max_esize(ESS), z64) : encode_exp(_aexp - 1)
     else
       #even easire.  Just do a direct subtraction.

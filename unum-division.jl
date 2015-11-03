@@ -13,7 +13,7 @@ function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #division by zero is ALWAYS a NaN in unums.
   is_zero(b) && return nan(Unum{ESS,FSS})
 
-  div_sign::Uint16 = ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK))
+  div_sign::UInt16 = ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK))
   #division from inf is always inf (except inf/inf), with a possible sign change
   if is_inf(a)
     is_inf(b) && return nan(Unum{ESS,FSS})
@@ -33,7 +33,7 @@ end
 
 #dividing by smaller than small subnormal yields the entire number line beyond
 #number / small_exact.
-function __div_sss{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::Uint16)
+function __div_sss{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::UInt16)
   #decide if we're going to exceed mmr anyways.
   total_exp = decode_exp(a) - min_exponent(ESS) + max_fsize(FSS)
   (total_exp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, div_sign)
@@ -46,7 +46,7 @@ function __div_sss{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::Uint16)
 end
 
 #dividing by more than maxreal yields all numbers tinier than number / big_exact.
-function __div_mmr{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::Uint16)
+function __div_mmr{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::UInt16)
   #decide if we're going to push beyond ssn
   total_exp = decode_exp(a) - max_exponent(ESS)
   (total_exp < min_exponent(ESS) - max_fsize(FSS)) &&  return sss(Unum{ESS,FSS}, div_sign)
@@ -58,7 +58,7 @@ function __div_mmr{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::Uint16)
 end
 
 #dividing by small subnormal yields all numbers smaller than number / small subnormal.
-function __sss_div{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::Uint16)
+function __sss_div{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::UInt16)
   #decide if we're going to actually get any bigger
   (decode_exp(a) > 0) && return sss(Unum{ESS,FSS}, div_sign)
 
@@ -67,7 +67,7 @@ function __sss_div{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::Uint16)
   return ubound_resolve(open_ubound((div_sign != 0 ? (outerbound, innerbound) : (innerbound, outerbound))...))
 end
 
-function __mmr_div{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::Uint16)
+function __mmr_div{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::UInt16)
   (decode_exp(a) < 0) && return mmr(Unum{ESS,FSS}, div_sign)
 
   a_sub = is_exact(a) ? a : __outward_exact(a)
@@ -77,7 +77,7 @@ function __mmr_div{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::Uint16)
   return ubound_resolve(open_ubound((div_sign != 0 ? (outerbound, innerbound) : (innerbound, outerbound))...))
 end
 
-function __div_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, div_sign::Uint16)
+function __div_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, div_sign::UInt16)
   is_zero(a) && return zero(Unum{ESS,FSS})
 
   is_sss(b) && return __div_sss(a, div_sign)
@@ -113,7 +113,7 @@ end
 #(1 + a)(0 + b) = b + ab
 function __smult(a::SuperInt, b::SuperInt)
   (fraction, _) = Unums.__chunk_mult(a, b)
-  carry = one(Uint64)
+  carry = one(UInt64)
 
   #only perform the respective adds if the *opposing* thing is not subnormal.
   ((carry, fraction) = Unums.__carried_add(carry, fraction, b))
@@ -149,7 +149,7 @@ function allones(fss)
   [f64 for i = 1:__frac_cells(fss)]
 end
 
-function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::Uint16)
+function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::UInt16)
   #multiplication by zero is always zero, except 0/0 which is covered by
   #division by zero rule in the outer division function.
   is_zero(a) && return zero(Unum{ESS,FSS})
@@ -160,7 +160,7 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::Uint16)
     return zero(Unum{ESS,FSS})
   end
 
-  div_length::Uint16 = length(a.fraction) + ((FSS >= 6) ? 1 : 0)
+  div_length::UInt16 = length(a.fraction) + ((FSS >= 6) ? 1 : 0)
 
   #calculate the exponent.
   exp_f::Int64 = decode_exp(a) - decode_exp(b) + (issubnormal(a) ? 1 : 0) - (issubnormal(b) ? 1 : 0)
@@ -170,12 +170,12 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::Uint16)
 
   #save the old numerator.
   if (issubnormal(a))
-    shift::Uint64 = clz(numerator) + 1
+    shift::UInt64 = clz(numerator) + 1
     numerator = lsh(numerator, shift)
     exp_f -= shift
   end
   _numerator = __copy_superint(numerator)
-  carry::Uint64 = 1
+  carry::UInt64 = 1
 
   #next bring the denominator into coherence.
   denominator::SuperInt = (FSS >= 6) ? [z64, b.fraction] : b.fraction
@@ -196,8 +196,8 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::Uint16)
   (exp_f > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, sign)
   (exp_f < min_exponent(ESS) - max_fsize(FSS) - 2) && return sss(Unum{ESS,FSS}, sign)
 
-  is_ulp::Uint16 = z16
-  frac_mask::SuperInt = (FSS < 6) ? (fillbits(int64(-(max_fsize(FSS) + 1)), o16)) : [z64, [f64 for idx=1:__frac_cells(FSS)]]
+  is_ulp::UInt16 = z16
+  frac_mask::SuperInt = (FSS < 6) ? (fillbits(Int64(-(max_fsize(FSS) + 1)), o16)) : [z64, [f64 for idx=1:__frac_cells(FSS)]]
 
   if (!justtop(denominator))
     #figure out the mask we need.
@@ -209,7 +209,7 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::Uint16)
 
     #iteratively improve x.
     for (idx = 1:32)  #we will almost certainly not get to 32 iterations.
-      (_, factor) = __carried_diff(o64, ((FSS >= 6) ? zeros(Uint64, div_length) : z64), denominator)
+      (_, factor) = __carried_diff(o64, ((FSS >= 6) ? zeros(UInt64, div_length) : z64), denominator)
       (carry, numerator) = __sfma(carry, numerator, factor)
       (_, denominator) = __sfma(z64, denominator, factor)
 
@@ -227,7 +227,7 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::Uint16)
 
     numerator &= division_mask
     is_ulp = UNUM_UBIT_MASK
-    fsize::Uint16 = max_fsize(FSS)
+    fsize::UInt16 = max_fsize(FSS)
 
     frac_delta::SuperInt = (FSS < 6) ? (t64 >> max_fsize(FSS)) : [z64, o64, [z64 for idx=1:(__frac_cells(FSS) - 1)]]
     #check our math to assign ULPs

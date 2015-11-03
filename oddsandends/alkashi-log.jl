@@ -17,27 +17,27 @@ using Unums
 function signof(x::FloatingPoint)
   T = typeof(x)
   if (T == Float64)
-    return ((reinterpret(Uint64, x) & 0x8000_0000_0000_0000) != 0) ? 1 : 0
+    return ((reinterpret(UInt64, x) & 0x8000_0000_0000_0000) != 0) ? 1 : 0
   elseif (T == Float32)
-    return ((reinterpret(Uint32, x) & 0x8000_0000) != 0) ? 1 : 0
+    return ((reinterpret(UInt32, x) & 0x8000_0000) != 0) ? 1 : 0
   end
 end
 
 function exponentof(x::FloatingPoint)
   T = typeof(x)
   if (T == Float64)
-    return int64((reinterpret(Int64, x) & 0x7FF0_0000_0000_0000) >> 52 - 1023)
+    return Int64((reinterpret(Int64, x) & 0x7FF0_0000_0000_0000) >> 52 - 1023)
   elseif (T == Float32)
-    return int64((reinterpret(Int32, x) & 0x7F80_0000) >> 23 - 127)
+    return Int64((reinterpret(Int32, x) & 0x7F80_0000) >> 23 - 127)
   end
 end
 
 function castfrac(x::FloatingPoint)
   T = typeof(x)
   if (T == Float64)
-    return (reinterpret(Uint64, x) & 0x000F_FFFF_FFFF_FFFF) << 12
+    return (reinterpret(UInt64, x) & 0x000F_FFFF_FFFF_FFFF) << 12
   elseif (T == Float32)
-    return uint64(reinterpret(Uint32, x) & 0x007F_FFFF) << 41
+    return UInt64(reinterpret(UInt32, x) & 0x007F_FFFF) << 41
   end
 end
 
@@ -49,12 +49,12 @@ function maskfor(T::Type)
   end
 end
 
-o16 = one(Uint16)
-z16 = zero(Uint16)
+o16 = one(UInt16)
+z16 = zero(UInt16)
 __clz_array=[0x0004,0x0003,0x0002,0x0002, o16, o16, o16, o16, z16,z16,z16,z16,z16,z16,z16,z16]
 function clz(n)
   (n == 0) && return 64
-  res::Uint16 = 0
+  res::UInt16 = 0
   #use the binary search method
   (n & 0xFFFF_FFFF_0000_0000 == 0) && (n <<= 32; res += 0x0020)
   (n & 0xFFFF_0000_0000_0000 == 0) && (n <<= 16; res += 0x0010)
@@ -77,10 +77,10 @@ end
 #performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
 #and number 2 has a hidden bit of exactly zero
 #(1 + a)(0 + b) = b + ab
-function smult(a::Uint64, b::Uint64)
+function smult(a::UInt64, b::UInt64)
 
   (fraction, _) = Unums.__chunk_mult(a, b)
-  carry = one(Uint64)
+  carry = one(UInt64)
 
   #only perform the respective adds if the *opposing* thing is not subnormal.
   ((carry, fraction) = Unums.__carried_add(carry, fraction, b))
@@ -90,7 +90,7 @@ function smult(a::Uint64, b::Uint64)
   fraction << 1
 end
 
-function reassemble(sign::Uint64, ev::Uint64, fv::Uint64)
+function reassemble(sign::UInt64, ev::UInt64, fv::UInt64)
   number = (fv >> 12) | ((ev + 1023) << 52) | (sign << 63)
 
   println(bits(number))
@@ -101,7 +101,7 @@ end
 const t32 = 0xFFFF_FFFF_0000_0000
 const l32 = 0x0000_0000_FFFF_FFFF
 
-function wsqr(a::Uint64)
+function wsqr(a::UInt64)
   top = (a & t32) >> 32
   bot = (a & l32)
 
@@ -126,25 +126,25 @@ function exlg(x::FloatingPoint)
   exp_f::Int64 = exponentof(x) + (issubnormal(x) ? 1 : 0)
 
   #figure the decimals.
-  fraction::Uint64 = castfrac(x)
+  fraction::UInt64 = castfrac(x)
 
   if (issubnormal(x))
-    shift::Uint64 = clz(fraction) + 1
+    shift::UInt64 = clz(fraction) + 1
     fraction = fraction << shift
     exp_f -= shift
   end
 
-  sign::Uint64 = 0
+  sign::UInt64 = 0
   if (exp_f < 0)
     exp_f = -exp_f - 1
     sign = 1
   end
-  lz = clz(uint64(exp_f))
+  lz = clz(UInt64(exp_f))
   resexp = 63 - lz
   #add the exponent part onto the result fraction.
-  resfrac = uint64(exp_f << (lz + 1))
+  resfrac = UInt64(exp_f << (lz + 1))
 
-  bitsofar = zero(Uint64)
+  bitsofar = zero(UInt64)
   #do the alkashi-type algorithm.
   for idx = 1:52
     (c, q) = wsqr(fraction)
@@ -159,7 +159,7 @@ function exlg(x::FloatingPoint)
     end
   end
 
-  iint::Uint64 = (sign == 0) ? bitsofar : -bitsofar
+  iint::UInt64 = (sign == 0) ? bitsofar : -bitsofar
   resfrac |= iint >> resexp
   #resexp = 0
   #resfrac = 0
@@ -182,4 +182,4 @@ println("xbits:     ", bits(x))
 println("abits:     ", bits(a))
 println("zbits:     ", bits(z))
 
-println("diff:      ", reinterpret(Uint64, a) - reinterpret(Uint64, z))
+println("diff:      ", reinterpret(UInt64, a) - reinterpret(UInt64, z))

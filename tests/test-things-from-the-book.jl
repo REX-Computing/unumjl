@@ -14,10 +14,10 @@ using Base.Test
 #test various things from the book.
 #are our representations of unums correct?
 
-one16 = one(Uint16)
-one64 = one(Uint64)
-zero16 = zero(Uint16)
-zero64 = zero(Uint64)
+one16 = one(UInt16)
+one64 = one(UInt64)
+zero16 = zero(UInt16)
+zero64 = zero(UInt64)
 top64 = 0x8000_0000_0000_0000 #our representation for the fraction part is left-shifted.
 
 #p.27, representation of simple unums.  In the tiny environment{1, 0}

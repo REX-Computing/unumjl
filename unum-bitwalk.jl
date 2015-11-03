@@ -19,7 +19,7 @@ function bitwalk{ESS,FSS}(bf, u::Unum{ESS,FSS}, exacts = false, bound_exacts = f
   #create a subsidiary function that pushes onto the results array based on the
   #sign of u.
 
-  exact_inner = Unum{ESS,FSS}(uint16(u.fsize + 1), u.esize, u.flags & UNUM_SIGN_MASK, u.fraction, u.exponent)
+  exact_inner = Unum{ESS,FSS}(UInt16(u.fsize + 1), u.esize, u.flags & UNUM_SIGN_MASK, u.fraction, u.exponent)
   bound_exacts && bf(exact_inner) && (res = vcat(res, exact_inner))
 
   #generate the inner ulp:  This is just flipping the ubit mask on the inner value.
@@ -28,7 +28,7 @@ function bitwalk{ESS,FSS}(bf, u::Unum{ESS,FSS}, exacts = false, bound_exacts = f
 
   #calculate the exact middle.
   new_fraction = u.fraction | __bit_from_top(u.fsize + 2, __frac_cells(FSS))
-  exact_middle = Unum{ESS,FSS}(uint16(u.fsize + 1), u.esize, u.flags & UNUM_SIGN_MASK, new_fraction, u.exponent)
+  exact_middle = Unum{ESS,FSS}(UInt16(u.fsize + 1), u.esize, u.flags & UNUM_SIGN_MASK, new_fraction, u.exponent)
   exacts && bf(exact_middle) && (res = vcat(res, exact_middle))
 
   #generate the outer ulp:  This is just flipping the ubit mask on the middle value

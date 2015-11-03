@@ -10,11 +10,11 @@
 #test that the unum safe constructor throws appropriate errors
 
 #a few useful definitions
-o16 = one(Uint16)
-z16 = zero(Uint16)
-o64 = one(Uint64)
-z64 = zero(Uint64)
-f64 = uint64(-1)
+o16 = one(UInt16)
+z16 = zero(UInt16)
+o64 = one(UInt64)
+z64 = zero(UInt64)
+f64 = UInt64(-1)
 t64 = 0x8000_0000_0000_0000
 
 @test_throws ArgumentError Unums.__check_block_unum(0, 0, o16, z16, z64, z64)
@@ -24,7 +24,7 @@ t64 = 0x8000_0000_0000_0000
 #test that esize error gets thrown
 @test_throws ArgumentError unum(Unum{0,0}, z16, o16, z16, z64, z64)
 #test that exponent error gets thrown
-@test_throws ArgumentError unum(Unum{0,0}, z16, z16, z16, z64, uint64(2))
+@test_throws ArgumentError unum(Unum{0,0}, z16, z16, z16, z64, UInt64(2))
 #test that the fraction error gets thrown
 @test_throws ArgumentError unum(Unum{0,0}, z16, z16, z16, [z64, z64], z64)
 #test that the constructor correctly engages frac_trim
@@ -51,7 +51,7 @@ unsafe_fsize = Unum{0,0}(o16, z16, z16, z64, z64)
 unsafe_fsize_2 = unum_unsafe(unsafe_fsize)
 unsafe_esize = Unum{0,0}(z16, o16, z16, z64, z64)
 unsafe_esize_2 = unum_unsafe(unsafe_esize)
-unsafe_exponent = Unum{0,0}(z16, o16, z16, z64, uint64(2))
+unsafe_exponent = Unum{0,0}(z16, o16, z16, z64, UInt64(2))
 unsafe_exponent_2 = unum_unsafe(unsafe_exponent)
 unsafe_fraction = Unum{0,0}(z16, o16, z16, [z64, z64], z64)
 unsafe_fraction_2 = unum_unsafe(unsafe_fraction)

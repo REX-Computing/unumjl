@@ -9,7 +9,7 @@
 ###############################################################################
 ## multistage carried difference engine for uint64s.
 
-function __carried_diff(carry::Uint64, v1::SuperInt, v2::SuperInt, trail::Uint64 = z64)
+function __carried_diff(carry::UInt64, v1::SuperInt, v2::SuperInt, trail::UInt64 = z64)
   #run a difference engine across an array of 64-bit integers
   l = length(v1)
   #"carry" will usually be one, but there are other possibilities (e.g. zero)
@@ -89,7 +89,7 @@ end
 
 #attempts to shift the fraction as far as allowed.  Returns appropriate esize
 #and exponent, and the new fraction.
-function __shift_many_zeros(fraction, _aexp, ESS, lastbit::Uint64 = z64)
+function __shift_many_zeros(fraction, _aexp, ESS, lastbit::UInt64 = z64)
   maxshift::Int64 = _aexp - min_exponent(ESS)
   tryshift::Int64 = clz(fraction) + 1
   leftshift::Int64 = tryshift > maxshift ? maxshift : tryshift
@@ -106,7 +106,7 @@ end
 #a subtraction operation where a and b are ordered such that mag(a) > mag(b)
 function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
 
-  l::Uint16 = length(a.fraction)
+  l::UInt16 = length(a.fraction)
   # a series of easy cases.
   (a == -b) && return zero(Unum{ESS,FSS})
 
@@ -118,12 +118,12 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   is_strange_subnormal(b) && (b = __resolve_subnormal(b))
 
   #check for deviations due to subnormality.
-  a_dev::Int16, carry::Uint64 = is_exp_zero(a) ? (o16, z64) : (z16, o64)
+  a_dev::Int16, carry::UInt64 = is_exp_zero(a) ? (o16, z64) : (z16, o64)
   #set the carry.
   b_dev::Int16 = is_exp_zero(b) ? o16 : z16
 
   #calculate the bit offset
-  bit_offset = uint16((_aexp + a_dev) - (_bexp + b_dev))
+  bit_offset = UInt16((_aexp + a_dev) - (_bexp + b_dev))
 
   if (bit_offset > max_fsize(FSS))
     #return the previous unum, but with the ubit flag thrown up.
@@ -169,8 +169,8 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
 
 
   #set up some common variables as defaults.
-  esize::Uint16 = a.esize
-  exponent::Uint64 = a.exponent
+  esize::UInt16 = a.esize
+  exponent::UInt64 = a.exponent
   #here the code bifurcates.  for FSS < 6, life is much simpler, we can just
   #use the space within the 64-bit fraction.
   #PART ONE.  CALCULATE (carry, fraction, trail)
@@ -182,9 +182,9 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
     #check to see if we have to carry, don't forget to left shift.
     (fraction > a.fraction) && (carry = 0; fraction << 1)
     #set the ubit, for sure if we have material past the trailing bit.
-    is_ubit::Uint16 = ((~frac_mask & fraction) != 0) ? UNUM_UBIT_MASK : z16
+    is_ubit::UInt16 = ((~frac_mask & fraction) != 0) ? UNUM_UBIT_MASK : z16
     #assign the trailing variable
-    trail::Uint64 = (is_ubit != 0) ? 1 : 0
+    trail::UInt64 = (is_ubit != 0) ? 1 : 0
     #mask out all but the top of the fraction.
     fraction = fraction & (frac_mask)
   else
@@ -212,7 +212,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   else
     #no shift.  If we have a trailing bit, ignore it and set the result to have UBIT flag.
     (trail != 0) && (is_ubit |= UNUM_UBIT_MASK)
-    fsize::Uint16 = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)
+    fsize::UInt16 = (is_ubit != 0) ? max_fsize(FSS) : __fsize_of_exact(fraction)
     ((fraction & __bit_from_top(1 << FSS + 1, 1)) != 0) && return Unum{ESS,FSS}(fsize, a.esize, a.flags | is_ubit, fraction & frac_mask, a.exponent)
     fraction = fraction & frac_mask
   end

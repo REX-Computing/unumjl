@@ -48,11 +48,11 @@ type __unum_shim
   ESS::Integer
   FSS::Integer
   val::Float64
-  ubit::Uint16
+  ubit::UInt16
 end
 
 colon(a::Array{Any,1}, b::Float64, c::Function) = __unum_shim(a[1], a[2], b, __f2ubit(c))
 function colon(a::__unum_shim, b::Integer, c::Integer)
   x = convert(Unum{a.ESS, a.FSS}, a.val)
-  unum(Unum{a.ESS, a.FSS}, uint16(c), uint16(b), (x.flags & UNUM_SIGN_MASK) | a.ubit, x.fraction, x.exponent)
+  unum(Unum{a.ESS, a.FSS}, UInt16(c), UInt16(b), (x.flags & UNUM_SIGN_MASK) | a.ubit, x.fraction, x.exponent)
 end

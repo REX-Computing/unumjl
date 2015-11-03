@@ -25,11 +25,20 @@ function __unum_isdev()
   __UNUM_DEV
 end
 
+import Base.<
+import Base.>
+import Base.==
+import Base.+
+import Base.-
+import Base./
+import Base.*
+import Base.colon
+
 #create the abstract Utype type
 abstract Utype <: Real
 export Utype
 
-#bring in some important uint64 bitwise methods
+#bring in some important UInt64 bitwise methods
 include("unum-int64op.jl")
 #helpers used in the unum type constructors andn pseudoconstructors
 include("unum-helpers.jl")

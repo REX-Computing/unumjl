@@ -8,13 +8,13 @@
 #unum-test-int64op.jl
 
 #some useful variables
-msb1    = uint64(0x8000_0000_0000_0000)
-lsb1    = uint64(0x0000_0000_0000_0001)
-msb8    = uint64(0xFF00_0000_0000_0000)
-msb6    = uint64(0xFC00_0000_0000_0000)
-lsb6    = uint64(0x0000_0000_0000_003F)
-allbits = uint64(0xFFFF_FFFF_FFFF_FFFF)
-nobits  = uint64(0x0000_0000_0000_0000)
+msb1    = UInt64(0x8000_0000_0000_0000)
+lsb1    = UInt64(0x0000_0000_0000_0001)
+msb8    = UInt64(0xFF00_0000_0000_0000)
+msb6    = UInt64(0xFC00_0000_0000_0000)
+lsb6    = UInt64(0x0000_0000_0000_003F)
+allbits = UInt64(0xFFFF_FFFF_FFFF_FFFF)
+nobits  = UInt64(0x0000_0000_0000_0000)
 
 #test bitof
 @test Unums.bitof(allbits, 0)  == lsb1
@@ -35,8 +35,8 @@ nobits  = uint64(0x0000_0000_0000_0000)
 @test clz(nobits) == 64
 @test clz(msb8) == 0
 @test clz(lsb6) == 58
-@test clz(uint64(0b0001111000)) == 57
-@test clz(uint16(0b0001111000)) == 9
+@test clz(UInt64(0b0001111000)) == 57
+@test clz(UInt16(0b0001111000)) == 9
 @test clz([0x00FF_0000_0000_0000, nobits]) == 72
 @test clz([nobits, 0x0000_0000_0000_F00F]) == 48
 @test clz([nobits, nobits]) == 128
@@ -45,8 +45,8 @@ nobits  = uint64(0x0000_0000_0000_0000)
 @test ctz(nobits) == 64
 @test ctz(msb8) == 56
 @test ctz(lsb6) == 0
-@test ctz(uint64(0b0001111000)) == 3
-@test ctz(uint16(0b0001111000)) == 3
+@test ctz(UInt64(0b0001111000)) == 3
+@test ctz(UInt16(0b0001111000)) == 3
 @test ctz([0x00FF_0000_0000_0000, nobits]) == 48
 @test ctz([nobits, 0x0000_0000_0000_F00F]) == 64
 @test ctz([nobits, nobits]) == 128
@@ -72,19 +72,19 @@ nobits  = uint64(0x0000_0000_0000_0000)
 @test Unums.mask(-64) == allbits
 #note the difference between "mask(int)" which does a total number of bits in
 #one direction or the other and "mask(range)" which uses zero-indexed ranges.
-@test Unums.mask(0:3) == uint64(0x0000_0000_0000_000F)
-@test Unums.mask(4:7) == uint64(0x0000_0000_0000_00F0)
+@test Unums.mask(0:3) == UInt64(0x0000_0000_0000_000F)
+@test Unums.mask(4:7) == UInt64(0x0000_0000_0000_00F0)
 @test Unums.mask(0:63) == allbits
 
 #test the fillbits machinery.  One cell - should be identical to mask.
-one16 = uint16(1)
+one16 = UInt16(1)
 @test Unums.fillbits(0,   one16) == nobits
 @test Unums.fillbits(1,   one16) == lsb1
 @test Unums.fillbits(-1,  one16) == msb1
 @test Unums.fillbits(64,  one16) == allbits
 @test Unums.fillbits(-64, one16) == allbits
 #test two cells.
-two16 = uint16(2)
+two16 = UInt16(2)
 @test Unums.fillbits(-1,   two16) == [nobits, msb1]
 @test Unums.fillbits(1,    two16) == [lsb1, nobits]
 @test Unums.fillbits(64,   two16) == [allbits, nobits]
@@ -95,7 +95,7 @@ two16 = uint16(2)
 @test Unums.fillbits(128,  two16) == [allbits, allbits]
 @test Unums.fillbits(-128, two16) == [allbits, allbits]
 #test three cells
-three16 = uint16(3)
+three16 = UInt16(3)
 @test Unums.fillbits(65, three16) == [allbits, lsb1, nobits]
 @test Unums.fillbits(-65,three16) == [nobits, msb1, allbits]
 
