@@ -18,11 +18,5 @@ const o64 = one(UInt64)
 const t64 = 0x8000_0000_0000_0000               #top bit
 const f64 = 0xFFFF_FFFF_FFFF_FFFF               #full bits
 
-#note in version 0.4, this will need to change to Union{}
-SuperInt = Union(UInt64, Array{UInt64,1})
-
-__copy_superint(a::UInt64) = a
-__copy_superint(a::Array{UInt64, 1}) = copy(a)
-
-superbits(a::UInt64) = bits(a)
-superbits(a::Array{UInt64, 1}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a)
+__i64a_bits(a::UInt64) = bits(a)
+__i64a_bits(a::Array{UInt64, 1}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a)

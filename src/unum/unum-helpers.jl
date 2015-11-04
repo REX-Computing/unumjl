@@ -2,6 +2,22 @@
 #helper functions for the unum constructor, and functions that will frequently
 #be used with the constructor.
 
+################################################################################
+# Safety checking
+
+function __check_unum_param(ESS::Integer, FSS::Integer, fsize::UInt16, esize::UInt16, fraction, exponent::UInt64)
+  fsize < (1 << FSS)              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
+  esize < (1 << ESS)              || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
+
+  #when you have esize == 63 ALL THE VALUES ARE VALID, but bitshift op will do something strange.
+  ((esize == 63) || exponent < (1 << (esize + 1))) || throw(ArgumentError("exponent $(exponent) too big for esize $(esize)"))
+  length(fraction) == __frac_cells(FSS) || throw(ArgumentError("size mismatch between supplied fraction array $(length(fraction)) and expected $(__frac_cells(FSS))"))
+  nothing
+end
+
+__check_unum_param_dev(ESS::Integer, FSS::Integer, fsize::UInt16, esize::UInt16, fraction, exponent::UInt64) =
+  __check_unum_param(ESS, FSS, fsize, esize, fraction, exponent)
+
 ###########################################################
 #Utility functions
 
@@ -53,7 +69,7 @@ function __frac_analyze(fraction::SuperInt, is_ubit::UInt16, fss::Integer)
 
     #mask out the fraction.
     fraction = fraction & high_mask
-    
+
     fsize = (is_ubit != 0) ? _mfs : __minimum_data_width(fraction)
     (fraction & high_mask, fsize, is_ubit)
   else

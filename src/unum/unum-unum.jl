@@ -2,46 +2,49 @@
 
 #contains information about the unum type and helper functions directly related to constructor.
 
-immutable Unum{ESS, FSS} <: Utype
+#the unum type is an abstract type.  We'll be overloading the call function later
+#so we can do "pseudo-constructions" on this type.
+
+abstract Unum{ESS, FSS} <: Utype
+
+type UnumSmall{ESS, FSS} <: Unum{ESS, FSS}
   fsize::UInt16
   esize::UInt16
   flags::UInt16
-  fraction::SuperInt
-  exponent::UInt64  #realistically, we won't need huge exponents
-
-  #inner constructor makes sure that the fsize and esize agree with the fsizesize
-  #and esizesize environment, and the fraction and exponent.  note the resulting
-  #constructor in general will be an UNSAFE constructor.
-  #currently for debugging purposes it performs four checks:
-  #
-  #1) is the FSS OK?
-  #2) is the ESS OK?
-  #3) is exponent appropriate for ESS?
-  #3) is the SuperInt of the correct size for ESS?
-  #
-  # the Unum constructor, then should ONLY be used when you have assurance that
-  # the unum is safe (as in within the g-layer of any given calculation)
-
-  function Unum(fsize::UInt16, esize::UInt16, flags::UInt16, fraction::SuperInt, exponent::UInt64)
-    #check to make sure fsize is within FSS, esize within ESS
-    __check_block_unum_dev(ESS, FSS, fsize, esize, fraction, exponent)
-
-    #because fraction could be assigned an existing array, we should do a safe copy.
-    if (__frac_cells(ESS) == 1)
-      temp_fraction = fraction
-    else
-      temp_fraction = zeros(UInt64, length(fraction))
-      temp_fraction[:] = fraction
-    end
-
-    new(fsize, esize, flags, temp_fraction, exponent)
-  end
+  fraction::UInt64
+  exponent::UInt64
 end
-export Unum
+
+type UnumLarge{ESS, FSS} <: Unum{ESS, FSS}
+  fsize::UInt16
+  esize::UInt16
+  flags::UInt16
+  fraction::Array{UInt64}
+  exponent::UInt64
+end
+
+#override call to allow direct instantiation using the Unum{ESS,FSS} pseudo-constructor.
+function call{ESS, FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::UInt64, exponent::UInt64)
+  (FSS > 6) && throw(ArgumentError("FSS = $FSS > 6 requires an UInt64 array"))
+  (ESS > 6) && throw(ArgumentError("ESS = $ESS > 6 currently not allowed."))
+  UnumSmall{ESS,FSS}(fsize, esize, flags, fraction, exponent)
+end
+
+function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::Array{UInt64}, exponent::UInt64)
+  (ESS > 6) && throw(ArgumentError("ESS = $ESS > 6 currently not allowed."))
+  (FSS > 11) && throw(ArgumentError("FSS = $FSS > 11 currently not allowed"))
+  (FSS < 7) && throw(ArgumentError("FSS = $FSS < 7 should be passed a single Uint64"))
+  #calculate the number of cells that fraction will have.
+  frac_length = length(fraction)
+  need_length = 1 << (FSS - 6)
+  (frac_length < need_length) && throw(ArgumentError("insufficient array elements to create unum with desired FSS ($FSS requires $need_length > $frac_length)"))
+  UnumLarge{ESS,FSS}(fsize, esize, flags, fraction, exponent)
+end
 
 #the "unum" constructor is a safe, pruning constructor.
 #note that the first argument to the is pseudo-constructor must be a type value
 #that relays the environment signature for the desired unum.
+
 function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::SuperInt, exponent::UInt64)
   #checks to make sure everything is safe.
   __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
@@ -64,12 +67,6 @@ unum{ESS,FSS}(x::Unum{ESS,FSS}) = unum(Unum{ESS,FSS}, x.fsize, x.esize, x.flags,
 #and a unum copy that substitutes the flags
 unum{ESS,FSS}(x::Unum{ESS,FSS}, subflags::UInt16) = unum(Unum{ESS,FSS}, x.fsize, x.esize, subflags, x.fraction, x.exponent)
 
-#unum copy constructor, unsafe version
-unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}) = Unum{ESS,FSS}(x.fsize, x.esize, x.flags, x.fraction, x.exponent)
-#substituting flags
-unum_unsafe{ESS,FSS}(x::Unum{ESS,FSS}, subflags::UInt16) = Unum{ESS,FSS}(x.fsize, x.esize, subflags, x.fraction, x.exponent)
-unum_unsafe{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::SuperInt, exponent::UInt64) = Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
-
 #an "easy" constructor which is safe, and takes an unbiased exponent value, and
 #a superint value
 function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction::SuperInt, exponent::Integer)
@@ -84,9 +81,8 @@ function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction::Supe
   unum(Unum{ESS,FSS}, fsize, esize, flags, fraction, exponent)
 end
 
-export unum
-export unum_unsafe
-export unum_easy
+export unum, unum_easy
+
 
 #masks for the unum flags variable.
 const UNUM_SIGN_MASK = UInt16(0x0002)

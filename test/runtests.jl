@@ -2,4 +2,6 @@ using unums
 using Base.Test
 
 # write your own tests here
-@test 1 == 1
+include("./test-infrastructure.jl")
+include("./test-operations.jl")
+include("./test-warlpiri.jl")
