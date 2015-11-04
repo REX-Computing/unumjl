@@ -12,3 +12,6 @@ Unums.__check_ubound_param_upperbound_dev{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS
 
 Unums.__check_ubound_param_lowerbound_dev{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) =
   Unums.__check_ubound_param_lowerbound(a, b)
+
+Unums.__check_frac_trim_dev(l::Int, fsize::UInt16) =
+  Unums.__check_frac_trim(l, fsize)

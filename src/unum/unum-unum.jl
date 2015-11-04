@@ -13,7 +13,15 @@ type UnumSmall{ESS, FSS} <: Unum{ESS, FSS}
   flags::UInt16
   fraction::UInt64
   exponent::UInt64
+  function UnumSmall(fsize, esize, flags, fraction, exponent)
+    __check_unum_param_dev(ESS, FSS, fsize, esize, fraction, exponent)
+    new(fsize, esize, flags, fraction, exponent)
+  end
 end
+
+#copy constructor
+UnumSmall{ESS,FSS}(x::UnumSmall{ESS,FSS}) = UnumSmall{ESS,FSS}(x.fsize, x.esize, x.flags, x.fraction, x.exponent)
+UnumSmall{ESS,FSS}(x::UnumSmall{ESS,FSS}, flags::UInt16) = UnumSmall{ESS,FSS}(x.fsize, x.esize, flags, x.fraction, x.exponent)
 
 type UnumLarge{ESS, FSS} <: Unum{ESS, FSS}
   fsize::UInt16
@@ -21,7 +29,15 @@ type UnumLarge{ESS, FSS} <: Unum{ESS, FSS}
   flags::UInt16
   fraction::Array{UInt64}
   exponent::UInt64
+  function UnumLarge(fsize, esize, flags, fraction, exponent)
+    __check_unum_param_dev(ESS, FSS, fsize, esize, fraction, exponent)
+    new(fsize, esize, flags, fraction, exponent)
+  end
 end
+
+#copy constructor
+UnumLarge{ESS,FSS}(x::UnumSmall{ESS,FSS}) = UnumLarge{ESS,FSS}(x.fsize, x.esize, x.flags, x.fraction, x.exponent)
+UnumLarge{ESS,FSS}(x::UnumSmall{ESS,FSS}, flags::UInt16) = UnumLarge{ESS,FSS}(x.fsize, x.esize, flags, x.fraction, x.exponent)
 
 #override call to allow direct instantiation using the Unum{ESS,FSS} pseudo-constructor.
 function call{ESS, FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::UInt64, exponent::UInt64)
@@ -45,9 +61,9 @@ end
 #note that the first argument to the is pseudo-constructor must be a type value
 #that relays the environment signature for the desired unum.
 
-function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::SuperInt, exponent::UInt64)
+function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction, exponent::UInt64)
   #checks to make sure everything is safe.
-  __check_block_unum(ESS, FSS, fsize, esize, fraction, exponent)
+  __check_unum_param(ESS, FSS, fsize, esize, fraction, exponent)
 
   #mask out values outside of the flag range.
   flags &= UNUM_FLAG_MASK
@@ -69,7 +85,7 @@ unum{ESS,FSS}(x::Unum{ESS,FSS}, subflags::UInt16) = unum(Unum{ESS,FSS}, x.fsize,
 
 #an "easy" constructor which is safe, and takes an unbiased exponent value, and
 #a superint value
-function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction::SuperInt, exponent::Integer)
+function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction, exponent::Integer)
   #decode the exponent
   (esize, exponent) = encode_exp(exponent)
   #match the length of fraction to FSS, set the ubit if there's trimming that
@@ -80,7 +96,6 @@ function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction::Supe
   fsize = max_fsize(FSS)
   unum(Unum{ESS,FSS}, fsize, esize, flags, fraction, exponent)
 end
-
 export unum, unum_easy
 
 

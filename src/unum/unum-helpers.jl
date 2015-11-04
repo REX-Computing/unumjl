@@ -21,14 +21,19 @@ __check_unum_param_dev(ESS::Integer, FSS::Integer, fsize::UInt16, esize::UInt16,
 ###########################################################
 #Utility functions
 
+function __check_frac_trim(l::Int, fsize::UInt16)
+  (fsize >= (l << 6)) && throw(ArgumentError("fraction array length $l too short for fsize $fsize"))
+  nothing
+end
+
 #fractrim:  Takes a superint value and returns a triplet: (fraction, fsize, ubit)
 #this triplet represents the fraction SuperInt trimmed to fsize, a new fsize,
 #in the case that it's exact and some zeros can be trimmed, and whether or not
 #ubit needs to be thrown (were there values cast out by fsize)?
-function __frac_trim(frac::SuperInt, fsize::UInt16)
+function __frac_trim(frac::VarInt, fsize::UInt16)
   l::UInt16 = length(frac)
   #drop an error if the superint can't accomodate fsize.
-  (fsize >= (l << 6)) && throw(ArgumentError("fraction array must accomodate fsize value for __frac_trim"))
+  __check_frac_trim_dev(l, fsize)
 
   #create the fsize mask.
   high_mask = fillbits(-(fsize + 1), l)  #remember, the real fsize is fsize + 1
