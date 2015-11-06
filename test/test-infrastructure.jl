@@ -1,12 +1,8 @@
 #test-infrastructure.jl
 #tests unums infrastructure (everything except mathematical operations).
 
-require("../unums.jl")
-
-using Unums
 ################################################################################
 ## UNIT TESTING
-using Base.Test
 
 #integer operations and helpers for the type constructor
 include("./unit/unit-int64op.jl")

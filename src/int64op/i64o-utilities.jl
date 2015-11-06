@@ -2,17 +2,17 @@
 
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
-__minimum_data_width(n::Array{UInt64,1}) = UInt16(max(0, length(n) << 6 - ctz(n) - 1))
+__minimum_data_width(n::Array{UInt64,1}) = UInt16(max(0, length(n) << 6 - trailing_zeros(n) - 1))
   #explanation of formula:
   #length(a) << 6:            total bits in the array representation
-  #-ctz(f):                   how many zeros are at the end, we can trim those
+  #-trailing_zeros(f):                   how many zeros are at the end, we can trim those
   #-1:                        the bit representation (1000...0000) = "1" has
   #                           width 0 as per our definition.
   #max(0, ...):               bit representation of (0000...0000) = "0" also
   #                           has width 0, not width "-1".
 
 #this is a better formula for a single-width unsigned integer representation.
-__minimum_data_width(n::UInt64) = UInt16(max(0, 63 - ctz(n)))
+__minimum_data_width(n::UInt64) = UInt16(max(0, 63 - trailing_zeros(n)))
 
 #__allones_for length
 #checks to see if the object is all ones for the appropriate length.
@@ -21,11 +21,11 @@ __minimum_data_width(n::UInt64) = UInt16(max(0, 63 - ctz(n)))
 
 #nb:  -9223372036854775808 is the magic int64 version of 0x8000_0000_0000_0000 and
 #we are using the arithmetic rightshift which drags leading ones aloong.
-__allones_for_length(n::UInt64, m::UInt16) = (n == UInt64(-9223372036854775808 >> m))
+__allones_for_length(n::UInt64, m::UInt16) = (n == reinterpret(UInt64, -9223372036854775808 >> m))
 
 function __allones_for_length(n::Array{UInt64,1}, m::UInt16)
   #first, calculate where our dividing line will fall.
-  dividingcell::Integer = div(m, 64) + 1
+  dividingcell::Int = div(m, 64) + 1
   for idx = 1:length(n)
     #trichotomy relative to the dividing line.
     if idx < dividingcell

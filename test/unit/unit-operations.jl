@@ -21,7 +21,7 @@ u = Unums.__resolve_subnormal(x)
 #note we can't use the equality operator testnig because the equality operator
 #will engage the __resolve_subnormal function itself.
 
-#repeat the exercise in a SuperInt unum.
+#repeat the exercise in a VarInt unum.
 x = Unum{4,8}(z16, z16, z16, [z64, z64, z64, t64], z64)
 u = Unums.__resolve_subnormal(x)
 #@test calculate(x) == calculate(u)  #NB "calculate" doesn't currently work on superint unums.

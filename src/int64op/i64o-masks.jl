@@ -3,21 +3,17 @@
 #masking and related operations on superints.
 
 #generates a mask of a certain number of bits on the right, or left if negative
-function mask(bits::Integer)
+function mask(bits::Int)
   if bits >= 0
-    (bits == 64) ? UInt64(-1) : UInt64((1 << bits) - 1)
+    (bits == 64) ? -one(UInt64) : UInt64((1 << bits) - 1)
   else
     UInt64(~mask(64 + bits))
   end
 end
-#does the same, except with a unit range.
-function mask(range::UnitRange)
-  UInt64((1 << (range.stop + 1)) - (1 << (range.start)))
-end
 
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
 #assume there is one cell, if no value has been passed.
-function fillbits(n::Integer, cells::Integer = 1)
+function fillbits(n::Int, cells::Int = 1)
   #kick it to the mask function if there's only one cell.
   (cells == 1) && return mask(n)
 
@@ -32,7 +28,7 @@ function fillbits(n::Integer, cells::Integer = 1)
     nothing
   else
     #first assign the border cell.
-    bordercell::Integer = n < 0 ? (abs(n) >> 6 + 1) : cells - (n >> 6)
+    bordercell::Int = n < 0 ? (abs(n) >> 6 + 1) : cells - (n >> 6)
     #cells filled from the right to the left
     for idx = 1:cells
       if idx < bordercell

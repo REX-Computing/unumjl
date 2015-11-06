@@ -55,8 +55,4 @@ include("unum-expwalk.jl")
 include("unum_solver.jl")
 =#
 
-
-#set up the options engine for the unums system, which might hotswap functions.
-include("./options/options.jl")
-
 end #module

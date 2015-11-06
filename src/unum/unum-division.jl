@@ -108,7 +108,7 @@ end
 #performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
 #and number 2 has a hidden bit of exactly zero
 #(1 + a)(0 + b) = b + ab
-function __smult(a::SuperInt, b::SuperInt)
+function __smult(a::VarInt, b::VarInt)
   (fraction, _) = Unums.__chunk_mult(a, b)
   carry = one(UInt64)
 
@@ -123,7 +123,7 @@ end
 const __EXACT_INDEX_TABLE = [0, 0, 0, 0, 0, 0, 2, 3, 5, 9, 17, 33, 65]
 const __HALFMASK_TABLE = [0xEFFF_FFFF_FFFF_FFFF, 0xCFFF_FFFF_FFFF_FFFF, 0x0FFF_FFFF_FFFF_FFFF, 0x00FF_FFFF_FFFF_FFFF, 0x0000_FFFF_FFFF_FFFF, 0x0000_0000_FFFF_FFFF]
 
-function __check_exact(a::SuperInt, b::SuperInt, fss)
+function __check_exact(a::VarInt, b::VarInt, fss)
   if (fss == 0)
     return a == b
   elseif (fss < 6)
@@ -163,11 +163,11 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::UInt16)
   exp_f::Int64 = decode_exp(a) - decode_exp(b) + (issubnormal(a) ? 1 : 0) - (issubnormal(b) ? 1 : 0)
 
   #first bring the numerator into coherence.
-  numerator::SuperInt = (FSS >= 6) ? [z64, a.fraction] : a.fraction
+  numerator::VarInt = (FSS >= 6) ? [z64, a.fraction] : a.fraction
 
   #save the old numerator.
   if (issubnormal(a))
-    shift::UInt64 = clz(numerator) + 1
+    shift::UInt64 = leading_zeros(numerator) + 1
     numerator = lsh(numerator, shift)
     exp_f -= shift
   end
@@ -175,9 +175,9 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::UInt16)
   carry::UInt64 = 1
 
   #next bring the denominator into coherence.
-  denominator::SuperInt = (FSS >= 6) ? [z64, b.fraction] : b.fraction
+  denominator::VarInt = (FSS >= 6) ? [z64, b.fraction] : b.fraction
   if issubnormal(b)
-    shift = clz(denominator)
+    shift = leading_zeros(denominator)
     denominator = lsh(denominator, shift)
     exp_f += shift
   else
@@ -194,7 +194,7 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::UInt16)
   (exp_f < min_exponent(ESS) - max_fsize(FSS) - 2) && return sss(Unum{ESS,FSS}, sign)
 
   is_ulp::UInt16 = z16
-  frac_mask::SuperInt = (FSS < 6) ? (fillbits(int64(-(max_fsize(FSS) + 1)), o16)) : [z64, [f64 for idx=1:__frac_cells(FSS)]]
+  frac_mask::VarInt = (FSS < 6) ? (fillbits(int64(-(max_fsize(FSS) + 1)), o16)) : [z64, [f64 for idx=1:__frac_cells(FSS)]]
 
   if (!justtop(denominator))
     #figure out the mask we need.
@@ -226,7 +226,7 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::UInt16)
     is_ulp = UNUM_UBIT_MASK
     fsize::UInt16 = max_fsize(FSS)
 
-    frac_delta::SuperInt = (FSS < 6) ? (t64 >> max_fsize(FSS)) : [z64, o64, [z64 for idx=1:(__frac_cells(FSS) - 1)]]
+    frac_delta::VarInt = (FSS < 6) ? (t64 >> max_fsize(FSS)) : [z64, o64, [z64 for idx=1:(__frac_cells(FSS) - 1)]]
     #check our math to assign ULPs
 
     reseq = __smult((numerator & frac_mask), _denominator)

@@ -3,10 +3,6 @@
 #unit tests based on warlpiri mathematics.
 #not part of the main test suite.
 
-include("../unum.jl")
-using Unums
-using Base.Test
-
 #some useful unsigned int constants
 one16 = one(UInt16)
 one64 = one(UInt64)
@@ -17,7 +13,7 @@ top64 = 0x8000_0000_0000_0000 #our representation for the fraction part is left-
 #create the warlpiri type.  This is a 0/0 unum.
 Warlpiri = Unum{0,0}
 #an external constructor will make things a bit easier, sadly we have to lower case this.
-warlpiri(flags::Integer, frac::UInt64, exp::UInt64) = Warlpiri(zero16, zero16, UInt16(flags), frac, exp)
+warlpiri(flags::Int, frac::UInt64, exp::UInt64) = Warlpiri(zero16, zero16, UInt16(flags), frac, exp)
 #first let's make sure that the Warlpiri unums take up four bits
 @test 4 == maxubits(Warlpiri)
 

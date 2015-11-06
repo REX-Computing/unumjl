@@ -3,20 +3,20 @@
 #bitshifting operations on superints
 #iterative leftshift and rightshift operations on Array SuperInts
 
-lsh(a::UInt64, b::Integer) = a << b
+lsh(a::UInt64, b::Int) = a << b
 #destructive version which clobbers the existing verion
-function lsh!(a::Array{UInt64,1},b::Integer)
+function lsh!(a::Array{UInt64,1},b::Int)
   #kick it back to right shift if it's negative
   (b < 0) && (rsh!(a, -b); return)
-  l::Integer = length(a)
+  l::Int = length(a)
   #calculate how many cells apart our two ints shall be.
-  celldiff::Integer = b >> 6
+  celldiff::Int = b >> 6
   #calculate how much we have to shift
-  shift::Integer = b % 64
-  countershift::Integer = 64 - shift
+  shift::Int = b % 64
+  countershift::Int = 64 - shift
   #a calculation buffer.
   calcbuffer::UInt64 = zero(UInt64)
-  ex_idx::Integer = 1 + celldiff
+  ex_idx::Int = 1 + celldiff
 
   for idx = 1:l-celldiff
     calcbuffer = a[ex_idx] << shift
@@ -33,22 +33,22 @@ function lsh!(a::Array{UInt64,1},b::Integer)
   nothing
 end
 #protective version which doesn't clobber the existing data.
-function lsh(a::Array{UInt64, 1}, b::Integer)
+function lsh(a::Array{UInt64, 1}, b::Int)
   res = copy(a)
   lsh!(res, b)
   res
 end
 
-rsh(a::UInt64, b::Integer) = a >> b
-function rsh!(a::Array{UInt64, 1}, b::Integer)
+rsh(a::UInt64, b::Int) = a >> b
+function rsh!(a::Array{UInt64, 1}, b::Int)
   #kick it back to left shift in case we input a negative number.
   (b < 0) && (lsh!(a, -b); return)
-  l::Integer = length(a)
+  l::Int = length(a)
   #calculate how many cells apart our two ints shall be.
-  celldiff::Integer = b >> 6
+  celldiff::Int = b >> 6
   #calculate how much we have to shift
-  shift::Integer = b % 64
-  countershift::Integer = 64 - shift
+  shift::Int = b % 64
+  countershift::Int = 64 - shift
   #a calculation buffer.
   calcbuffer::UInt64 = zero(UInt64)
   ex_idx = l - celldiff
@@ -69,7 +69,7 @@ function rsh!(a::Array{UInt64, 1}, b::Integer)
   nothing
 end
 
-function rsh(a::Array{UInt64}, b::Integer)
+function rsh(a::Array{UInt64}, b::Int)
   res = copy(a)
   rsh!(res, b)
   res

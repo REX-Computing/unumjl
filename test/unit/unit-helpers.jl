@@ -22,7 +22,7 @@
 @test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, UInt16(61)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
 @test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, UInt16(63)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
 @test Unums.__frac_trim(allbits, UInt16(63)) == (allbits, 63, 0)
-#test two-cell SuperInt with fractrim.
+#test two-cell VarInt with fractrim.
 @test Unums.__frac_trim([nobits, nobits], UInt16(0)) == ([nobits, nobits], 0, 0)
 @test Unums.__frac_trim([nobits, nobits], UInt16(127)) == ([nobits, nobits], 0, 0)
 @test Unums.__frac_trim([nobits, lsb1], UInt16(0)) == ([nobits, nobits], 0, Unums.UNUM_UBIT_MASK)
@@ -62,17 +62,17 @@
 
 ################################################################################
 #__frac_match
-#expands or contracts a SuperInt to match the fss, and throws the ubit flag if
+#expands or contracts a VarInt to match the fss, and throws the ubit flag if
 #the fraction supplied got clipped.
 
-#downshifting from a long SuperInt to a much smaller one.
+#downshifting from a long VarInt to a much smaller one.
 #having any bits in less significant cells will throw the ubit.
 @test Unums.__frac_match([lsb1, nobits], 1) == (nobits, Unums.UNUM_UBIT_MASK)
 @test Unums.__frac_match([nobits, msb1], 2) == (msb1, 0)
 #having clear less significant cells, but some digits in more siginificant cells
 #still throws the ubit.
 @test Unums.__frac_match([nobits, allbits], 4) == (0xFFFF_0000_0000_0000, Unums.UNUM_UBIT_MASK)
-#upshifting from a shorter SuperInt to a bigger one merely pads with zeros
+#upshifting from a shorter VarInt to a bigger one merely pads with zeros
 @test Unums.__frac_match(allbits, 7) == ([nobits, allbits], 0)
 @test Unums.__frac_match(allbits, 8) == ([nobits, nobits, nobits, allbits], 0)
 @test Unums.__frac_match([allbits, msb1], 8) == ([nobits, nobits, allbits, msb1], 0)

@@ -6,7 +6,7 @@
 ###############################################################################
 ## multistage carried difference engine for uint64s.
 
-function __carried_diff(carry::UInt64, v1::SuperInt, v2::SuperInt, trail::UInt64 = z64)
+function __carried_diff(carry::UInt64, v1::VarInt, v2::VarInt, trail::UInt64 = z64)
   #run a difference engine across an array of 64-bit integers
   l = length(v1)
   #"carry" will usually be one, but there are other possibilities (e.g. zero)
@@ -88,7 +88,7 @@ end
 #and exponent, and the new fraction.
 function __shift_many_zeros(fraction, _aexp, ESS, lastbit::UInt64 = z64)
   maxshift::Int64 = _aexp - min_exponent(ESS)
-  tryshift::Int64 = clz(fraction) + 1
+  tryshift::Int64 = leading_zeros(fraction) + 1
   leftshift::Int64 = tryshift > maxshift ? maxshift : tryshift
   fraction = lsh(fraction, leftshift)
 

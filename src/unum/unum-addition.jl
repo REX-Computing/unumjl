@@ -50,7 +50,7 @@ end
 const __MASK_TABLE = [0x8000_0000_0000_0000, 0xC000_0000_0000_0000, 0xF000_0000_0000_0000, 0xFF00_0000_0000_0000, 0xFFFF_0000_0000_0000, 0xFFFF_FFFF_0000_0000]
 
 #performs a carried add on an unsigned integer array.
-function __carried_add(carry::UInt64, v1::SuperInt, v2::SuperInt)
+function __carried_add(carry::UInt64, v1::VarInt, v2::VarInt)
   #first perform a direct sum on the integer arrays
   res = v1 + v2
   #check to see if we need a carry.  Note last() can operate on scalar values
@@ -67,12 +67,12 @@ function __carried_add(carry::UInt64, v1::SuperInt, v2::SuperInt)
   (carry, res)
 end
 
-#returns a (SuperInt, int, bool) triplet:  (value, shift, falloff)
-function __shift_after_add(carry::UInt64, value::SuperInt, is_ubit::UInt16)
+#returns a (VarInt, int, bool) triplet:  (value, shift, falloff)
+function __shift_after_add(carry::UInt64, value::VarInt, is_ubit::UInt16)
   #cache the length of value
   l::UInt16 = length(value)
   #calculate how far we have to shift.
-  shift = 64 - clz(carry) - 1
+  shift = 64 - leading_zeros(carry) - 1
   #did we lose values off the end of the number?
   (is_ubit == 0) && (is_ubit = (value & fillbits(shift, l)) != superzero(l))
   #shift the value over

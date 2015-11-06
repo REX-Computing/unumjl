@@ -30,7 +30,7 @@ easy_walpiri_two = unum_easy(Unum{0,0}, z16, z64, o64)
 @test easy_walpiri_two.fraction == z64
 @test easy_walpiri_two.fsize == 0
 @test easy_walpiri_two.flags == z16
-#test that unum_easy will also take a sloppy SuperInt.
+#test that unum_easy will also take a sloppy VarInt.
 easy_walpiri_two_oops = unum_easy(Unum{0,0}, z16, [f64, z64], o64)
 @test easy_walpiri_two_oops.fraction == z64
 @test easy_walpiri_two_oops.fsize == 0

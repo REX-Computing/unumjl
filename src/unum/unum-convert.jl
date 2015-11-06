@@ -6,7 +6,7 @@ import Base.convert
 ## INTEGER TO UNUM
 
 #CONVERSIONS - INTEGER -> UNUM
-function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
+function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Int)
   #for now, don't handle the uint128 case
   #do a zero check
   if (x == 0)
@@ -26,7 +26,7 @@ function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
   (ESS == 0) && (x == 1) && return Unum{ESS,FSS}(z16, z16, flags, t64, z64)
 
   #find the msb of x, this will tell us how much to move things
-  msbx = 63 - clz(x)
+  msbx = 63 - leading_zeros(x)
   #do a check to see if we should release almost_infinite
   (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK)
 
@@ -46,8 +46,8 @@ end
 #create a type for floating point properties
 immutable FProp
   intequiv::Type
-  esize::Integer
-  fsize::Integer
+  esize::Int
+  fsize::Int
 end
 
 #store floating point properties in a dict
@@ -67,7 +67,7 @@ issubnormal(x::Float16) = (x != 0) && ((reinterpret(UInt16, x) & 0x7c00) == 0)
 export issubnormal
 
 #helper function to convert from different floating point types.
-function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
+function __f_to_u(ESS::Int, FSS::Int, x::FloatingPoint, T::Type)
   #retrieve the floating point properties of the type to convert from.
   fp = __fp_props[T]
 
@@ -99,7 +99,7 @@ function __f_to_u(ESS::Integer, FSS::Integer, x::FloatingPoint, T::Type)
   if issubnormal(x)
     #keeping in mind that the fraction bits are now left-aligned, calculate
     #how much further we have to push the fraction bits.
-    frac_move::Int16 = clz(fraction) + 1
+    frac_move::Int16 = leading_zeros(fraction) + 1
     fraction = fraction << frac_move
     unbiased_exp -= frac_move
   end
@@ -173,7 +173,7 @@ function __u_to_f_generator(T::Type)
     #check to see if the unum is subnormal
     if is_exp_zero(x)
       #measure the msb significant bit of x.fraction and we'll move the exponent to that.
-      shift::UInt16 = clz(x.fraction) + 1
+      shift::UInt16 = leading_zeros(x.fraction) + 1
       #shift the fraction over
       fraction = x.fraction << shift
       #remember, subnormal exponents have +1 to their 'actual' exponent.

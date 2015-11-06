@@ -45,7 +45,7 @@ end
 o16 = one(UInt16)
 z16 = zero(UInt16)
 __clz_array=[0x0004,0x0003,0x0002,0x0002, o16, o16, o16, o16, z16,z16,z16,z16,z16,z16,z16,z16]
-function clz(n)
+function leading_zeros(n)
   (n == 0) && return 64
   res::UInt16 = 0
   #use the binary search method
@@ -122,7 +122,7 @@ function exlg(x::FloatingPoint)
   fraction::UInt64 = castfrac(x)
 
   if (issubnormal(x))
-    shift::UInt64 = clz(fraction) + 1
+    shift::UInt64 = leading_zeros(fraction) + 1
     fraction = fraction << shift
     exp_f -= shift
   end
@@ -132,7 +132,7 @@ function exlg(x::FloatingPoint)
     exp_f = -exp_f - 1
     sign = 1
   end
-  lz = clz(UInt64(exp_f))
+  lz = leading_zeros(UInt64(exp_f))
   resexp = 63 - lz
   #add the exponent part onto the result fraction.
   resfrac = UInt64(exp_f << (lz + 1))

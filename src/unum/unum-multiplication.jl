@@ -56,7 +56,7 @@ function __lower_scan(a::Array{UInt32, 1}, b::Array{UInt32, 1}, l::UInt16)
 end
 
 # chunk_mult handles simply the chunked multiply of two superints
-function __chunk_mult(a::SuperInt, b::SuperInt)
+function __chunk_mult(a::VarInt, b::VarInt)
   #note that frag_mult fails for absurdly high length integer arrays.
   l::UInt16 = length(a) << 1
 
@@ -121,7 +121,7 @@ function __chunk_mult(a::SuperInt, b::SuperInt)
 end
 
 #amends a fraction to a subnormal number if necessary.
-function __amend_to_subnormal{ESS,FSS}(T::Type{Unum{ESS,FSS}}, fraction::UInt64, unbiased_exp::Integer, flags::UInt16)
+function __amend_to_subnormal{ESS,FSS}(T::Type{Unum{ESS,FSS}}, fraction::UInt64, unbiased_exp::Int, flags::UInt16)
   l::UInt16 = length(fraction)
   unbiased_exp < (min_exponent(ESS) - max_fsize(FSS) - 1) && return sss(Unum{ESS,FSS}, flags)
   #regenerate the fraction as follows:  First calcluate the subnormal shift.
@@ -178,7 +178,7 @@ function __mult_exact{ESS, FSS}(a::Unum{ESS,FSS},b::Unum{ESS,FSS}, sign::UInt16)
 
   if (carry == 0)
     #shift over the fraction as far as we need to.  (we know this isn't zero, because we did a zero check.)
-    shift::Int64 = int64(clz(fraction) + 1)
+    shift::Int64 = int64(leading_zeros(fraction) + 1)
     is_ubit |= (allzeros(fraction & fillbits(shift, __frac_cells(FSS)))) ? z16 : UNUM_UBIT_MASK
     fraction = fraction << shift
     shift *= -1

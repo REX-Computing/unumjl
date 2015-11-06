@@ -44,7 +44,7 @@ function calculate(a::Array{UInt64,1})
   sum
 end
 
-function test_mults(cells::Integer)
+function test_mults(cells::Int)
   x = rand(UInt64, cells)
   y = rand(UInt64, cells)
 
@@ -113,7 +113,7 @@ function trunc_frag_mult(a::Array{UInt64,1}, b::Array{UInt64,1})
 end
 
 
-function test_truncs(cells::Integer)
+function test_truncs(cells::Int)
   x = rand(UInt64, cells)
   y = rand(UInt64, cells)
 

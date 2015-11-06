@@ -85,7 +85,7 @@ unum{ESS,FSS}(x::Unum{ESS,FSS}, subflags::UInt16) = unum(Unum{ESS,FSS}, x.fsize,
 
 #an "easy" constructor which is safe, and takes an unbiased exponent value, and
 #a superint value
-function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction, exponent::Integer)
+function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction, exponent::Int)
   #decode the exponent
   (esize, exponent) = encode_exp(exponent)
   #match the length of fraction to FSS, set the ubit if there's trimming that

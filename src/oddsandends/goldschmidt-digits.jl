@@ -45,7 +45,7 @@ end
 o16 = one(UInt16)
 z16 = zero(UInt16)
 __clz_array=[0x0004,0x0003,0x0002,0x0002, o16, o16, o16, o16, z16,z16,z16,z16,z16,z16,z16,z16]
-function clz(n)
+function leading_zeros(n)
   (n == 0) && return 64
   res::UInt16 = 0
   #use the binary search method
@@ -144,7 +144,7 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   numerator::UInt64 = castfrac(x)
 
   if (issubnormal(x))
-    shift::UInt64 = clz(numerator) + 1
+    shift::UInt64 = leading_zeros(numerator) + 1
     numerator = numerator << shift
     exp_f -= shift
   end
@@ -156,7 +156,7 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   denominator::UInt64 = castfrac(y)
   #adjust the denominator in the case that it's a subnormal
   if issubnormal(y)
-    shift = clz(denominator)
+    shift = leading_zeros(denominator)
     denominator = denominator << shift
     exp_f += shift
   else

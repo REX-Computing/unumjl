@@ -3,7 +3,7 @@
 
 #literally calculate the value of the Unum.  Please don't use this for Infs and NaNs
 
-function superintval(v::SuperInt)
+function superintval(v::VarInt)
   (typeof(v) == UInt64) && return big(v)
   sum = big(0)
   for i = 1:length(v)
@@ -78,7 +78,7 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   _aexp::Int64 = decode_exp(a)
   #don't forget to add one, because in theory we're going to want to move that
   #first one PAST the left end of the fraction value.
-  _ashl::UInt16 = clz(a.fraction) + 1
+  _ashl::UInt16 = leading_zeros(a.fraction) + 1
 
   is_zero(a) && return zero(Unum{ESS,FSS})
 
@@ -116,7 +116,7 @@ function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
       #in which case just make it a bunch of ones, decrement the exponent, and
       #make sure we aren't subnormal, in which case, we just encode as subnormal.
       _aexp::Int64 = decode_exp(a)
-      fraction::SuperInt = fillbits(-(max_fsize(FSS) + 1), l)
+      fraction::VarInt = fillbits(-(max_fsize(FSS) + 1), l)
       fsize::UInt16 = max_fsize(FSS)
       (esize, exponent) = (_aexp == min_exponent(ESS)) ? (max_esize(ESS), z64) : encode_exp(_aexp - 1)
     else

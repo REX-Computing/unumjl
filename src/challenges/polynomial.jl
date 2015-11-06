@@ -9,7 +9,7 @@ const plength = 4
 const parray = [6, 5, -7, 1]
 const tol = 0.0001
 
-function pwr(x::Utype, n::Integer)
+function pwr(x::Utype, n::Int)
   if n == 1
     x
   elseif iseven(n)

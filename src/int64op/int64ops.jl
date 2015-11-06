@@ -5,7 +5,7 @@
 include("./i64o-varint.jl")         #basic varint class definition
 include("./i64o-constants.jl")      #functions generating int64 constants
 include("./i64o-bitpatterns.jl")    #boolean functions reporting on bit patterns
-include("./i64o-clzctz.jl")         #clz and ctz methods.
+include("./i64o-clzctz.jl")         #leading_zeros and trailing_zeros methods.
 include("./i64o-masks.jl")          #mask generating operators
 include("./i64o-shifts.jl")         #left and right shift operators
 include("./i64o-comparison.jl")     #chaining comparison operators
