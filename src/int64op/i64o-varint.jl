@@ -18,7 +18,20 @@ const o64 = one(UInt64)
 const t64 = 0x8000_0000_0000_0000               #top bit
 const f64 = 0xFFFF_FFFF_FFFF_FFFF               #full bits
 
-VarInt = Union{UInt64, Array{UInt64}}
+__cell_length(FSS) = 1 << (FSS - 6)
+
+__check_I64Array(FSS, a::Array{UInt64,1})
+  FSS < 7 && throw(ArgumentError("invalid FSS == $FSS < 7"))
+  _al = __cell_length(FSS)
+  length(a) != _al && throw(ArgumentError("invalid array length, should be $_al != $(length(a))"))
+end
+
+type I64Array{FSS}
+  a::Array{UInt64,1}
+  @dev_check FSS function I64Array(a::Array{UInt64,1})
+    new(a)
+  end
+end
 
 __i64a_bits(a::UInt64) = bits(a)
-__i64a_bits(a::Array{UInt64, 1}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a)
+__i64a_bits(a::I64Array{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a.a)

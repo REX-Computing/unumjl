@@ -11,16 +11,19 @@ module Unums
 abstract Utype <: Real
 export Utype
 
+#development safety option scheme
+include("./options/devsafety.jl")
+
 #aggregate of all of the int64-related operations
 include("./int64op/int64ops.jl")
 
-#class definition of unum.
-include("./unum/unum-unum.jl")
-#class definition of ubound
-include("./ubound/ubound-ubound.jl")
+#type definition of unum.
+include("./unum/unum-typedefs.jl")
+#type definition of ubound
+#include("./ubound/ubound-typedefs.jl")
 include("./unum/unum.jl")
 #ubound-related code
-include("./ubound/ubound.jl")
+#include("./ubound/ubound.jl")
 
 #=
 #the base unum type and its pseudoconstructors
