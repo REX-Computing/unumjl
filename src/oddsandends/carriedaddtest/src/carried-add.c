@@ -1,6 +1,12 @@
-#include <stdio.h>
 
-unsigned long long carried_add_lahf(unsigned long long carry, unsigned long long *res, unsigned long long *a1, unsigned long long *a2){
+/* Copyright (c) 2015 Rex Computing and Isaac Yonemoto"
+   see LICENSE.txt
+   this work was supported in part by DARPA Contract D15PC00135*/
+
+#include <stdio.h>
+#define ULL unsigned long long
+
+ULL carried_add_lahf(ULL carry, ULL *res, ULL *a1, ULL *a2){
   asm("xor  %%rax,   %%rax;"         //clear the rax register
       "adc  (%%rbx),   %%rdx;"         //first add the first value into rdx.
       "lahf;"                        //dump the flags into the ax register
@@ -15,7 +21,7 @@ unsigned long long carried_add_lahf(unsigned long long carry, unsigned long long
   return carry;
 };
 
-unsigned long long carried_add_jnc(unsigned long long carry, unsigned long long *res, unsigned long long *a1, unsigned long long *a2){
+ULL carried_add_jnc(ULL carry, ULL *res, ULL *a1, ULL *a2){
   asm("xor %%rax, %%rax;"          //clobber rax
       "adc %%rbx, %%rdx;"         //first add the first value into rdx.
       "jnc nofirst;"              //skip the next step we didn't carry
@@ -31,7 +37,7 @@ unsigned long long carried_add_jnc(unsigned long long carry, unsigned long long 
   return carry;
 };
 
-unsigned long long carried_add_loop2(unsigned long long carry, unsigned long long *res, unsigned long long *a1, unsigned long long *a2, long long ct){
+ULL carried_add_loop2(ULL carry, ULL *res, ULL *a1, ULL *a2, long long ct){
   long long idx;
   for (idx = ct; idx > 0; idx--){
     asm("xor %%rax, %%rax;"         //clear the rax register
@@ -53,10 +59,10 @@ unsigned long long carried_add_loop2(unsigned long long carry, unsigned long lon
 };
 
 int main(){
-  unsigned long long carry = 0;
-  unsigned long long res = 0;
-  unsigned long long a1 = 0xFFFFFFFFFFFFFFFF;
-  unsigned long long a2 = 0x1;
+  ULL carry = 0;
+  ULL res = 0;
+  ULL a1 = 0xFFFFFFFFFFFFFFFF;
+  ULL a2 = 0x1;
   carry = carried_add_jnc(carry, &res, &a1, &a2);
   printf("%llX : %llX\n", carry, res);
   return 0;

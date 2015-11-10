@@ -1,5 +1,11 @@
+
+/* Copyright (c) 2015 Rex Computing and Isaac Yonemoto"
+   see LICENSE.txt
+   this work was supported in part by DARPA Contract D15PC00135*/
+
 #include <stdio.h>
 #define ULL unsigned long long
+
 ULL carried_add_7(ULL carry, ULL *res, ULL *a1, ULL *a2){
   //cell array starts fast forwarded as passed by julia.
   asm(

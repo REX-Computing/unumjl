@@ -1,3 +1,6 @@
+# Copyright (c) 2015 Rex Computing and Isaac Yonemoto"
+# see LICENSE.txt
+# this work was supported in part by DARPA Contract D15PC00135
 
 innerasm = """    "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
@@ -35,7 +38,15 @@ def makecfn(i):
     print "  return carry;"
     print "}"
 
-print("#include <stdio.h>")
-print("#define ULL unsigned long long")
+
+print """
+/* Copyright (c) 2015 Rex Computing and Isaac Yonemoto"
+   see LICENSE.txt
+   this work was supported in part by DARPA Contract D15PC00135*/
+
+#include <stdio.h>
+#define ULL unsigned long long
+"""
+
 for i in range(7,12):
     makecfn(i)

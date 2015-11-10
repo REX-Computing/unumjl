@@ -1,3 +1,7 @@
+# Copyright (c) 2015 Rex Computing and Isaac Yonemoto"
+# see LICENSE.txt
+# this work was supported in part by DARPA Contract D15PC00135
+
 #an i64array made for fsizesize.  Helps multiple dispatch and generated functions
 #optimize for certain complex array operations.
 
