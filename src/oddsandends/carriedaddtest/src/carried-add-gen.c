@@ -13,13 +13,12 @@ ULL carried_add_7(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -28,13 +27,12 @@ ULL carried_add_7(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     :"=a" (carry)                                 //the only output is the carry.
     :"a" (carry), "b" (res), "c" (a1), "d" (a2)   //a consistently will contain the carry, b, c, d passed parameters
   );
@@ -47,13 +45,12 @@ ULL carried_add_8(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -63,13 +60,12 @@ ULL carried_add_8(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -79,13 +75,12 @@ ULL carried_add_8(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -94,13 +89,12 @@ ULL carried_add_8(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     :"=a" (carry)                                 //the only output is the carry.
     :"a" (carry), "b" (res), "c" (a1), "d" (a2)   //a consistently will contain the carry, b, c, d passed parameters
   );
@@ -113,13 +107,12 @@ ULL carried_add_9(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -129,13 +122,12 @@ ULL carried_add_9(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -145,13 +137,12 @@ ULL carried_add_9(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -161,13 +152,12 @@ ULL carried_add_9(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -177,13 +167,12 @@ ULL carried_add_9(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -193,13 +182,12 @@ ULL carried_add_9(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -209,13 +197,12 @@ ULL carried_add_9(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -224,13 +211,12 @@ ULL carried_add_9(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     :"=a" (carry)                                 //the only output is the carry.
     :"a" (carry), "b" (res), "c" (a1), "d" (a2)   //a consistently will contain the carry, b, c, d passed parameters
   );
@@ -243,13 +229,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -259,13 +244,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -275,13 +259,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -291,13 +274,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -307,13 +289,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -323,13 +304,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -339,13 +319,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -355,13 +334,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -371,13 +349,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -387,13 +364,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -403,13 +379,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -419,13 +394,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -435,13 +409,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -451,13 +424,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -467,13 +439,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -482,13 +453,12 @@ ULL carried_add_10(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     :"=a" (carry)                                 //the only output is the carry.
     :"a" (carry), "b" (res), "c" (a1), "d" (a2)   //a consistently will contain the carry, b, c, d passed parameters
   );
@@ -501,13 +471,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -517,13 +486,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -533,13 +501,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -549,13 +516,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -565,13 +531,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -581,13 +546,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -597,13 +561,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -613,13 +576,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -629,13 +591,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -645,13 +606,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -661,13 +621,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -677,13 +636,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -693,13 +651,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -709,13 +666,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -725,13 +681,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -741,13 +696,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -757,13 +711,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -773,13 +726,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -789,13 +741,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -805,13 +756,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -821,13 +771,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -837,13 +786,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -853,13 +801,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -869,13 +816,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -885,13 +831,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -901,13 +846,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -917,13 +861,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -933,13 +876,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -949,13 +891,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -965,13 +906,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -981,13 +921,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     //decrement pointers
     "sub  $0x0008,  %%rbx;"
     "sub  $0x0008,  %%rcx;"
@@ -996,13 +935,12 @@ ULL carried_add_11(ULL carry, ULL *res, ULL *a1, ULL *a2){
     "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the flags into the ax register
+    "mov  %%rax,    %%r9;"
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else.
+    "setc %%al;"                    //dump the flags again
+    "or   %%r9,    %%rax;"          //combine both bits
     :"=a" (carry)                                 //the only output is the carry.
     :"a" (carry), "b" (res), "c" (a1), "d" (a2)   //a consistently will contain the carry, b, c, d passed parameters
   );

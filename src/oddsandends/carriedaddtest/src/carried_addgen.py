@@ -5,13 +5,12 @@
 innerasm = """    "mov  %%rax,   %%r8;"           //use r8 as an accumulator register.
     "xor  %%rax,   %%rax;"         //clear the rax register
     "adc  (%%rcx), %%r8;"          //dereference rcx and add the value to r8.
-    "lahf;"                        //dump the flags into the ax register
-    "mov  %%ah,    %%al;"
+    "setc %%al;"                   //dump the carry flag into the ax register
+    "mov  %%rax,    %%r9;"         //move the carry data out to r9
     "adc  (%%rdx), %%r8;"          //dereference rdx and add the value to r8.
     "mov  %%r8,    (%%rbx);"       //move the accumulated r8 value to the spot pointed to by res.
-    "lahf;"                        //dump the flags again
-    "or   %%ah,    %%al;"          //combine both bits
-    "and  $0x0001, %%rax;"         //or it to mask out everything else."""
+    "setc %%al;"                   //dump the carry flag again
+    "or   %%r9,    %%rax;"         //combine both bits"""
 
 joinasm = """    //decrement pointers
     "sub  $0x0008,  %%rbx;"
