@@ -14,48 +14,29 @@ export Utype
 #development safety option scheme
 include("./options/devsafety.jl")
 
-#aggregate of all of the int64-related operations
-include("./int64op/int64ops.jl")
-
+################################################################################
+#TYPE DEFINITION FILES
+#type definitions for int64 array.
+include("./int64op/i64o-typedefs.jl")
 #type definition of unum.
 include("./unum/unum-typedefs.jl")
 #type definition of ubound
 #include("./ubound/ubound-typedefs.jl")
+
+################################################################################
+#IMPLEMENTATION FILES
+#implementation of int64 and int64 array utility code.
+include("./int64op/int64ops.jl")
+#implementation of unums.
 include("./unum/unum.jl")
 #ubound-related code
 #include("./ubound/ubound.jl")
 
-#=
-#the base unum type and its pseudoconstructors
-include("unum-unum.jl")
-#and the derived ubound type
-include("ubound-ubound.jl")
+#utility files
+#include("unum-bitwalk.jl")
+#include("unum-promote.jl")
+#include("unum-expwalk.jl")
+#include("unum_solver.jl")
 
-#functions that operate on the unum type itself, and friends.
-include("unum-typeproperties.jl")
-
-include("unum-constants.jl")
-include("unum-properties.jl")
-include("unum-comparison.jl")
-include("unum-convert.jl")
-include("unum-operations.jl")
-#some math stuff
-include("unum-addition.jl")
-include("unum-subtraction.jl")
-include("unum-multiplication.jl")
-include("unum-division.jl")
-
-#unary operators
-include("unum-sqrs.jl")
-
-#h-layer stuff (human)
-include("unum-hlayer.jl")
-
-#other utilities
-include("unum-bitwalk.jl")
-include("unum-promote.jl")
-include("unum-expwalk.jl")
-include("unum_solver.jl")
-=#
 
 end #module

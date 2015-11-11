@@ -1,4 +1,4 @@
-#i64o-varint.jl
+#i64o-typedefs.jl
 #definition of the varint union type and basic things to do with these values.
 #the superint is a union of arbitrary length UInt64 and single value UInt64.
 #operators are to be defined which seamlessly deal with all these numbers.
@@ -20,18 +20,22 @@ const f64 = 0xFFFF_FFFF_FFFF_FFFF               #full bits
 
 __cell_length(FSS) = 1 << (FSS - 6)
 
-__check_I64Array(FSS, a::Array{UInt64,1})
+__check_I64ArrayNum(FSS, a::Array{UInt64,1})
   FSS < 7 && throw(ArgumentError("invalid FSS == $FSS < 7"))
   _al = __cell_length(FSS)
   length(a) != _al && throw(ArgumentError("invalid array length, should be $_al != $(length(a))"))
 end
 
-type I64Array{FSS}
+doc"""
+`Unums.I64ArrayNum` is a variadic type which maps an `FSS` variable to an `Int64`
+array of a size corresponding to `FSS`.
+
+In development mode, a check is in place to make sure `FSS` matches the array
+length.
+"""
+type I64ArrayNum{FSS}
   a::Array{UInt64,1}
-  @dev_check FSS function I64Array(a::Array{UInt64,1})
+  @dev_check FSS function I64ArrayNum(a::Array{UInt64,1})
     new(a)
   end
 end
-
-__i64a_bits(a::UInt64) = bits(a)
-__i64a_bits(a::I64Array{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a.a)
