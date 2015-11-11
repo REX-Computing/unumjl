@@ -6,6 +6,9 @@
 #the cell at the examined significance is equal, then the algorithm moves to the
 #next significant cell and seeks a decesion for that.  If all of the cells are
 #equal then it spits out false.
+
+import Base.<
+import Base.>
 function <(a::Array{UInt64,1}, b::Array{UInt64,1})
   for i = 1:length(a)
     @inbounds (a[i] > b[i]) && return false

@@ -10,7 +10,7 @@ doc"""
 NB:  Internally this may cast to a different Unum type (UnumLarge or UnumSmall)
 for performance purposes.  The Unum{ESS,FSS}(...) constructor may be unsafe and
 for safety-critical purposes, the corresponding unum(...) constructors or the
-\@unum macro is recommended.
+@unum macro is recommended.
 """
 abstract Unum{ESS, FSS} <: Utype
 export Unum
@@ -27,7 +27,7 @@ function __general_unum_checking(ESS, FSS, fsize, esize, flags, fraction, expone
   (exponent > _mbe) && throw(ArgumentError("exponent == $exponent > $_mbs maximum for esize == $esize."))
   #check to see that the fraction contents match.
   (FSS < 7) && (!isa(fraction, Uint64)) && throw(ArgumentError("FSS == $FSS requires a Uint64 fraction"))
-  (FSS > 6) && (!isa(fraction, I64ArrayNum{FSS})) && throw(ArgumentError("FSS == $FSS requires a I64ArrayNum{$FSS} fraction"))
+  (FSS > 6) && (!isa(fraction, ArrayNum{FSS})) && throw(ArgumentError("FSS == $FSS requires a ArrayNum{$FSS} fraction"))
   nothing
 end
 
@@ -57,7 +57,7 @@ type UnumLarge{ESS, FSS} <: Unum{ESS, FSS}
   fsize::UInt16
   esize::UInt16
   flags::UInt16
-  fraction::I64ArrayNum{FSS}
+  fraction::ArrayNum{FSS}
   exponent::UInt64
   @dev_check ESS FSS function UnumLarge(fsize, esize, flags, fraction, exponent)
     new(fsize, esize, flags, fraction, exponent)
@@ -83,7 +83,7 @@ function call{ESS, FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, fla
   UnumSmall{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
 
-function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::I64ArrayNum{FSS}, exponent::UInt64)
+function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::ArrayNum{FSS}, exponent::UInt64)
   (ESS > 6) && throw(ArgumentError("ESS = $ESS > 6 currently not allowed."))
   UnumLarge{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
@@ -98,7 +98,7 @@ function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, fla
   need_length = 1 << (FSS - 6)
   (frac_length < need_length) && throw(ArgumentError("insufficient array elements to create unum with desired FSS ($FSS requires $need_length > $frac_length)"))
   #pass this through an intermediate Int64Array number constructor.
-  UnumLarge{ESS,FSS}(fsize, esize, flags, I64ArrayNum{FSS}(fraction), exponent)
+  UnumLarge{ESS,FSS}(fsize, esize, flags, ArrayNum{FSS}(fraction), exponent)
 end
 
 #the "unum" constructor is a safe constructor that always checks if parameters are

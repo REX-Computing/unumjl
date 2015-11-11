@@ -20,22 +20,22 @@ const f64 = 0xFFFF_FFFF_FFFF_FFFF               #full bits
 
 __cell_length(FSS) = 1 << (FSS - 6)
 
-function __check_I64ArrayNum(FSS, a::Array{UInt64,1})
+function __check_ArrayNum(FSS, a::Array{UInt64,1})
   FSS < 7 && throw(ArgumentError("invalid FSS == $FSS < 7"))
   _al = __cell_length(FSS)
   length(a) != _al && throw(ArgumentError("invalid array length, should be $_al != $(length(a))"))
 end
 
 doc"""
-`Unums.I64ArrayNum` is a variadic type which maps an `FSS` variable to an `Int64`
+`Unums.ArrayNum` is a variadic type which maps an `FSS` variable to an `Int64`
 array of a size corresponding to `FSS`.
 
 In development mode, a check is in place to make sure `FSS` matches the array
 length.
 """
-type I64ArrayNum{FSS}
+type ArrayNum{FSS}
   a::Array{UInt64,1}
-  @dev_check FSS function I64ArrayNum(a::Array{UInt64,1})
+  @dev_check FSS function ArrayNum(a::Array{UInt64,1})
     new(a)
   end
 end

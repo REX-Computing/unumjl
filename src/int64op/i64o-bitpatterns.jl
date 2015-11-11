@@ -4,21 +4,21 @@
 
 # a helper function for is_exp_zero, and is_frac_zero.  Optimized to be fast.
 is_all_zero(a::UInt64) = (a == 0)
-function is_all_zero(a::Array{UInt64})
-  for idx = 1:length(a)
-    @inbounds a[idx] != 0 && return false
+@generated function is_all_zero{FSS}(a::ArrayNum{FSS})
+  code = :(accum = zero(UInt64))              #set an accumulator to zero.
+  for idx = 1:__cell_length(FSS)
+    code = :(code; @inbounds accum |= a[idx])   #accumulate bits.
   end
-  true
+  :(code; accum == 0)                         #check to see if the accumulated quantity is zero.
 end
 
-#note that is_not_zero has a different optimization in the array case.
-#this function should be used instead of !is_all_zero.
 is_not_zero(a::UInt64) = (a != 0)
-function is_not_zero(a::Array{UInt64})
-  for idx = 1:length(a)
-    @inbounds a[idx] != 0 && return true
+function is_not_zero{FSS}(a::ArrayNum{FSS})
+  code = :(accum = zero(UInt64))
+  for idx = 1:__cell_length(FSS)
+    code = :(code; @inbounds accum |= a[idx])
   end
-  false
+  :(code; accum != 0)
 end
 
 #is_top checks to see if the top bit of the integer represented by a superint

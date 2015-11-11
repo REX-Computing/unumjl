@@ -1,52 +1,59 @@
 #i64o-constants.jl
 
 #various superint constants and ways of generating them
-Base.zero{FSS}(::Type{I64Array{FSS}}) = I64Array{FSS}(zeros(UInt64, __cell_length(FSS)))
-#zeroing this out is generated code.
-@generated function Base.zero{FSS}(a::Type{I64Array{FSS}})
+Base.zero{FSS}(::Type{ArrayNum{FSS}}) = ArrayNum{FSS}(zeros(UInt64, __cell_length(FSS)))
+Base.zero{FSS}(a::Type{ArrayNum{FSS}}) = ArrayNum{FSS}(zeros(UInt64, __cell_length(FSS)))
+
+doc"""
+sets an `ArrayNum` to zero.
+"""
+@generated function zero!{FSS}(a::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
   code = :()
+  #unroll the loop that fills the contents of the a with zero.
   for idx = 1:l
     @inbounds code = :($code; a.a[$idx] = 0)
   end
-  return code
+  code
 end
 
-@generated function Base.one{FSS}(::Type{I64Array{FSS}})
+@generated function Base.one{FSS}(::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
   quote
-    arr = zeros(UInt64, $l))
+    arr = zeros(UInt64, $l)
     arr[$l] = 1
-    arr
+    ArrayNum{FSS}(arr)
   end
 end
 
-@generated function Base.one{FSS}(a::Type{I64Array{FSS}})
-  l = __cell_length(FSS)
-  code = :()
-  for idx = 1:(l-1)
-    @inbounds code = :($code; a.a[$idx] = 0)
-  end
-  :($code, @inbounds a[$l] = 1)
-end
-
-@generated function top{FSS}(::Type{I64Array{FSS}})
+@generated function Base.one{FSS}(a::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
   quote
-    arr = zeros(UInt64, $l))
-    arr[1] = t64
-    arr
+    arr = zeros(UInt64, $l)
+    arr[$l] = 1
+    ArrayNum{FSS}(arr)
   end
 end
-@generated function top{FSS}(a::Type{I64Array{FSS}})
+
+@generated function top{FSS}(::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
-  code = :()
-  for idx = 2:l
-    @inbounds code = :($code; a.a[$idx] = 0)
+  quote
+    arr = zeros(UInt64, $l)
+    arr[1] = t64
+    ArrayNum{FSS}(arr)
   end
-  :($code, @inbounds a[1] = t64)
+end
+
+@generated function top{FSS}(a::Type{ArrayNum{FSS}})
+  l = __cell_length(FSS)
+  quote
+    arr = zeros(UInt64, $l)
+    arr[1] = t64
+    ArrayNum{FSS}(arr)
+  end
 end
 export top
+
 #=
 #Generates a single UInt64 array that is all zeros except for a single bit
 #flipped, which is the n'th bit from the msb, 0-indexed.

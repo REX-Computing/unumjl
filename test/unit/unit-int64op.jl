@@ -16,20 +16,26 @@ o64 = one(UInt64)
 f64 = 0xFFFF_FFFF_FFFF_FFFF
 t64 = 0x8000_0000_0000_0000
 
+#ArrayNums of size < 7 are disallowed.
+@test_throws ArgumentError Unums.ArrayNum{1}([z64])
+@test_throws ArgumentError Unums.ArrayNum{2}([z64])
+@test_throws ArgumentError Unums.ArrayNum{3}([z64])
+@test_throws ArgumentError Unums.ArrayNum{4}([z64])
+@test_throws ArgumentError Unums.ArrayNum{5}([z64])
+@test_throws ArgumentError Unums.ArrayNum{6}([z64])
 ################################################################################
 ## SUPERINT CONSTANT GENERATION
 
-@test Unums.superzero(1) == nobits
-@test Unums.superone(1) ==  lsb1
-@test Unums.supertop(1) ==  msb1
-@test Unums.superzero(2) == [nobits, nobits]
-@test Unums.superone(2) ==  [nobits, lsb1]
-@test Unums.supertop(2) ==  [msb1, nobits]
-@test Unums.superzero(4) == [nobits, nobits, nobits, nobits]
-@test Unums.superone(4) ==  [nobits, nobits, nobits, lsb1]
-@test Unums.supertop(4) ==  [msb1, nobits, nobits, nobits]
+@test zero(Unums.ArrayNum{7}).a == [nobits, nobits]
+@test one(Unums.ArrayNum{7}).a  == [nobits, lsb1]
+@test top(Unums.ArrayNum{7}).a  == [msb1, nobits]
+@test zero(Unums.ArrayNum{8}).a == [nobits, nobits, nobits, nobits]
+@test one(Unums.ArrayNum{8}).a  == [nobits, nobits, nobits, lsb1]
+@test top(Unums.ArrayNum{8}).a  == [msb1, nobits, nobits, nobits]
+
 
 #bit_from_top
+#=
 @test Unums.__bit_from_top(0,1)    == msb1
 @test Unums.__bit_from_top(1,1)    == 0x4000_0000_0000_0000
 @test Unums.__bit_from_top(63,1)   == lsb1
@@ -37,30 +43,32 @@ t64 = 0x8000_0000_0000_0000
 @test Unums.__bit_from_top(63, 2)  == [lsb1, nobits]
 @test Unums.__bit_from_top(64, 2)  == [nobits, msb1]
 @test Unums.__bit_from_top(127, 2) == [nobits, lsb1]
+=#
 
 ################################################################################
 ## BIT PATTERN DETECTION
 
 #is_all_zero
-@test Unums.is_all_zero(nobits)
-@test Unums.is_all_zero([nobits, nobits])
-@test Unums.is_all_zero([nobits, nobits, nobits, nobits])
+@test  Unums.is_all_zero(nobits)
+@test  Unums.is_all_zero(Unums.ArrayNum{7}([nobits, nobits]))
+@test  Unums.is_all_zero(Unums.ArrayNum{8}([nobits, nobits, nobits, nobits]))
 @test !Unums.is_all_zero(lsb1)
-@test !Unums.is_all_zero([lsb1, nobits])
-@test !Unums.is_all_zero([nobits, msb1])
-@test !Unums.is_all_zero([lsb1, msb1])
-@test !Unums.is_all_zero([nobits, nobits, lsb1, nobits])
+@test !Unums.is_all_zero(Unums.ArrayNum{7}([lsb1, nobits]))
+@test !Unums.is_all_zero(Unums.ArrayNum{7}([nobits, msb1]))
+@test !Unums.is_all_zero(Unums.ArrayNum{7}([lsb1, msb1]))
+@test !Unums.is_all_zero(Unums.ArrayNum{8}([nobits, nobits, lsb1, nobits]))
 
 #is_not_zero
 @test !Unums.is_not_zero(nobits)
-@test !Unums.is_not_zero([nobits, nobits])
-@test !Unums.is_not_zero([nobits, nobits, nobits, nobits])
-@test Unums.is_not_zero(lsb1)
-@test Unums.is_not_zero([lsb1, nobits])
-@test Unums.is_not_zero([nobits, msb1])
-@test Unums.is_not_zero([lsb1, msb1])
-@test Unums.is_not_zero([nobits, nobits, lsb1, nobits])
+@test !Unums.is_not_zero(Unums.ArrayNum{7}([nobits, nobits]))
+@test !Unums.is_not_zero(Unums.ArrayNum{8}([nobits, nobits, nobits, nobits]))
+@test  Unums.is_not_zero(lsb1)
+@test  Unums.is_not_zero(Unums.ArrayNum{7}([lsb1, nobits]))
+@test  Unums.is_not_zero(Unums.ArrayNum{7}([nobits, msb1]))
+@test  Unums.is_not_zero(Unums.ArrayNum{7}([lsb1, msb1]))
+@test  Unums.is_not_zero(Unums.ArrayNum{8}([nobits, nobits, lsb1, nobits]))
 
+#=
 #is_top
 @test Unums.is_top(msb1)
 @test Unums.is_top([msb1, nobits])
@@ -187,3 +195,6 @@ t64 = 0x8000_0000_0000_0000
 @test Unums.__allones_for_length([f64, t64],                             UInt16(64))
 @test Unums.__allones_for_length([f64, 0xC000_0000_0000_0000],           UInt16(65))
 @test Unums.__allones_for_length([f64, f64, 0xC000_0000_0000_0000, z64], UInt16(129))
+=#
+
+@test implementation_incomplete
