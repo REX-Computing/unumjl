@@ -18,6 +18,9 @@ function __general_unum_checking(ESS, FSS, fsize, esize, flags, fraction, expone
   (esize > _mes) && throw(ArgumentError("esize == $esize > $_mes maximum for ESS == $ESS."))
   _mbe = max_biased_exponent(esize)
   (exponent > _mbe) && throw(ArgumentError("exponent == $exponent > $_mbs maximum for esize == $esize."))
+  #check to see that the fraction contents match.
+  (FSS < 7) && (!isa(fraction, Uint64)) && throw(ArgumentError("FSS == $FSS requires a Uint64 fraction"))
+  (FSS > 6) && (!isa(fraction, I64ArrayNum{FSS})) && throw(ArgumentError("FSS == $FSS requires a I64ArrayNum{$FSS} fraction"))
   nothing
 end
 
@@ -47,7 +50,7 @@ type UnumLarge{ESS, FSS} <: Unum{ESS, FSS}
   fsize::UInt16
   esize::UInt16
   flags::UInt16
-  fraction::Array{UInt64}
+  fraction::I64ArrayNum{FSS}
   exponent::UInt64
   @dev_check ESS FSS function UnumLarge(fsize, esize, flags, fraction, exponent)
     new(fsize, esize, flags, fraction, exponent)
@@ -73,7 +76,7 @@ function call{ESS, FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, fla
   UnumSmall{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
 
-function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::Array{UInt64}, exponent::UInt64)
+function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::I64ArrayNum{FSS}, exponent::UInt64)
   (ESS > 6) && throw(ArgumentError("ESS = $ESS > 6 currently not allowed."))
   (FSS > 11) && throw(ArgumentError("FSS = $FSS > 11 currently not allowed"))
   (FSS < 7) && throw(ArgumentError("FSS = $FSS < 7 should be passed a single Uint64"))
