@@ -4,7 +4,14 @@
 
 #the unum type is an abstract type.  We'll be overloading the call function later
 #so we can do "pseudo-constructions" on this type.
+doc"""
+`Unum{ESS,FSS}` creates a Unum with esizesize ESS and fsizesize FSS.
 
+NB:  Internally this may cast to a different Unum type (UnumLarge or UnumSmall)
+for performance purposes.  The Unum{ESS,FSS}(...) constructor may be unsafe and
+for safety-critical purposes, the corresponding unum(...) constructors or the
+\@unum macro is recommended.
+"""
 abstract Unum{ESS, FSS} <: Utype
 export Unum
 
@@ -78,13 +85,20 @@ end
 
 function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::I64ArrayNum{FSS}, exponent::UInt64)
   (ESS > 6) && throw(ArgumentError("ESS = $ESS > 6 currently not allowed."))
+  UnumLarge{ESS,FSS}(fsize, esize, flags, fraction, exponent)
+end
+
+#for convenience we can also call a big unum with an
+function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::Array{UInt64, 1}, exponent::UInt64)
+  (ESS > 6) && throw(ArgumentError("ESS = $ESS > 6 currently not allowed."))
   (FSS > 11) && throw(ArgumentError("FSS = $FSS > 11 currently not allowed"))
   (FSS < 7) && throw(ArgumentError("FSS = $FSS < 7 should be passed a single Uint64"))
   #calculate the number of cells that fraction will have.
   frac_length = length(fraction)
   need_length = 1 << (FSS - 6)
   (frac_length < need_length) && throw(ArgumentError("insufficient array elements to create unum with desired FSS ($FSS requires $need_length > $frac_length)"))
-  UnumLarge{ESS,FSS}(fsize, esize, flags, fraction, exponent)
+  #pass this through an intermediate Int64Array number constructor.
+  UnumLarge{ESS,FSS}(fsize, esize, flags, I64ArrayNum{FSS}(fraction), exponent)
 end
 
 #the "unum" constructor is a safe constructor that always checks if parameters are

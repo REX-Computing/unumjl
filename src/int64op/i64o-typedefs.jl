@@ -20,7 +20,7 @@ const f64 = 0xFFFF_FFFF_FFFF_FFFF               #full bits
 
 __cell_length(FSS) = 1 << (FSS - 6)
 
-__check_I64ArrayNum(FSS, a::Array{UInt64,1})
+function __check_I64ArrayNum(FSS, a::Array{UInt64,1})
   FSS < 7 && throw(ArgumentError("invalid FSS == $FSS < 7"))
   _al = __cell_length(FSS)
   length(a) != _al && throw(ArgumentError("invalid array length, should be $_al != $(length(a))"))

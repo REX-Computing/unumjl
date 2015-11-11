@@ -1,9 +1,9 @@
 #i64o-constants.jl
 
 #various superint constants and ways of generating them
-zero{FSS}(::Type{I64Array{FSS}}) = I64Array{FSS}(zeros(UInt64, __cell_length(FSS)))
+Base.zero{FSS}(::Type{I64Array{FSS}}) = I64Array{FSS}(zeros(UInt64, __cell_length(FSS)))
 #zeroing this out is generated code.
-@generated function zero{FSS}(a::Type{I64Array{FSS}})
+@generated function Base.zero{FSS}(a::Type{I64Array{FSS}})
   l = __cell_length(FSS)
   code = :()
   for idx = 1:l
@@ -12,7 +12,7 @@ zero{FSS}(::Type{I64Array{FSS}}) = I64Array{FSS}(zeros(UInt64, __cell_length(FSS
   return code
 end
 
-@generated function one{FSS}(::Type{I64Array{FSS}})
+@generated function Base.one{FSS}(::Type{I64Array{FSS}})
   l = __cell_length(FSS)
   quote
     arr = zeros(UInt64, $l))
@@ -20,7 +20,8 @@ end
     arr
   end
 end
-@generated function one{FSS}(a::Type{I64Array{FSS}})
+
+@generated function Base.one{FSS}(a::Type{I64Array{FSS}})
   l = __cell_length(FSS)
   code = :()
   for idx = 1:(l-1)
@@ -45,8 +46,8 @@ end
   end
   :($code, @inbounds a[1] = t64)
 end
-
-
+export top
+#=
 #Generates a single UInt64 array that is all zeros except for a single bit
 #flipped, which is the n'th bit from the msb, 0-indexed.
 function __bit_from_top(n::Int, l::Int)
@@ -62,3 +63,4 @@ function __bit_from_top(n::Int, l::Int)
   #return the result
   res
 end
+=#
