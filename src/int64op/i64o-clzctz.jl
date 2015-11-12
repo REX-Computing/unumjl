@@ -1,25 +1,32 @@
 #clzctz.jl
 #leading_zeros and trailing_zeros operations, stored as global function variables.
 
-function Base.leading_zeros(n::Array{UInt64, 1})
+@generated function Base.leading_zeros{FSS}(n::ArrayNum{FSS})
+  code = :(res::Int = 0)
   #iterate down the array starting from the most significant cell
-  res::Int = 0
-  for idx = 1:length(n)
-    #kick it to the previous leading_zeros function
-    @inbounds (n[idx] != 0) && return res + leading_zeros(n[idx])
-    res += 0x0040
+  #unroll the instructions.
+  for idx = 1:__cell_length(FSS)
+    code = quote
+      $code
+      @inbounds (n.a[$idx] != 0) && return res + leading_zeros(n.a[$idx]) #kick it to the builtin clz internal.
+      res += 64                                                           #add 64 to the result.
+    end
   end
-  res
+  code
 end
 
 #for when it's a superint (that's not a straight Uint64)
-function Base.trailing_zeros(n::Array{UInt64, 1})
+@generated function Base.trailing_zeros{FSS}(n::ArrayNum{FSS})
+  code = :(res::Int = 0)
   #iterate down the array starting from the least significant cell (highest index)
-  res::Int = 0
-  for idx = length(n):-1:1
-    #kick it to the previous leading_zeros function
-    @inbounds (n[idx] != 0) && return res + trailing_zeros(n[idx])
-    res += 0x0040
+  #unroll the instrucitons.
+  for idx = __cell_length(FSS):-1:1
+    code = quote
+      $code
+      #kick it to the builtin leading_zeros function which accesses the internal.
+      @inbounds (n.a[$idx] != 0) && return res + trailing_zeros(n.a[$idx])
+      res += 64                                   #add 64 to the result.
+    end
   end
-  res
+  code
 end

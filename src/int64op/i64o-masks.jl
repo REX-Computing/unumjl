@@ -2,46 +2,29 @@
 
 #masking and related operations on superints.
 
-#generates a mask of a certain number of bits on the right, or left if negative
-function mask(bits::Int)
-  if bits >= 0
-    (bits == 64) ? -one(UInt64) : UInt64((1 << bits) - 1)
-  else
-    UInt64(~mask(64 + bits))
-  end
+#generates top and bottom masks corresponding to a certain fsize
+function mask_top(fsize::UInt16)
+  reinterpret(UInt64, -9223372036854775808 >> fsize)
+end
+
+function mask_bot(fsize::UInt16)
+  ~reinterpret(UInt64, -9223372036854775808 >> fsize)
 end
 
 #fill x least significant bits with ones.  Negative numbers fill most sig. bits
 #assume there is one cell, if no value has been passed.
-function fillbits(n::Int, cells::Int = 1)
-  #kick it to the mask function if there's only one cell.
-  (cells == 1) && return mask(n)
-
-  #allocate our filling mask.
-  res = zeros(UInt64, cells)
-  #generate the cells.
-  if n == ((cells << 6)) || (-n == (cells << 6))
-    #check to see if we're asking to fill the entire set of cells
-    for idx = 1:cells; res[idx] = f64; end
-  elseif n == 0
-    #we don't have to fill up anything.
-    nothing
-  else
-    #first assign the border cell.
-    bordercell::Int = n < 0 ? (abs(n) >> 6 + 1) : cells - (n >> 6)
-    #cells filled from the right to the left
-    for idx = 1:cells
-      if idx < bordercell
-        #the lower indices are populated with zeros if we're filling from lsb.
-        res[idx] = n > 0 ? z64 : f64
-      elseif idx == bordercell
-        #easily gets passed to mask.
-        res[idx] = mask(n % 64)
-      else
-        #the higher indices are populated with ones if we're filling from msb.
-        res[idx] = n > 0 ? f64 : z64
-      end
-    end
+#these functions are generated such that we have a switch-less design.
+@generated function mask_top!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
+  code = :( middle_cell = div(fsize, 0x0040) + 1 )
+  for idx = 1:__cell_length(FSS)
+    code = :($code; @inbounds n.a[$idx] = $idx < middle_cell ? t64 : ($idx > middle_cell ? z64 : mask_top(fsize % 0x0040)))
   end
-  res
+  :($code; nothing)
+end
+@generated function mask_bot!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
+  code = :( middle_cell = div(fsize, 0x0040) + 1 )
+  for idx = 1:__cell_length(FSS)
+    code = :($code; @inbounds n.a[$idx] = $idx < middle_cell ? z64 : ($idx > middle_cell ? t64 : mask_bot(fsize % 0x0040)))
+  end
+  :($code; nothing)
 end

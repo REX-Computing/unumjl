@@ -38,9 +38,9 @@ one at the Unum level.
 """
 is_top(a::UInt64) = (a == t64)
 @generated function is_top{FSS}(n::ArrayNum{FSS})
-  code = :((n.a[1] != t64) && return false; accum = zero(UInt64))
-  for idx = 2:__cell_length{FSS}
-    code = :($code; @inbounds accum |= n.a[idx])
+  code = :(accum = (n.a[1] $ t64))
+  for idx = 2:__cell_length(FSS)
+    code = :($code; @inbounds accum |= n.a[$idx])
   end
   :($code; accum == 0)
 end
@@ -52,9 +52,9 @@ the subnormal one at the Unum level.
 """
 is_not_top(a::UInt64) = (a != t64)
 @generated function is_not_top{FSS}(n::ArrayNum{FSS})
-  code = :((n.a[1] != t64) && return true; accum = zero(UInt64))
-  for idx = 2:__cell_length{FSS}
-    code = :($code; @inbounds accum |= n.a[idx])
+  code = :(accum = (n.a[1] $ t64))
+  for idx = 2:__cell_length(FSS)
+    code = :($code; @inbounds accum |= n.a[$idx])
   end
   :($code; accum != 0)
 end

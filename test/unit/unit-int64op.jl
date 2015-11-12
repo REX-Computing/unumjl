@@ -88,7 +88,7 @@ t64 = 0x8000_0000_0000_0000
 @test Unums.is_not_top(Unums.ArrayNum{7}([nobits, msb1]))
 @test Unums.is_not_top(Unums.ArrayNum{8}([msb1, nobits, nobits, msb1]))
 
-#=
+
 ################################################################################
 ## CLZ AND CTZ
 
@@ -98,22 +98,22 @@ t64 = 0x8000_0000_0000_0000
 @test leading_zeros(msb8) == 0
 @test leading_zeros(lsb6) == 58
 @test leading_zeros(UInt64(0b0001111000)) == 57
-@test leading_zeros([nobits, 0x00FF_0000_0000_0000]) == 72
-@test leading_zeros([0x0000_0000_0000_F00F, nobits]) == 48
-@test leading_zeros([nobits, nobits]) == 128
+@test leading_zeros(Unums.ArrayNum{7}([nobits, 0x00FF_0000_0000_0000])) == 72
+@test leading_zeros(Unums.ArrayNum{7}([0x0000_0000_0000_F00F, nobits])) == 48
+@test leading_zeros(Unums.ArrayNum{7}([nobits, nobits])) == 128
 #test trailing_zeros
 @test trailing_zeros(allbits) == 0
 @test trailing_zeros(nobits) == 64
 @test trailing_zeros(msb8) == 56
 @test trailing_zeros(lsb6) == 0
 @test trailing_zeros(UInt64(0b0001111000)) == 3
-@test trailing_zeros([nobits, 0x00FF_0000_0000_0000]) == 48
-@test trailing_zeros([0x0000_0000_0000_F00F, nobits]) == 64
-@test trailing_zeros([nobits, nobits]) == 128
+@test trailing_zeros(Unums.ArrayNum{7}([nobits, 0x00FF_0000_0000_0000])) == 48
+@test trailing_zeros(Unums.ArrayNum{7}([0x0000_0000_0000_F00F, nobits])) == 64
+@test trailing_zeros(Unums.ArrayNum{7}([nobits, nobits])) == 128
 
 ################################################################################
 ## MASKS
-
+#=
 #test mask generation
 @test Unums.mask(1) == lsb1
 @test Unums.mask(-1) == msb1
