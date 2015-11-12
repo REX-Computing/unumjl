@@ -68,27 +68,27 @@ t64 = 0x8000_0000_0000_0000
 @test  Unums.is_not_zero(Unums.ArrayNum{7}([lsb1, msb1]))
 @test  Unums.is_not_zero(Unums.ArrayNum{8}([nobits, nobits, lsb1, nobits]))
 
-#=
 #is_top
 @test Unums.is_top(msb1)
-@test Unums.is_top([msb1, nobits])
-@test Unums.is_top([msb1, nobits, nobits, nobits])
+@test Unums.is_top(Unums.ArrayNum{7}([msb1, nobits]))
+@test Unums.is_top(Unums.ArrayNum{8}([msb1, nobits, nobits, nobits]))
 @test !Unums.is_top(nobits)
 @test !Unums.is_top(msb1 & lsb1)
-@test !Unums.is_top([msb1, lsb1])
-@test !Unums.is_top([nobits, msb1])
-@test !Unums.is_top([msb1, nobits, nobits, msb1])
+@test !Unums.is_top(Unums.ArrayNum{7}([msb1, lsb1]))
+@test !Unums.is_top(Unums.ArrayNum{7}([nobits, msb1]))
+@test !Unums.is_top(Unums.ArrayNum{8}([msb1, nobits, nobits, msb1]))
 
 #is_not_top
 @test !Unums.is_not_top(msb1)
-@test !Unums.is_not_top([msb1, nobits])
-@test !Unums.is_not_top([msb1, nobits, nobits, nobits])
+@test !Unums.is_not_top(Unums.ArrayNum{7}([msb1, nobits]))
+@test !Unums.is_not_top(Unums.ArrayNum{8}([msb1, nobits, nobits, nobits]))
 @test Unums.is_not_top(nobits)
 @test Unums.is_not_top(msb1 & lsb1)
-@test Unums.is_not_top([msb1, lsb1])
-@test Unums.is_not_top([nobits, msb1])
-@test Unums.is_not_top([msb1, nobits, nobits, msb1])
+@test Unums.is_not_top(Unums.ArrayNum{7}([msb1, lsb1]))
+@test Unums.is_not_top(Unums.ArrayNum{7}([nobits, msb1]))
+@test Unums.is_not_top(Unums.ArrayNum{8}([msb1, nobits, nobits, msb1]))
 
+#=
 ################################################################################
 ## CLZ AND CTZ
 
