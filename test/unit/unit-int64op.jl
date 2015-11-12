@@ -113,35 +113,46 @@ t64 = 0x8000_0000_0000_0000
 
 ################################################################################
 ## MASKS
-#=
+
 #test mask generation
-@test Unums.mask(1) == lsb1
-@test Unums.mask(-1) == msb1
-@test Unums.mask(-8) == msb8
-@test Unums.mask(6) == lsb6
-@test Unums.mask(64) == allbits
-@test Unums.mask(-64) == allbits
+@test Unums.mask_top(UInt16(0)) == msb1
+@test Unums.mask_bot(UInt16(62)) == lsb1
+@test Unums.mask_top(UInt16(7)) == msb8
+@test Unums.mask_bot(UInt16(57)) == lsb6
+@test Unums.mask_top(UInt16(63)) == allbits
 
-#test the fillbits machinery.  One cell - should be identical to mask.
-@test Unums.fillbits(0,   1) == nobits
-@test Unums.fillbits(1,   1) == lsb1
-@test Unums.fillbits(-1,  1) == msb1
-@test Unums.fillbits(64,  1) == allbits
-@test Unums.fillbits(-64, 1) == allbits
 #test two cells.
-@test Unums.fillbits(-1,   2) == [msb1, nobits]
-@test Unums.fillbits(1,    2) == [nobits, lsb1]
-@test Unums.fillbits(64,   2) == [nobits, allbits]
-@test Unums.fillbits(-64,  2) == [allbits, nobits]
-@test Unums.fillbits(65,   2) == [lsb1, allbits]
-@test Unums.fillbits(-65,  2) == [allbits, msb1]
-@test Unums.fillbits(0,    2) == [nobits, nobits]
-@test Unums.fillbits(128,  2) == [allbits, allbits]
-@test Unums.fillbits(-128, 2) == [allbits, allbits]
-#test three cells
-@test Unums.fillbits(65,  3) == [nobits, lsb1, allbits]
-@test Unums.fillbits(-65, 3) == [allbits, msb1, nobits]
+twocellint = zero(Unums.ArrayNum{7})
 
+Unums.mask_top!(twocellint, UInt16(0))
+@test twocellint.a == [msb1, nobits]
+Unums.mask_bot!(twocellint, UInt16(126))
+@test twocellint.a == [nobits, lsb1]
+Unums.mask_top!(twocellint, UInt16(63))
+@test twocellint.a == [allbits, nobits]
+Unums.mask_bot!(twocellint, UInt16(63))
+@test twocellint.a == [nobits, allbits]
+Unums.mask_top!(twocellint, UInt16(64))
+@test twocellint.a == [allbits, msb1]
+Unums.mask_bot!(twocellint, UInt16(62))
+@test twocellint.a == [lsb1, allbits]
+Unums.mask_bot!(twocellint, UInt16(127))
+@test twocellint.a == [nobits, nobits]
+Unums.mask_top!(twocellint, UInt16(127))
+@test twocellint.a == [allbits, allbits]
+
+#test four cells
+fourcellint = zero(Unums.ArrayNum{8})
+Unums.mask_top!(fourcellint, UInt16(64))
+@test fourcellint.a == [allbits, msb1, nobits, nobits]
+Unums.mask_bot!(fourcellint, UInt16(190))
+@test fourcellint.a == [nobits, nobits, lsb1, allbits]
+Unums.mask_top!(fourcellint, UInt16(255))
+@test fourcellint.a == [allbits, allbits, allbits, allbits]
+Unums.mask_bot!(fourcellint, UInt16(255))
+@test fourcellint.a == [nobits, nobits, nobits, nobits]
+
+#=
 ################################################################################
 ## SHIFTS
 
