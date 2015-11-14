@@ -3,70 +3,75 @@
 #bitshifting operations on superints
 #iterative leftshift and rightshift operations on Array SuperInts
 
-lsh(a::UInt64, b::Int) = a << b
+lsh(a::UInt64, b::Int64) = a << b
 #destructive version which clobbers the existing verion
-function lsh!(a::Array{UInt64,1},b::Int)
-  #kick it back to right shift if it's negative
-  (b < 0) && (rsh!(a, -b); return)
-  l::Int = length(a)
-  #calculate how many cells apart our two ints shall be.
-  celldiff::Int = b >> 6
-  #calculate how much we have to shift
-  shift::Int = b % 64
-  countershift::Int = 64 - shift
-  #a calculation buffer.
-  calcbuffer::UInt64 = zero(UInt64)
-  ex_idx::Int = 1 + celldiff
+@gen_code function lsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
+  l = __cell_length(FSS)
+  @code quote
+    #kick it back to right shift if it's negative
+    (b < 0) && (rsh!(a, -b); return)
 
-  for idx = 1:l-celldiff
-    calcbuffer = a[ex_idx] << shift
-    a[idx] = calcbuffer
-    #terminating condition is that we've found the end.
-    ex_idx == l && break
-    ex_idx += 1
-    a[idx] |= a[ex_idx] >> countershift
+    #calculate how many cells apart our two ints shall be.
+    celldiff::Int64 = b >> 6
+    #calculate how much we have to shift
+    shift::Int64 = b & 0x0000_0000_0000_003F
+    shift == 0 && @goto cellmove          #skip it, if it's more efficient.
+    c_shift::Int64 = 64 - shift
   end
-  #fill out the last cells as zero.
-  for idx = (1:celldiff)
-    a[l - idx + 1] = zero(UInt64)
+
+  #go ahead and shift all blocks.
+  for idx = 1:l-1
+    @code :(@inbounds a.a[$idx] = (a.a[$idx] << shift) | a.a[$idx + 1] >> c_shift)
   end
-  nothing
-end
-#protective version which doesn't clobber the existing data.
-function lsh(a::Array{UInt64, 1}, b::Int)
-  res = copy(a)
-  lsh!(res, b)
-  res
+
+  @code quote
+    #finish the last block.
+    @inbounds a.a[$l] = a.a[$l] << shift
+    #cut in here if we skipped the cell movement.
+    @label cellmove
+    #move the cells
+    (celldiff == 0) && return
+    splitdex::Int64 = $l - celldiff
+  end
+
+  for idx = 1:l
+    @code :(@inbounds a.a[$idx] = ($idx <= splitdex) ? a.a[$idx + celldiff] : 0)
+  end
 end
 
 rsh(a::UInt64, b::Int) = a >> b
-function rsh!(a::Array{UInt64, 1}, b::Int)
-  #kick it back to left shift in case we input a negative number.
-  (b < 0) && (lsh!(a, -b); return)
-  l::Int = length(a)
-  #calculate how many cells apart our two ints shall be.
-  celldiff::Int = b >> 6
-  #calculate how much we have to shift
-  shift::Int = b % 64
-  countershift::Int = 64 - shift
-  #a calculation buffer.
-  calcbuffer::UInt64 = zero(UInt64)
-  ex_idx = l - celldiff
+@gen_code function rsh!{FSS}(a::ArrayNum{FSS}, b::Int)
+  l = __cell_length(FSS)
+  @code quote
+    #kick it back to right shift if it's negative
+    (b < 0) && (rsh!(a, -b); return)
+
+    #calculate how many cells apart our two ints shall be.
+    celldiff::Int64 = b >> 6
+    #calculate how much we have to shift
+    shift::Int64 = b & 0x0000_0000_0000_003F
+    shift == 0 && @goto cellmove                #consider this may be skippable.
+    c_shift::Int64 = 64 - shift
+  end
+
+  #go ahead and shift all blocks.
+  for idx = l:-1:2
+    @code :(@inbounds a.a[$idx] = (a.a[$idx] >> shift) | a.a[$idx - 1] << c_shift)
+  end
+
+  @code quote
+    #finish the last block.
+    @inbounds a.a[1] = a.a[1] >> shift
+    #cut in here if we skipped the cell movement.
+    @label cellmove
+    #move the cells
+    (celldiff == 0) && return
+    splitdex::Int64 = celldiff
+  end
 
   for idx = l:-1:1
-    calcbuffer = a[ex_idx] >> shift
-    a[idx] = calcbuffer
-    #terminating condition is that we've found the end.
-    (ex_idx == 1) && break
-    ex_idx -= 1
-    a[idx] |= a[ex_idx] << countershift
+    @code :(@inbounds a.a[$idx] = ($idx > splitdex) ? a.a[$idx - celldiff] : 0)
   end
-
-  for idx = 1:(celldiff)
-    a[idx] = zero(UInt64)
-  end
-
-  nothing
 end
 
 function rsh(a::Array{UInt64}, b::Int)

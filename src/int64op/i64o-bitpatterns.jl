@@ -10,12 +10,12 @@ doc"""
 are zero.  Used for checking zero at the Unum level.
 """
 is_all_zero(n::UInt64) = (n == 0)
-@generated function is_all_zero{FSS}(n::ArrayNum{FSS})
-  code = :(accum = zero(UInt64))              #set an accumulator to zero.
+@gen_code function is_all_zero{FSS}(n::ArrayNum{FSS})
+  @code :(accum = zero(UInt64))              #set an accumulator to zero.
   for idx = 1:__cell_length(FSS)
-    code = :($code; @inbounds accum |= n.a[$idx])   #accumulate bits.
+    @code :(@inbounds accum |= n.a[$idx])   #accumulate bits.
   end
-  :($code; accum == 0)                         #check to see if the accumulated quantity is zero.
+  @code :(accum == 0)                         #check to see if the accumulated quantity is zero.
 end
 
 doc"""
@@ -23,12 +23,12 @@ doc"""
 are one.  Used for checking not_zero at the Unum level.
 """
 is_not_zero(n::UInt64) = (n != 0)
-@generated function is_not_zero{FSS}(n::ArrayNum{FSS})
-  code = :(accum = zero(UInt64))
+@gen_code function is_not_zero{FSS}(n::ArrayNum{FSS})
+  @code :(accum = zero(UInt64))
   for idx = 1:__cell_length(FSS)
-    code = :($code; @inbounds accum |= n.a[$idx])
+    @code :(@inbounds accum |= n.a[$idx])
   end
-  :($code; accum != 0)
+  @code :(accum != 0)
 end
 
 doc"""
@@ -37,12 +37,12 @@ doc"""
 one at the Unum level.
 """
 is_top(a::UInt64) = (a == t64)
-@generated function is_top{FSS}(n::ArrayNum{FSS})
-  code = :(accum = (n.a[1] $ t64))
+@gen_code function is_top{FSS}(n::ArrayNum{FSS})
+  @code :(accum = (n.a[1] $ t64))
   for idx = 2:__cell_length(FSS)
-    code = :($code; @inbounds accum |= n.a[$idx])
+    @code :(@inbounds accum |= n.a[$idx])
   end
-  :($code; accum == 0)
+  @code :(accum == 0)
 end
 
 doc"""
@@ -51,10 +51,10 @@ doc"""
 the subnormal one at the Unum level.
 """
 is_not_top(a::UInt64) = (a != t64)
-@generated function is_not_top{FSS}(n::ArrayNum{FSS})
-  code = :(accum = (n.a[1] $ t64))
+@gen_code function is_not_top{FSS}(n::ArrayNum{FSS})
+  @code :(accum = (n.a[1] $ t64))
   for idx = 2:__cell_length(FSS)
-    code = :($code; @inbounds accum |= n.a[$idx])
+    @code :(@inbounds accum |= n.a[$idx])
   end
-  :($code; accum != 0)
+  @code :(accum != 0)
 end

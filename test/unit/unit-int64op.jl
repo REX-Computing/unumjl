@@ -152,27 +152,53 @@ Unums.mask_top!(fourcellint, UInt16(255))
 Unums.mask_bot!(fourcellint, UInt16(255))
 @test fourcellint.a == [nobits, nobits, nobits, nobits]
 
-#=
 ################################################################################
 ## SHIFTS
 
 #test leftshifts and rightshifts on multi-arrays
 @test Unums.lsh(allbits, 4) == 0xFFFF_FFFF_FFFF_FFF0
 @test Unums.rsh(allbits, 4) == 0x0FFF_FFFF_FFFF_FFFF
-@test Unums.lsh([allbits, allbits],4) == [allbits, 0xFFFF_FFFF_FFFF_FFF0]
-@test Unums.rsh([allbits, allbits],4) == [0x0FFF_FFFF_FFFF_FFFF, allbits]
+twocellint = Unums.ArrayNum{7}([allbits, allbits])
+Unums.lsh!(twocellint,4)
+@test twocellint.a == [allbits, 0xFFFF_FFFF_FFFF_FFF0]
+
+twocellint.a = [allbits, allbits]
+Unums.rsh!(twocellint,4)
+@test twocellint.a == [0x0FFF_FFFF_FFFF_FFFF, allbits]
+
+
 #test really long distance leftshifts and rightshifts
-@test Unums.lsh([allbits, allbits, allbits, allbits], 68) == [allbits, allbits, 0xFFFF_FFFF_FFFF_FFF0, nobits]
-@test Unums.rsh([allbits, allbits, allbits, allbits], 68) == [nobits, 0x0FFF_FFFF_FFFF_FFFF, allbits, allbits]
+const allfour = [allbits, allbits, allbits, allbits]
+const texture = [0x1234_5678_9ABC_DEF1, 0x2345_6789_ABCD_EF12, 0x3456_789A_BCDE_F123, 0x4567_89AB_CDEF_1234]
+
+fourcellint = Unums.ArrayNum{8}(copy(allfour))
+Unums.lsh!(fourcellint, 68)
+@test fourcellint.a == [allbits, allbits, 0xFFFF_FFFF_FFFF_FFF0, nobits]
+
+fourcellint.a = copy(allfour)
+Unums.rsh!(fourcellint, 68)
+@test fourcellint.a == [nobits, 0x0FFF_FFFF_FFFF_FFFF, allbits, allbits]
+
 #textured shifts to make sure things are actually ok.
-@test Unums.lsh([0x1234_5678_9ABC_DEF0, 0x2345_6789_ABCD_EF01, 0x3456_789A_BCDE_F012], 4) ==  [0x234_5678_9ABC_DEF02, 0x345_6789_ABCD_EF013, 0x456_789A_BCDE_F0120]
-@test Unums.lsh([0x1234_5678_9ABC_DEF0, 0x2345_6789_ABCD_EF01, 0x3456_789A_BCDE_F012], 68) == [0x345_6789_ABCD_EF013, 0x456_789A_BCDE_F0120, nobits]
-@test Unums.rsh([0x1234_5678_9ABC_DEF0, 0x2345_6789_ABCD_EF01, 0x3456_789A_BCDE_F012], 4) ==  [0x01234_5678_9ABC_DEF, 0x02345_6789_ABCD_EF0, 0x13456_789A_BCDE_F01]
-@test Unums.rsh([0x1234_5678_9ABC_DEF0, 0x2345_6789_ABCD_EF01, 0x3456_789A_BCDE_F012], 68) == [nobits, 0x01234_5678_9ABC_DEF, 0x02345_6789_ABCD_EF0]
+fourcellint.a = copy(texture)
+Unums.lsh!(fourcellint, 4)
+@test fourcellint.a ==  [0x2345_6789_ABCD_EF12, 0x3456_789A_BCDE_F123, 0x4567_89AB_CDEF_1234, 0x5678_9ABC_DEF1_2340]
+
+fourcellint.a = copy(texture)
+Unums.lsh!(fourcellint, 68)
+@test fourcellint.a == [0x3456_789A_BCDE_F123, 0x4567_89AB_CDEF_1234, 0x5678_9ABC_DEF1_2340, nobits]
+
+fourcellint.a = copy(texture)
+Unums.rsh!(fourcellint, 4)
+@test fourcellint.a == [0x0123_4567_89AB_CDEF, 0x1234_5678_9ABC_DEF1, 0x2345_6789_ABCD_EF12, 0x3456_789A_BCDE_F123]
+
+fourcellint.a = copy(texture)
+Unums.rsh!(fourcellint, 68)
+@test fourcellint.a == [nobits, 0x0123_4567_89AB_CDEF, 0x1234_5678_9ABC_DEF1, 0x2345_6789_ABCD_EF12]
 
 ################################################################################
 ## COMPARISON
-
+#=
 @test [allbits, 0x0000_0000_0000_0001] > [allbits, nobits]
 @test [0x0000_0000_0000_0001, nobits] > [nobits, allbits]
 @test [allbits, nobits] < [allbits, 0x0000_0000_0000_0001]

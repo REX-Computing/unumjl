@@ -12,7 +12,7 @@ sets an `ArrayNum` to zero.
   code = :()
   #unroll the loop that fills the contents of the a with zero.
   for idx = 1:l
-    @inbounds code = :($code; a.a[$idx] = 0)
+    code ⊣ :(@inbounds a.a[$idx] = 0)
   end
   code
 end

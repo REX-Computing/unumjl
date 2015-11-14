@@ -11,6 +11,9 @@ module Unums
 abstract Utype <: Real
 export Utype
 
+#various tools to help coding.
+include("./tools.jl")
+
 #development safety option scheme
 include("./options/devsafety.jl")
 
