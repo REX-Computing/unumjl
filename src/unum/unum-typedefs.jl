@@ -24,13 +24,17 @@ function __general_unum_check(ESS, FSS, fsize, esize, flags, fraction, exponent)
   _mes = max_esize(ESS)
   (esize > _mes) && throw(ArgumentError("esize == $esize > $_mes maximum for ESS == $ESS."))
   _mbe = max_biased_exponent(esize)
-  (exponent > _mbe) && throw(ArgumentError("exponent == $exponent > $_mbs maximum for esize == $esize."))
+  (exponent > _mbe) && throw(ArgumentError("exponent == $exponent > $_mbe maximum for esize == $esize."))
   #check to see that the fraction contents match.
   (FSS < 7) && (!isa(fraction, UInt64)) && throw(ArgumentError("FSS == $FSS requires a Uint64 fraction"))
   (FSS > 6) && (!isa(fraction, ArrayNum{FSS})) && throw(ArgumentError("FSS == $FSS requires a ArrayNum{$FSS} fraction"))
   nothing
 end
 
+doc"""
+`Unums.UnumSmall{ESS,FSS}` is the internal type for Unums with FSS < 7.  These
+numbers require a single unsigned 64-bit integer to store their fractions.
+"""
 type UnumSmall{ESS, FSS} <: Unum{ESS, FSS}
   fsize::UInt16
   esize::UInt16
@@ -53,6 +57,10 @@ function __check_UnumSmall(ESS, FSS, fsize, esize, flags, fraction, exponent)
   nothing
 end
 
+doc"""
+`Unums.UnumLarge{ESS,FSS}` is the internal type for Unums with FSS > 6.  These
+numbers require an array of 64-bit integers to store their fractions.
+"""
 type UnumLarge{ESS, FSS} <: Unum{ESS, FSS}
   fsize::UInt16
   esize::UInt16
@@ -101,10 +109,16 @@ function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, fla
   UnumLarge{ESS,FSS}(fsize, esize, flags, ArrayNum{FSS}(fraction), exponent)
 end
 
-#the "unum" constructor is a safe constructor that always checks if parameters are
-#compliant. note that the first argument to the is pseudo-constructor must be a type value
-#that relays the environment signature for the desired unum.
+doc"""
+`unum(Unum{ESS,FSS}, fsize, esize, flags, fraction, exponent)` is a safe
+constructor that always checks the parameters to make sure they are not invalid.
+The first argument to this pseudo-constructor must be a Unum type value that
+relays the environment signature to the unum call so that the appropriate unum
+can be made.
 
+note that the `Unum{ESS,FSS}(...)` constuctor only checks for validity when
+developer checking is enabled.
+"""
 function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction, exponent::UInt64)
   #checks to make sure everything is safe.
   __general_unum_check(ESS, FSS, fsize, esize, flags, fraction, exponent)
@@ -129,6 +143,10 @@ unum{ESS,FSS}(x::Unum{ESS,FSS}, subflags::UInt16) = unum(Unum{ESS,FSS}, x.fsize,
 
 #an "easy" constructor which is safe, and takes an unbiased exponent value, and
 #a superint value
+doc"""
+`unum_easy(Unum{ESS,FSS}, flags, fraction, exponent)` is a safe
+constructor that has slightly more human-comprehensible parameters.
+"""
 function unum_easy{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction, exponent::Int)
 
   exponent < min_exponent(ESS) && throw(ArgumentError("exponent $exponent out-of-bounds for ESS $ESS"))
@@ -151,9 +169,8 @@ export unum, unum_easy
 const UNUM_SIGN_MASK = UInt16(0x0002)
 const UNUM_UBIT_MASK = UInt16(0x0001)
 const UNUM_FLAG_MASK = UInt16(0x0003)
-#nb: in the future we may implement g-layer shortcuts:
-#in our implementation, these values are sufficient criteria they describe
-#are true.  If these flags are not set, further checks must be done.
+#nb: in the future we may implement g-layer shortcuts, which allow short-circuiting
+#of type checks.
 const UNUM_NAN__MASK = UInt16(0x8000)
 const UNUM_ZERO_MASK = UInt16(0x4000)
 const UNUM_INF__MASK = UInt16(0x2000)

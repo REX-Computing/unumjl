@@ -111,7 +111,7 @@ Ex. usage:
   4.5(exact) == Unum{4,6}(<insert value here>)
   4.6(exact) == Unum{4,6}(<insert value here>), with a warning.
 """
-type exact <: ubit_coersion_symbol; end
+typealias exact ⇥
 
 doc"""
 `ulp` triggers the generation of a unum, as a part of the conversion, it coerces a
@@ -121,7 +121,7 @@ Ex. usage:
   4.5(ulp) == Unum{4,6}(<insert value here>)
   4.6(ulp) == Unum{4,6}(<insert value here>)
 """
-type ulp <: ubit_coersion_symbol; end
+typealias ulp ⋯
 
 doc"""
 `auto` triggers the generation of a unum with automatic detection of ubit based
@@ -139,10 +139,10 @@ doc"""
 literal with repeating digits
 
 Ex. usage:
-  0.3(repeat{1}) == Unum{4,6}(<insert value here>)
+  0.3(rpt{1}) == Unum{4,6}(<insert value here>)
 """
-type repeat{DIGITS} <: ubit_coersion_symbol; end
-export exact, ulp, auto, repeat, ⇥, ⋯
+type rpt{DIGITS} <: ubit_coersion_symbol; end
+export exact, ulp, auto, rpt, ⇥, ⋯
 
 doc"""
 the `@unum` macro triggers the following float literal to be parsed and interpreted as a
@@ -156,3 +156,25 @@ macro unum(param)
   throw(ArgumentError("the @unum macro must be passed a float literal"))
 end
 export @unum
+
+import Base.*
+function *(x::AbstractFloat, ::Type{⇥})
+  println("creates an exact unum for value $x")
+  nothing
+end
+
+function *(x::AbstractFloat, ::Type{⋯})
+  println("creates an inexact unum for value $x")
+  nothing
+end
+
+function *(x::AbstractFloat, ::Type{auto})
+  println("creates a autodetected unum for value $x")
+  nothing
+end
+
+function *{DIGITS}(x::AbstractFloat, ::Type{rpt{DIGITS}})
+  println("creates a repeating decimal with value $x")
+  nothing
+end
+export *
