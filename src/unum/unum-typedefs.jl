@@ -16,7 +16,7 @@ abstract Unum{ESS, FSS} <: Utype
 export Unum
 
 #general parameter checking for unums.
-function __general_unum_checking(ESS, FSS, fsize, esize, flags, fraction, exponent)
+function __general_unum_check(ESS, FSS, fsize, esize, flags, fraction, exponent)
   (ESS > 6) && throw(ArgumentError("ESS == $ESS > 6 disallowed in current implementation"))
   (FSS > 11) && throw(ArgumentError("FSS == $FSS > 11 disallowed in current implementation"))
   _mfs = max_fsize(FSS)
@@ -26,7 +26,7 @@ function __general_unum_checking(ESS, FSS, fsize, esize, flags, fraction, expone
   _mbe = max_biased_exponent(esize)
   (exponent > _mbe) && throw(ArgumentError("exponent == $exponent > $_mbs maximum for esize == $esize."))
   #check to see that the fraction contents match.
-  (FSS < 7) && (!isa(fraction, Uint64)) && throw(ArgumentError("FSS == $FSS requires a Uint64 fraction"))
+  (FSS < 7) && (!isa(fraction, UInt64)) && throw(ArgumentError("FSS == $FSS requires a Uint64 fraction"))
   (FSS > 6) && (!isa(fraction, ArrayNum{FSS})) && throw(ArgumentError("FSS == $FSS requires a ArrayNum{$FSS} fraction"))
   nothing
 end
@@ -95,7 +95,7 @@ function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, fla
   (FSS < 7) && throw(ArgumentError("FSS = $FSS < 7 should be passed a single Uint64"))
   #calculate the number of cells that fraction will have.
   frac_length = length(fraction)
-  need_length = 1 << (FSS - 6)
+  need_length = __cell_length(FSS)
   (frac_length < need_length) && throw(ArgumentError("insufficient array elements to create unum with desired FSS ($FSS requires $need_length > $frac_length)"))
   #pass this through an intermediate Int64Array number constructor.
   UnumLarge{ESS,FSS}(fsize, esize, flags, ArrayNum{FSS}(fraction), exponent)

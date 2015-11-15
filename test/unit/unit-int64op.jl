@@ -198,12 +198,13 @@ Unums.rsh!(fourcellint, 68)
 
 ################################################################################
 ## COMPARISON
-#=
-@test [allbits, 0x0000_0000_0000_0001] > [allbits, nobits]
-@test [0x0000_0000_0000_0001, nobits] > [nobits, allbits]
-@test [allbits, nobits] < [allbits, 0x0000_0000_0000_0001]
-@test [nobits, allbits] < [0x0000_0000_0000_0001, nobits]
 
+@test Unums.ArrayNum{7}([allbits, 0x0000_0000_0000_0001]) > Unums.ArrayNum{7}([allbits, nobits])
+@test Unums.ArrayNum{7}([0x0000_0000_0000_0001, nobits]) > Unums.ArrayNum{7}([nobits, allbits])
+@test Unums.ArrayNum{7}([allbits, nobits]) < Unums.ArrayNum{7}([allbits, 0x0000_0000_0000_0001])
+@test Unums.ArrayNum{7}([nobits, allbits]) < Unums.ArrayNum{7}([0x0000_0000_0000_0001, nobits])
+
+#=
 ################################################################################
 ## UTILITIES
 
@@ -233,5 +234,3 @@ Unums.rsh!(fourcellint, 68)
 @test Unums.__allones_for_length([f64, 0xC000_0000_0000_0000],           UInt16(65))
 @test Unums.__allones_for_length([f64, f64, 0xC000_0000_0000_0000, z64], UInt16(129))
 =#
-
-@test implementation_incomplete

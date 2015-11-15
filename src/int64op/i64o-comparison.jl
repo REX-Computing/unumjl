@@ -9,20 +9,32 @@
 
 import Base.<
 import Base.>
-function <(a::Array{UInt64,1}, b::Array{UInt64,1})
-  for i = 1:length(a)
-    @inbounds (a[i] > b[i]) && return false
-    @inbounds (a[i] < b[i]) && return true
+@gen_code function <{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
+  @code quote
+    res::Bool = false
+    alive::Bool = true
   end
-  return false
+  for idx = 1:__cell_length(FSS)
+    @code quote
+      @inbounds res = res | (alive & (a.a[$idx] < b.a[$idx]))
+      @inbounds alive = alive & (b.a[$idx] == a.a[$idx])
+    end
+  end
+  @code :(res)
 end
 
 #the greater than function operates the same way with antisymmetrical relation
 #checks.
-function >(a::Array{UInt64,1}, b::Array{UInt64,1})
-  for i=1:length(a)
-    @inbounds (a[i] < b[i]) && return false
-    @inbounds (a[i] > b[i]) && return true
+@gen_code function >{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
+  @code quote
+    res::Bool = false
+    alive::Bool = true
   end
-  return false
+  for idx = 1:__cell_length(FSS)
+    @code quote
+      @inbounds res = res | (alive & (a.a[$idx] > b.a[$idx]))
+      @inbounds alive = alive & (a.a[$idx] == b.a[$idx])
+    end
+  end
+  @code :(res)
 end

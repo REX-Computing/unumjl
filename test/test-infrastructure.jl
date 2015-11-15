@@ -11,7 +11,7 @@ include("./unit/unit-int64op.jl")
 #include("./unit/unit-helpers.jl")
 
 #type constructor testing
-#include("./unit/unit-unum.jl")
+include("./unit/unit-unum.jl")
 #include("./unit/unit-ubound.jl")
 #=
 #testing things that get done to unums

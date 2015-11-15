@@ -22,7 +22,7 @@ include("./options/devsafety.jl")
 #type definitions for int64 array.
 include("./int64op/i64o-typedefs.jl")
 #type definition of unum.
-#include("./unum/unum-typedefs.jl")
+include("./unum/unum-typedefs.jl")
 #type definition of ubound
 #include("./ubound/ubound-typedefs.jl")
 
@@ -31,7 +31,7 @@ include("./int64op/i64o-typedefs.jl")
 #implementation of int64 and int64 array utility code.
 include("./int64op/int64ops.jl")
 #implementation of unums.
-#include("./unum/unum.jl")
+include("./unum/unum.jl")
 #ubound-related code
 #include("./ubound/ubound.jl")
 

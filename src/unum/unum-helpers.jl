@@ -4,7 +4,7 @@
 
 ################################################################################
 # Safety checking
-
+#=
 function __check_unum_param(ESS::Int, FSS::Int, fsize::UInt16, esize::UInt16, fraction, exponent::UInt64)
   fsize < (1 << FSS)              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
   esize < (1 << ESS)              || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
@@ -138,6 +138,7 @@ end
 function __set_lsb(a::Array{UInt64, 1}, fss::Int)
     return a | [zeros(UInt64, __frac_cells(fss) - 1); o64]
 end
+=#
 
 ################################################################################
 # EXPONENT ENCODING AND DECODING
@@ -159,8 +160,8 @@ max_esize(ESS) = UInt16((1 << ESS) - 1)
 #note the difference here.  ESS values are determined by julia's type system
 #and therefore take the value Int.  esize values are set by the type definition
 #and are unsigned 16-bit integers always.
-max_biased_exponent(ESS::Int) = (1 << (1 << ESS)) - 1)
-max_biased_exponent(esize::UInt16) = 1 << ESS
+max_biased_exponent(ESS::Int) = (1 << (1 << ESS)) - 1
+max_biased_exponent(esize::UInt16) = 1 << esize
 
 #note that these are the unbiased exponent values.
 max_exponent(ESS) = 1 << (1 << ESS - 1)
