@@ -31,13 +31,13 @@
 #test that the fraction error gets thrown
 @test_throws ArgumentError unum(Unum{0,0}, z16, z16, z16, [z64, z64], z64)
 
-#=
-#test that the constructor correctly engages frac_trim
+#test that the constructor correctly trims fractions that are too long.
 walpiri_half = unum(Unum{0,0}, z16, z16, z16, f64, z64)
 @test walpiri_half.fraction == t64
 @test walpiri_half.fsize == 0
 @test walpiri_half.flags & Unums.UNUM_UBIT_MASK == Unums.UNUM_UBIT_MASK
 
+#=
 #test the unum_easy constructor
 easy_walpiri_two = unum_easy(Unum{0,0}, z16, z64, o64)
 @test easy_walpiri_two.fraction == z64

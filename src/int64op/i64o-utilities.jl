@@ -2,10 +2,13 @@
 
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
-__minimum_data_width(n::Array{UInt64,1}) = UInt16(max(0, length(n) << 6 - trailing_zeros(n) - 1))
+@gen_code function __minimum_data_width{FSS}(n::ArrayNum{FSS})
+  l = __cell_length(FSS) << 6 - 1
+  @code :(UInt16(max(0, $l - trailing_zeros(n))))
+end
   #explanation of formula:
   #length(a) << 6:            total bits in the array representation
-  #-trailing_zeros(f):                   how many zeros are at the end, we can trim those
+  #-trailing_zeros(f):        how many zeros are at the end, we can trim those
   #-1:                        the bit representation (1000...0000) = "1" has
   #                           width 0 as per our definition.
   #max(0, ...):               bit representation of (0000...0000) = "0" also
@@ -14,32 +17,40 @@ __minimum_data_width(n::Array{UInt64,1}) = UInt16(max(0, length(n) << 6 - traili
 #this is a better formula for a single-width unsigned integer representation.
 __minimum_data_width(n::UInt64) = UInt16(max(0, 63 - trailing_zeros(n)))
 
-#__allones_for length
-#checks to see if the object is all ones for the appropriate length.
-#keep in mind that zero passed length value is equivalent to one digit.
-#this is useful for checking if we're very close to one.
+#=
 
-#nb:  -9223372036854775808 is the magic int64 version of 0x8000_0000_0000_0000 and
-#we are using the arithmetic rightshift which drags leading ones aloong.
-__allones_for_length(n::UInt64, m::UInt16) = (n == reinterpret(UInt64, -9223372036854775808 >> m))
+doc"""
+`__allones_for_fsize` checks to see if the object is all ones for a given
+fsize value.  keep in mind that zero passed length value is equivalent to one
+digit.  This is useful for checking if fractions have an effective value close
+to 1 or 2 (depending on subnormality).  Note: for array ints, the expected
+situation is to pass the array.
+"""
+function __allones_for_fsize(n::UInt64, fsize::UInt16)
+  _masktop = mask_top(fsize)
+  (n & _masktop) == _masktop
+end
 
-function __allones_for_length(n::Array{UInt64,1}, m::UInt16)
-  #first, calculate where our dividing line will fall.
-  dividingcell::Int = div(m, 64) + 1
-  for idx = 1:length(n)
-    #trichotomy relative to the dividing line.
-    if idx < dividingcell
-      #if it's before, it should be entirely ones (f64)
-      (n[idx] != f64) && return false
-    elseif idx == dividingcell
-      #if it's on the dividing line, measure what the count will be, we can
-      #ping back to the UInt64 version, keeping in mind that zero is strange.
-      #remember to decrement by one first.
-      (__allones_for_length(n[idx], UInt16(m % 64))) || return false
-    else
-      #everything coming after the dividing line should be zeros.
-      (n[idx] != z64) && return false
+@gen_code function __allones_for_fsize{cells}(n::Array{UInt64,1}, fsize::UInt16, ::Val{cells})
+  @code quote
+    dividingcell::Int = div(fsize, 64) + 1
+    sidebits::UInt64 = fsize % 64   #how many bits will be left over in the critical cell.
+  end
+
+  for idx = 1:cells
+    @code quote
+      (dividingcell == 1) && return __allones_for_fsize(n[$idx])
+      #dividing line.
+      if $idx < dividingcell
+        #if it's before, it should be entirely ones (f64)
+        (n[$idx] != f64) && return false
+      elseif $idx == dividingcell
+        #if it's on the dividing line, measure what the count will be, we can
+        #ping back to the UInt64 version, keeping in mind that zero is strange.
+        (sidebits == 0) && return true
+        return __allones_for_fsize(n[$idx], sidebits)
+      end
     end
   end
-  return true
 end
+=#

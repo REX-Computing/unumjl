@@ -23,6 +23,14 @@ t64 = 0x8000_0000_0000_0000
 @test_throws ArgumentError Unums.ArrayNum{4}([z64])
 @test_throws ArgumentError Unums.ArrayNum{5}([z64])
 @test_throws ArgumentError Unums.ArrayNum{6}([z64])
+
+#ArrayNums must have the minimum number of elements.
+@test_throws ArgumentError Unums.ArrayNum{7}([z64])
+@test_throws ArgumentError Unums.ArrayNum{8}([z64, z64])
+
+#but it's ok if we pass an ArrayNum an array with more elements than necessary.
+bigger_array = Unums.ArrayNum{7}([z64, z64, z64, z64])
+@test bigger_array.a == [z64, z64, z64, z64]
 ################################################################################
 ## SUPERINT CONSTANT GENERATION
 
@@ -204,7 +212,7 @@ Unums.rsh!(fourcellint, 68)
 @test Unums.ArrayNum{7}([allbits, nobits]) < Unums.ArrayNum{7}([allbits, 0x0000_0000_0000_0001])
 @test Unums.ArrayNum{7}([nobits, allbits]) < Unums.ArrayNum{7}([0x0000_0000_0000_0001, nobits])
 
-#=
+
 ################################################################################
 ## UTILITIES
 
@@ -214,12 +222,12 @@ Unums.rsh!(fourcellint, 68)
 @test Unums.__minimum_data_width(msb1) == 0
 @test Unums.__minimum_data_width(lsb1) == 63
 @test Unums.__minimum_data_width(msb8) == 7
-@test Unums.__minimum_data_width([nobits, nobits]) == 0
-@test Unums.__minimum_data_width([msb1, nobits]) == 0
-@test Unums.__minimum_data_width([nobits, msb1]) == 64
-@test Unums.__minimum_data_width([allbits, allbits]) == 127
-@test Unums.__minimum_data_width([nobits, lsb1]) == 127
-@test Unums.__minimum_data_width([nobits, nobits, nobits, lsb1]) == 255
+@test Unums.__minimum_data_width(Unums.ArrayNum{7}([nobits, nobits])) == 0
+@test Unums.__minimum_data_width(Unums.ArrayNum{7}([msb1, nobits])) == 0
+@test Unums.__minimum_data_width(Unums.ArrayNum{7}([nobits, msb1])) == 64
+@test Unums.__minimum_data_width(Unums.ArrayNum{7}([allbits, allbits])) == 127
+@test Unums.__minimum_data_width(Unums.ArrayNum{7}([nobits, lsb1])) == 127
+@test Unums.__minimum_data_width(Unums.ArrayNum{8}([nobits, nobits, nobits, lsb1])) == 255
 
 #test __allones_for_length
 @test Unums.__allones_for_length(0x8000_0000_0000_0000,                  UInt16(0))
@@ -228,9 +236,8 @@ Unums.rsh!(fourcellint, 68)
 @test !Unums.__allones_for_length(0xD000_0000_0000_0000,                 UInt16(3))
 @test Unums.__allones_for_length(0xFFFF_0000_0000_0000,                  UInt16(15))
 @test Unums.__allones_for_length(f64,                                    UInt16(63))
-@test Unums.__allones_for_length([0x8000_0000_0000_0000, z64],           UInt16(0))
-@test Unums.__allones_for_length([f64, z64],                             UInt16(63))
-@test Unums.__allones_for_length([f64, t64],                             UInt16(64))
-@test Unums.__allones_for_length([f64, 0xC000_0000_0000_0000],           UInt16(65))
-@test Unums.__allones_for_length([f64, f64, 0xC000_0000_0000_0000, z64], UInt16(129))
-=#
+@test Unums.__allones_for_length(ArrayNum{7}([0x8000_0000_0000_0000, z64]),           UInt16(0))
+@test Unums.__allones_for_length(ArrayNum{7}([f64, z64]),                             UInt16(63))
+@test Unums.__allones_for_length(ArrayNum{7}([f64, t64]),                             UInt16(64))
+@test Unums.__allones_for_length(ArrayNum{7}([f64, 0xC000_0000_0000_0000]),           UInt16(65))
+@test Unums.__allones_for_length(ArrayNum{8}([f64, f64, 0xC000_0000_0000_0000, z64]), UInt16(129))

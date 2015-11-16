@@ -1,45 +1,28 @@
 #unum-helpers.jl
 #helper functions for the unum constructor, and functions that will frequently
 #be used with the constructor.
-
-################################################################################
-# Safety checking
-#=
-function __check_unum_param(ESS::Int, FSS::Int, fsize::UInt16, esize::UInt16, fraction, exponent::UInt64)
-  fsize < (1 << FSS)              || throw(ArgumentError("fsize $(fsize) too big for FSS $(FSS)"))
-  esize < (1 << ESS)              || throw(ArgumentError("esize $(esize) too big for ESS $(ESS)"))
-
-  #when you have esize == 63 ALL THE VALUES ARE VALID, but bitshift op will do something strange.
-  ((esize == 63) || exponent < (1 << (esize + 1))) || throw(ArgumentError("exponent $(exponent) too big for esize $(esize)"))
-  length(fraction) == __frac_cells(FSS) || throw(ArgumentError("size mismatch between supplied fraction array $(length(fraction)) and expected $(__frac_cells(FSS))"))
-  nothing
-end
-
-__check_unum_param_dev(ESS::Int, FSS::Int, fsize::UInt16, esize::UInt16, fraction, exponent::UInt64) =
-  __check_unum_param(ESS, FSS, fsize, esize, fraction, exponent)
-
 ###########################################################
 #Utility functions
 
-function __check_frac_trim(l::Int, fsize::UInt16)
-  (fsize >= (l << 6)) && throw(ArgumentError("fraction array length $l too short for fsize $fsize"))
+#checking to make sure the parameters of frac_trim make sense.
+function __check_frac_trim(frac::UInt64, fsize::UInt16)
+  (fsize >= 64) && throw(ArgumentError("fsize $fsize too large for FSS < 7"))
   nothing
 end
-__check_frac_trim_dev(l::Int, fsize::UInt16) = __check_frac_trim(l, fsize)
+function __check_frac_trim{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
+  (fsize > max_fsize(FSS)) && throw(ArgumentError("fsize $fsize too large for FSS $FSS"))
+  nothing
+end
 
-#fractrim:  Takes a superint value and returns a triplet: (fraction, fsize, ubit)
+#_frac_trim:  Takes a Uint64 value and returns a triplet: (fraction, fsize, ubit)
 #this triplet represents the fraction VarInt trimmed to fsize, a new fsize,
 #in the case that it's exact and some zeros can be trimmed, and whether or not
 #ubit needs to be thrown (were there values cast out by fsize)?
-function __frac_trim(frac::VarInt, fsize::UInt16)
-  l::Int = length(frac)
-  #drop an error if the superint can't accomodate fsize.
-  __check_frac_trim_dev(l, fsize)
-
-  #create the fsize mask.
-  high_mask = fillbits(-(fsize + 1), l)  #remember, the real fsize is fsize + 1
-  low_mask = ~high_mask
-  #do we need to set decide if we need to set the ubit
+@dev_check function __frac_trim(frac::UInt64, fsize::UInt16)
+  #generate masks from fsize values using the internal functions.
+  high_mask = mask_top(fsize)
+  low_mask = mask_bot(fsize)
+  #decide if we need to set the ubit
   #mask out the high bits and check to see if what remains is zero.
   #this needs to be in an array because that will collapse to the appropriate
   #one-dimensional array in the array case and collapse to a one-element array
@@ -52,6 +35,26 @@ function __frac_trim(frac::VarInt, fsize::UInt16)
   fsize = (ubit == 0) ? __minimum_data_width(frac) : fsize
   (frac, fsize, ubit)
 end
+
+@dev_check function __frac_trim(frac::UInt64, fsize::UInt16)
+  #generate masks from fsize values using the internal functions.
+  high_mask = mask_top(fsize)
+  low_mask = mask_bot(fsize)
+  #decide if we need to set the ubit
+  #mask out the high bits and check to see if what remains is zero.
+  #this needs to be in an array because that will collapse to the appropriate
+  #one-dimensional array in the array case and collapse to a one-element array
+  #in the single case, so that matches with the zeros() directive.
+  ubit = is_all_zero(low_mask & frac) ? z16 : UNUM_UBIT_MASK
+  #mask out the low bits and save that as the fraction.
+  frac &= high_mask
+  #we may need to trim the fraction further, in which case we alter fsize.
+  #also take the "zero" case and make sure we represent at least one digit.
+  fsize = (ubit == 0) ? __minimum_data_width(frac) : fsize
+  (frac, fsize, ubit)
+end
+
+#=
 
 #__frac_mask: takes an FSS value and generates the corresponding superint frac_mask.
 #generally useful only for FSS values less than 6.
