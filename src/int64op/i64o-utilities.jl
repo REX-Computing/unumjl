@@ -3,7 +3,7 @@
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
 @gen_code function __minimum_data_width{FSS}(n::ArrayNum{FSS})
-  l = __cell_length(FSS) << 6 - 1
+  l = (__cell_length(FSS) << 6) - 1
   @code :(UInt16(max(0, $l - trailing_zeros(n))))
 end
   #explanation of formula:

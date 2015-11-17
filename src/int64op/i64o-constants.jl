@@ -5,17 +5,16 @@ Base.zero{FSS}(::Type{ArrayNum{FSS}}) = ArrayNum{FSS}(zeros(UInt64, __cell_lengt
 Base.zero{FSS}(a::Type{ArrayNum{FSS}}) = ArrayNum{FSS}(zeros(UInt64, __cell_length(FSS)))
 
 doc"""
-sets an `ArrayNum` to zero.
+`zero!` sets an `ArrayNum` to zero.
 """
-@generated function zero!{FSS}(a::Type{ArrayNum{FSS}})
+@gen_code function zero!{FSS}(a::ArrayNum{FSS})
   l = __cell_length(FSS)
-  code = :()
   #unroll the loop that fills the contents of the a with zero.
   for idx = 1:l
-    code ⊣ :(@inbounds a.a[$idx] = 0)
+    @code :(@inbounds a.a[$idx] = 0)
   end
-  code
 end
+export zero!
 
 @generated function Base.one{FSS}(::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)

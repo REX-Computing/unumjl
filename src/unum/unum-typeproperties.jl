@@ -1,5 +1,9 @@
 #unum-typefunctions.jl
 
+###NB PREPARE THIS FOR DEPRECATION
+
+
+#=
 #functions that operate on a unum type and retrieve certain properties.
 #note that type constants come from unum-constants.jl
 
@@ -95,3 +99,4 @@ import Base.maxintfloat
 function maxintfloat{ESS,FSS}(::Type{Unum{ESS,FSS}})
 end
 export maxintfloat
+=#

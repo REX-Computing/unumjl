@@ -9,7 +9,8 @@ function __check_frac_trim(frac::UInt64, fsize::UInt16)
   (fsize >= 64) && throw(ArgumentError("fsize $fsize too large for FSS < 7"))
   nothing
 end
-function __check_frac_trim{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
+
+function __check_frac_trim{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, reg::Val{r})
   (fsize > max_fsize(FSS)) && throw(ArgumentError("fsize $fsize too large for FSS $FSS"))
   nothing
 end
@@ -36,34 +37,38 @@ end
   (frac, fsize, ubit)
 end
 
-@dev_check function __frac_trim(frac::UInt64, fsize::UInt16)
-  #generate masks from fsize values using the internal functions.
-  high_mask = mask_top(fsize)
-  low_mask = mask_bot(fsize)
-  #decide if we need to set the ubit
-  #mask out the high bits and check to see if what remains is zero.
-  #this needs to be in an array because that will collapse to the appropriate
-  #one-dimensional array in the array case and collapse to a one-element array
-  #in the single case, so that matches with the zeros() directive.
-  ubit = is_all_zero(low_mask & frac) ? z16 : UNUM_UBIT_MASK
-  #mask out the low bits and save that as the fraction.
-  frac &= high_mask
-  #we may need to trim the fraction further, in which case we alter fsize.
-  #also take the "zero" case and make sure we represent at least one digit.
-  fsize = (ubit == 0) ? __minimum_data_width(frac) : fsize
-  (frac, fsize, ubit)
+@dev_check function __frac_trim{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, reg::Val{r})
+  #temporarily we have to shim this to __frac_trim_internal because doubling
+  #up @dev_check and @gen_code doesn't work.
+  __frac_trim_internal(frac, fsize, reg)
+end
+
+@gen_code function __frac_trim_internal{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, ::Val{r})
+  #set the register, this is a UInt64 array.
+  _register = registers[r]
+
+  @code quote
+    register = ArrayNum{FSS}($_register)
+    #zero out the register.
+    zero!(register)
+    #set the register to be the mask bottom
+    mask_bot!(register, fsize)
+    #fill in the register with bits from the fraction.
+    fill_mask!(register, frac)
+    #check to see if it's all zero.
+    ubit = is_all_zero(register) ? z16 : UNUM_UBIT_MASK
+    #fill the register with bits from the top.
+    mask_top!(register, fsize)
+    #backfill the fraction comparing with the mask.
+    fill_mask!(frac, register)
+    #reset fsize by calculating _minimum_data_width
+    fsize = (ubit == 0) ? __minimum_data_width(frac) : fsize
+    #return the relevant triplet.
+    (frac, fsize, ubit)
+  end
 end
 
 #=
-
-#__frac_mask: takes an FSS value and generates the corresponding superint frac_mask.
-#generally useful only for FSS values less than 6.
-function __frac_mask(fss::Int)
-  (fss < 6) && return fillbits(-(max_fsize(fss) + 1), 1)
-  (fss == 6) && return f64
-  return [f64 for i=1:__frac_cells(fss)]
-end
-
 #takes a peek at the fraction and decides if ubit needs to be set (if the boundary
 #is not flush with max_fss), but also decides if fsize_of_exact needs to be set.
 function __frac_analyze(fraction::UInt64, is_ubit::UInt16, fss::Int)

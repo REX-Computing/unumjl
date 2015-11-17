@@ -160,6 +160,16 @@ Unums.mask_top!(fourcellint, UInt16(255))
 Unums.mask_bot!(fourcellint, UInt16(255))
 @test fourcellint.a == [nobits, nobits, nobits, nobits]
 
+#mask filling.
+test_texture = [0x1234_5678_9ABC_DEF1, 0x2345_6789_ABCD_EF12]
+test_mask    = [0xFFFF_FFFF_FFFF_FFFF, 0xFFFF_0000_0000_0000]
+test_masktex = [0x1234_5678_9ABC_DEF1, 0x2345_0000_0000_0000]
+#test the and-ing process
+txt = Unums.ArrayNum{7}(copy(test_texture))
+msk = Unums.ArrayNum{7}(copy(test_mask))
+Unums.fill_mask!(msk, txt)
+@test msk.a == test_masktex
+
 ################################################################################
 ## SHIFTS
 
@@ -229,6 +239,7 @@ Unums.rsh!(fourcellint, 68)
 @test Unums.__minimum_data_width(Unums.ArrayNum{7}([nobits, lsb1])) == 127
 @test Unums.__minimum_data_width(Unums.ArrayNum{8}([nobits, nobits, nobits, lsb1])) == 255
 
+#=
 #test __allones_for_length
 @test Unums.__allones_for_length(0x8000_0000_0000_0000,                  UInt16(0))
 @test !Unums.__allones_for_length(z64,                                   UInt16(0))
@@ -241,3 +252,4 @@ Unums.rsh!(fourcellint, 68)
 @test Unums.__allones_for_length(ArrayNum{7}([f64, t64]),                             UInt16(64))
 @test Unums.__allones_for_length(ArrayNum{7}([f64, 0xC000_0000_0000_0000]),           UInt16(65))
 @test Unums.__allones_for_length(ArrayNum{8}([f64, f64, 0xC000_0000_0000_0000, z64]), UInt16(129))
+=#

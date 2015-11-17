@@ -17,6 +17,9 @@ include("./tools.jl")
 #development safety option scheme
 include("./options/devsafety.jl")
 
+#kernel for faster processing
+include("./kernel.jl")
+
 ################################################################################
 #TYPE DEFINITION FILES
 #type definitions for int64 array.

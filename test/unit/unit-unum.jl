@@ -37,6 +37,12 @@ walpiri_half = unum(Unum{0,0}, z16, z16, z16, f64, z64)
 @test walpiri_half.fsize == 0
 @test walpiri_half.flags & Unums.UNUM_UBIT_MASK == Unums.UNUM_UBIT_MASK
 
+#test the same thing in a really big number.
+bigunum_trim1 = unum(Unum{4,7}, UInt16(63), z16, z16, [z64, t64], z64)
+@test bigunum_trim1.fraction.a == [z64, z64]
+@test bigunum_trim1.fsize == 63
+@test bigunum_trim1.flags & Unums.UNUM_UBIT_MASK == Unums.UNUM_UBIT_MASK
+
 #=
 #test the unum_easy constructor
 easy_walpiri_two = unum_easy(Unum{0,0}, z16, z64, o64)

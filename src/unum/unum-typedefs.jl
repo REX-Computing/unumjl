@@ -8,9 +8,10 @@ doc"""
 `Unum{ESS,FSS}` creates a Unum with esizesize ESS and fsizesize FSS.
 
 NB:  Internally this may cast to a different Unum type (UnumLarge or UnumSmall)
-for performance purposes.  The Unum{ESS,FSS}(...) constructor may be unsafe and
-for safety-critical purposes, the corresponding unum(...) constructors or the
-@unum macro is recommended.
+for performance purposes.  The `Unum{ESS,FSS}(...)` constructor may be unsafe
+and for safety-critical purposes where computational performance is not an issue
+(e.g. literal input or data conversion), the corresponding unum(...)
+constructors or the `@unum` macro are recommended.
 """
 abstract Unum{ESS, FSS} <: Utype
 export Unum
@@ -109,6 +110,8 @@ function call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, fla
   UnumLarge{ESS,FSS}(fsize, esize, flags, ArrayNum{FSS}(fraction), exponent)
 end
 
+const __SAFE_CONSTRUCTOR_REGISTER = 1
+
 doc"""
 `unum(Unum{ESS,FSS}, fsize, esize, flags, fraction, exponent)` is a safe
 constructor that always checks the parameters to make sure they are not invalid.
@@ -120,6 +123,9 @@ note that the `Unum{ESS,FSS}(...)` constuctor only checks for validity when
 developer checking is enabled.
 """
 function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction, exponent::UInt64)
+  #if we have a big fsize, recast fraction as an ArrayNum{FSS}
+  (FSS >= 6) && (!(isa(fraction, ArrayNum))) && (fraction = ArrayNum{FSS}(fraction))
+
   #checks to make sure everything is safe.
   __general_unum_check(ESS, FSS, fsize, esize, flags, fraction, exponent)
 
@@ -128,7 +134,11 @@ function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16, flag
 
   #trim fraction to the length of fsize.  Return the trimmed fsize value and
   #ubit, if appropriate.
-  (fraction, fsize, ubit) = __frac_trim(fraction, fsize)
+  if (FSS < 6)
+    (fraction, fsize, ubit) = __frac_trim(fraction, fsize)
+  else
+    (fraction, fsize, ubit) = __frac_trim(fraction, fsize, Val{__SAFE_CONSTRUCTOR_REGISTER}())
+  end
   #apply the ubit change.
   flags |= ubit
 
