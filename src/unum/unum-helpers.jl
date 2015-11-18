@@ -10,7 +10,7 @@ function __check_frac_trim(frac::UInt64, fsize::UInt16)
   nothing
 end
 
-function __check_frac_trim{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, reg::Val{r})
+function __check_frac_trim!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, reg::Val{r})
   (fsize > max_fsize(FSS)) && throw(ArgumentError("fsize $fsize too large for FSS $FSS"))
   nothing
 end
@@ -37,13 +37,13 @@ end
   (frac, fsize, ubit)
 end
 
-@dev_check function __frac_trim{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, reg::Val{r})
+@dev_check function __frac_trim!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, reg::Val{r})
   #temporarily we have to shim this to __frac_trim_internal because doubling
   #up @dev_check and @gen_code doesn't work.
-  __frac_trim_internal(frac, fsize, reg)
+  __frac_trim_internal!(frac, fsize, reg)
 end
 
-@gen_code function __frac_trim_internal{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, ::Val{r})
+@gen_code function __frac_trim_internal!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, ::Val{r})
   #set the register, this is a UInt64 array.
   _register = registers[r]
 
@@ -64,7 +64,7 @@ end
     #reset fsize by calculating _minimum_data_width
     fsize = (ubit == 0) ? __minimum_data_width(frac) : fsize
     #return the relevant triplet.
-    (frac, fsize, ubit)
+    (fsize, ubit)
   end
 end
 
@@ -152,9 +152,9 @@ end
 # EXPONENT ENCODING AND DECODING
 #encodes an exponent as a biased 2-tuple (esize, exponent)
 #remember msb is zero-indexed, but outputs a zero for the zero value
-function encode_exp(unbiasedexp::Int)
+function encode_exp(unbiasedexp::Int64)
   #make sure our unbiased exponent is a signed integer
-  unbiasedexp = int64(unbiasedexp)
+  unbiasedexp = Int64(unbiasedexp)
   esize = UInt16(64 - leading_zeros(UInt64(abs(unbiasedexp - 1))))
   (esize, UInt64(unbiasedexp + 1 << esize - 1))
 end

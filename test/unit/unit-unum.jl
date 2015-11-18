@@ -23,55 +23,54 @@
 
 #actual tests on constructors using the safe unum constructor.
 #test that fsize error gets thrown.
-@test_throws ArgumentError unum(Unum{0,0}, o16, z16, z16, z64, z64)
+@test_throws ArgumentError Unum{0,0}(o16, z16, z16, z64, z64)
 #test that esize error gets thrown
-@test_throws ArgumentError unum(Unum{0,0}, z16, o16, z16, z64, z64)
+@test_throws ArgumentError Unum{0,0}(z16, o16, z16, z64, z64)
 #test that exponent error gets thrown
-@test_throws ArgumentError unum(Unum{0,0}, z16, z16, z16, z64, UInt64(2))
+@test_throws ArgumentError Unum{0,0}(z16, z16, z16, z64, UInt64(2))
 #test that the fraction error gets thrown
-@test_throws ArgumentError unum(Unum{0,0}, z16, z16, z16, [z64, z64], z64)
+@test_throws ArgumentError Unum{0,0}(z16, z16, z16, [z64, z64], z64)
+
+#make sure that the constructor doesn't trim fractions that aren't too long.
+warlpiri_one = Unum{0,0}(z16, z16, z16, t64, z64)
+@test warlpiri_one.fraction == t64
+@test warlpiri_one.fsize == z16
+@test warlpiri_one.flags == z16
 
 #test that the constructor correctly trims fractions that are too long.
-walpiri_half = unum(Unum{0,0}, z16, z16, z16, f64, z64)
-@test walpiri_half.fraction == t64
-@test walpiri_half.fsize == 0
-@test walpiri_half.flags & Unums.UNUM_UBIT_MASK == Unums.UNUM_UBIT_MASK
+warlpiri_some = Unum{0,0}(z16, z16, z16, f64, z64)
+@test warlpiri_some.fraction == t64
+@test warlpiri_some.fsize == z16
+@test warlpiri_some.flags & Unums.UNUM_UBIT_MASK == Unums.UNUM_UBIT_MASK
 
 #test the same thing in a really big number.
-bigunum_trim1 = unum(Unum{4,7}, UInt16(63), z16, z16, [z64, t64], z64)
+bigunum_trim1 = Unum{4,7}(UInt16(63), z16, z16, [z64, t64], z64)
 @test bigunum_trim1.fraction.a == [z64, z64]
 @test bigunum_trim1.fsize == 63
 @test bigunum_trim1.flags & Unums.UNUM_UBIT_MASK == Unums.UNUM_UBIT_MASK
 
-#=
 #test the unum_easy constructor
-easy_walpiri_two = unum_easy(Unum{0,0}, z16, z64, o64)
-@test easy_walpiri_two.fraction == z64
-@test easy_walpiri_two.fsize == 0
-@test easy_walpiri_two.flags == z16
-#test that unum_easy will also take a sloppy VarInt.
-easy_walpiri_two_oops = unum_easy(Unum{0,0}, z16, [f64, z64], o64)
-@test easy_walpiri_two_oops.fraction == z64
-@test easy_walpiri_two_oops.fsize == 0
-@test easy_walpiri_two_oops.flags == z16
+easy_warlpiri_two = unum(Unum{0,0}, z16, z64, 1)
+@test easy_warlpiri_two.exponent == o64
+@test easy_warlpiri_two.fraction == z64
+@test easy_warlpiri_two.fsize == z16
+@test easy_warlpiri_two.flags == z16
 
-#unset the development environment
-#test that we can create unsafe unums using the unsafe constructor.
-unsafe_fsize = Unum{0,0}(o16, z16, z16, z64, z64)
-unsafe_fsize_2 = unum_unsafe(unsafe_fsize)
-unsafe_esize = Unum{0,0}(z16, o16, z16, z64, z64)
-unsafe_esize_2 = unum_unsafe(unsafe_esize)
-unsafe_exponent = Unum{0,0}(z16, o16, z16, z64, UInt64(2))
-unsafe_exponent_2 = unum_unsafe(unsafe_exponent)
-unsafe_fraction = Unum{0,0}(z16, o16, z16, [z64, z64], z64)
-unsafe_fraction_2 = unum_unsafe(unsafe_fraction)
-#then show that these trigger TypeErrors when passed through the safe constructor
-@test_throws ArgumentError unum(unsafe_fsize)
-@test_throws ArgumentError unum(unsafe_fsize_2)
-@test_throws ArgumentError unum(unsafe_esize)
-@test_throws ArgumentError unum(unsafe_esize_2)
-@test_throws ArgumentError unum(unsafe_exponent)
-@test_throws ArgumentError unum(unsafe_exponent_2)
-@test_throws ArgumentError unum(unsafe_fraction)
-@test_throws ArgumentError unum(unsafe_fraction_2)
-=#
+if Unums.__DEV_MODE
+  #unset the development environment
+  Unums.__unset_dev_check()
+  @test !(Unums.__dev_check_state())
+  #unsafe unums can be created using the unsafe constructor.
+  unsafe_fsize = Unums.UnumSmall{0,0}(o16, z16, z16, z64, z64)
+  @test unsafe_fsize.fsize == o16
+  unsafe_esize = Unums.UnumSmall{0,0}(z16, o16, z16, z64, z64)
+  @test unsafe_esize.esize == o16
+  unsafe_exponent = Unums.UnumSmall{0,0}(z16, o16, z16, z64, UInt64(2))
+  @test unsafe_exponent.exponent == UInt64(2)
+
+  #then show that these trigger TypeErrors when passed through the safe constructor
+  @test_throws ArgumentError Unum{0,0}(unsafe_fsize)
+  @test_throws ArgumentError Unum{0,0}(unsafe_esize)
+  @test_throws ArgumentError Unum{0,0}(unsafe_exponent)
+  Unums.__set_dev_check()
+end

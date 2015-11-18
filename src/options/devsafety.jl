@@ -1,16 +1,34 @@
 doc"""
-constant `__DEV_MODE` is a global developer-mode variable which enables compile-time
+constant `Unums.__DEV_MODE` is a global developer-mode variable which enables compile-time
 optimization of Unum by removing certain safety checks.
 """
 const __DEV_MODE = true
 
 doc"""
-variable `__DEV_CHECK` is a run-time variable which can be used to temporarly
+variable `Unums.__DEV_CHECK` is a run-time variable which can be used to temporarly
 disable safety checks in favor of Unum performance, but is naturally overridden
 by `__DEV_MODE`.  functions incorporating checks will still incur a minor
 performance penalty at the head of their execution.
 """
 global __DEV_CHECK = true
+
+doc"""
+`__set_dev_check()` sets the `__DEV_CHECK` variable to true, this is necessary
+because julia doesn't permit setting variables in other modules.
+"""
+__set_dev_check() = (global __DEV_CHECK = true; nothing)
+
+doc"""
+`__unset_dev_check()` sets the `__DEV_CHECK` variable to false, this is necessary
+because julia doesn't permit setting variables in other modules.
+"""
+__unset_dev_check() = (global __DEV_CHECK = false; nothing)
+
+doc"""
+`__dev_check_state()` returns the state of the `__DEV_CHECK` variable, this is
+necessary because julia doesn't permit setting variables in other modules.
+"""
+__dev_check_state() = __DEV_CHECK
 
 function __extract_function_string(fvar)
   #for variadic functions, the function name parameter appears as part of an
