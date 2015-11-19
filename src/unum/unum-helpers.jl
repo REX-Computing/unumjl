@@ -159,7 +159,7 @@ function encode_exp(unbiasedexp::Int64)
   (esize, UInt64(unbiasedexp + 1 << esize - 1))
 end
 #the inverse operation is finding the unbiased exponent of an Unum.
-decode_exp(esize::UInt16, exponent::UInt64) = int(exponent) - (1 << esize) + 1
+decode_exp(esize::UInt16, exponent::UInt64) = Int64(exponent) - (1 << esize) + 1
 
 #maxfsize returns the the maximum fraction size for a given FSS.
 max_fsize(FSS) = UInt16((1 << FSS) - 1)
@@ -168,9 +168,9 @@ max_esize(ESS) = UInt16((1 << ESS) - 1)
 #note the difference here.  ESS values are determined by julia's type system
 #and therefore take the value Int.  esize values are set by the type definition
 #and are unsigned 16-bit integers always.
-max_biased_exponent(ESS::Int) = (1 << (1 << ESS)) - 1
-max_biased_exponent(esize::UInt16) = 1 << esize
+max_biased_exponent(ESS::Int64) = UInt64((1 << (1 << ESS))) - one(UInt64)
+max_biased_exponent(esize::UInt16) = UInt64(1 << (esize + 1)) - one(UInt64)
 
 #note that these are the unbiased exponent values.
-max_exponent(ESS) = 1 << (1 << ESS - 1)
-min_exponent(ESS) = -(1 << (1 << ESS - 1)) + 2
+max_exponent(ESS) = Int64(1 << (1 << ESS - 1))
+min_exponent(ESS) = Int64(-(1 << (1 << ESS - 1)) + 2)

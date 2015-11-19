@@ -8,7 +8,7 @@
 include("./unit/unit-int64op.jl")
 
 #functions which directly participate in construction and validation of unums
-#include("./unit/unit-helpers.jl")
+include("./unit/unit-helpers.jl")
 
 #type constructor testing
 include("./unit/unit-unum.jl")

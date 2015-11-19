@@ -3,12 +3,6 @@
 ################################################################################
 #__frac_trim
 
-#__frac_trim(frac, fsize) - this is a function solely used in the
-#constructor. __frac_trim takes a dump of bits (frac) in superint
-#and trims it down to size according to (fsize).  NB.  fsize the variable
-#represents the actual number of fraction bits *minus one*.  outputs
-#the new superint, the fsize (as potentially modified), and a ubit.
-
 #in a 64-bit single width superint.  Trim for fsize = 0, i.e. down to 1 bit.
 @test Unums.__frac_trim(nobits,  UInt16(0)) == (nobits, 0, 0)
 @test Unums.__frac_trim(allbits, UInt16(0)) == (msb1  , 0, Unums.UNUM_UBIT_MASK)
@@ -22,12 +16,28 @@
 @test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, UInt16(61)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
 @test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, UInt16(63)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
 @test Unums.__frac_trim(allbits, UInt16(63)) == (allbits, 63, 0)
+
+
 #test two-cell VarInt with fractrim.
-@test Unums.__frac_trim([nobits, nobits], UInt16(0)) == ([nobits, nobits], 0, 0)
-@test Unums.__frac_trim([nobits, nobits], UInt16(127)) == ([nobits, nobits], 0, 0)
-@test Unums.__frac_trim([nobits, lsb1], UInt16(0)) == ([nobits, nobits], 0, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim([nobits, lsb1], UInt16(63)) == ([nobits, nobits], 63, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim([lsb1, nobits], UInt16(63)) == ([lsb1, nobits], 63, 0)
+f7array = ArrayNum{7}([nobits, nobits])
+@test Unums.__frac_trim!(no7, UInt16(0)) == (0, 0)
+@test f7array.a == [nobits, nobits]
+
+@test Unums.__frac_trim!([nobits, nobits], UInt16(127)) == (0, 0)
+@test f7array.a == [nobits, nobits]
+
+f7array.a = [nobits, lsb1]
+@test Unums.__frac_trim!(f7array, UInt16(0)) == (0, Unums.UNUM_UBIT_MASK)
+@test f7array.a == [nobits, nobits]
+
+f7array.a = [nobits, lsb1]
+@test Unums.__frac_trim!(f7array, UInt16(63)) == (63, Unums.UNUM_UBIT_MASK)
+@test f7array.a == [nobits, nobits]
+
+f7array.a = [lsb1, nobits]
+@test Unums.__frac_trim(f7array, UInt16(63)) == (63, 0)
+@test f7array.a == [lsb1, nobits]
+
 #test three-cell SuperInts with fractrim.
 @test Unums.__frac_trim([nobits, nobits, nobits], UInt16(0)) == ([nobits, nobits, nobits], 0, 0)
 @test Unums.__frac_trim([nobits, nobits, nobits], UInt16(191)) == ([nobits, nobits, nobits], 0 ,0)
@@ -36,16 +46,7 @@
 
 #make sure we can't try to trim something to more bits than it has.
 @test_throws ArgumentError Unums.__frac_trim(nobits, UInt16(64))
-
-################################################################################
-#__frac_mask
-@test Unums.__frac_mask(0) == 0x8000_0000_0000_0000
-@test Unums.__frac_mask(1) == 0xC000_0000_0000_0000
-@test Unums.__frac_mask(5) == 0xFFFF_FFFF_0000_0000
-@test Unums.__frac_mask(6) == allbits
-@test Unums.__frac_mask(7) == [allbits, allbits]
-@test Unums.__frac_mask(8) == [allbits, allbits, allbits, allbits]
-
+#=
 ################################################################################
 #__frac_analyze
 
@@ -76,23 +77,17 @@
 @test Unums.__frac_match(allbits, 7) == ([nobits, allbits], 0)
 @test Unums.__frac_match(allbits, 8) == ([nobits, nobits, nobits, allbits], 0)
 @test Unums.__frac_match([allbits, msb1], 8) == ([nobits, nobits, allbits, msb1], 0)
-
+=#
 ################################################################################
 #__frac_cells
 #comprehensive test of these results.
-@test Unums.__frac_cells(0) == 1
-@test Unums.__frac_cells(1) == 1
-@test Unums.__frac_cells(2) == 1
-@test Unums.__frac_cells(3) == 1
-@test Unums.__frac_cells(4) == 1
-@test Unums.__frac_cells(5) == 1
-@test Unums.__frac_cells(6) == 1
-@test Unums.__frac_cells(7) == 2
-@test Unums.__frac_cells(8) == 4
-@test Unums.__frac_cells(9) == 8
-@test Unums.__frac_cells(10) == 16
-@test Unums.__frac_cells(11) == 32
+@test Unums.__cell_length(7) == 2
+@test Unums.__cell_length(8) == 4
+@test Unums.__cell_length(9) == 8
+@test Unums.__cell_length(10) == 16
+@test Unums.__cell_length(11) == 32
 
+#=
 ################################################################################
 #__set_lsb
 #comprehensive test of these results.
@@ -101,6 +96,7 @@
 @test Unums.__set_lsb(zero(UInt64), 6) == 0x0000_0000_0000_0001
 @test Unums.__set_lsb(zeros(UInt64, 2), 7) == [0x0, 0x0000_0000_0000_0001]
 @test Unums.__set_lsb(zeros(UInt64, 4), 8) == [0x0, 0x0, 0x0, 0x0000_0000_0000_0001]
+=#
 
 #test encoding and decoding exponents
 #remember, esize is the size of the exponent *minus one*.
@@ -137,17 +133,6 @@
 @test (3, 4) == Unums.encode_exp(-3)
 @test (1, 3) == Unums.encode_exp(2)
 
-@test Unums.max_exponent(0) == 1
-@test Unums.min_exponent(0) == 1
-@test Unums.max_exponent(1) == 2
-@test Unums.min_exponent(1) == 0
-@test Unums.max_exponent(2) == 8
-@test Unums.min_exponent(2) == -6
-@test Unums.max_exponent(3) == 128
-@test Unums.min_exponent(3) == -126
-@test Unums.max_exponent(4) == 32768
-@test Unums.min_exponent(4) == -32766
-
 #comprehensive checking of all exponents in the range -1000..1000
 for e = -1000:1000
   @test e == Unums.decode_exp(Unums.encode_exp(e)...)
@@ -181,5 +166,33 @@ end
 @test Unums.max_esize(4) == 15
 @test Unums.max_esize(5) == 31
 @test Unums.max_esize(6) == 63
-@test Unums.max_esize(7) == 127
-@test Unums.max_esize(8) == 255
+
+#test the max_biased_exponent, based on esizesize
+@test Unums.max_biased_exponent(0) == 1
+@test Unums.max_biased_exponent(1) == 3
+@test Unums.max_biased_exponent(2) == 15
+@test Unums.max_biased_exponent(3) == 255
+@test Unums.max_biased_exponent(4) == 65535
+@test Unums.max_biased_exponent(5) == 4294967295
+@test Unums.max_biased_exponent(6) == 0xffffffffffffffff
+
+#test the max_biased_exponent, based on esize
+@test Unums.max_biased_exponent(UInt16(0)) == 1
+@test Unums.max_biased_exponent(UInt16(1)) == 3
+@test Unums.max_biased_exponent(UInt16(2)) == 7
+@test Unums.max_biased_exponent(UInt16(3)) == 15
+@test Unums.max_biased_exponent(UInt16(4)) == 31
+@test Unums.max_biased_exponent(UInt16(5)) == 63
+@test Unums.max_biased_exponent(UInt16(6)) == 127
+
+#test the max_exponents
+@test Unums.max_exponent(0) == 1
+@test Unums.min_exponent(0) == 1
+@test Unums.max_exponent(1) == 2
+@test Unums.min_exponent(1) == 0
+@test Unums.max_exponent(2) == 8
+@test Unums.min_exponent(2) == -6
+@test Unums.max_exponent(3) == 128
+@test Unums.min_exponent(3) == -126
+@test Unums.max_exponent(4) == 32768
+@test Unums.min_exponent(4) == -32766
