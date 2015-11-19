@@ -86,7 +86,7 @@ end
 #override call for copy constructor
 function Base.call{ESS, FSS}(::Type{Unum{ESS,FSS}}, x::Unum{ESS,FSS})
   __general_unum_check(ESS, FSS, x.fsize, x.esize, x.flags, x.fraction, x.exponent)
-  (FSS < 7) ? UnumSmall(x) : UnumLarge(x)
+  (FSS < 7) ? UnumSmall(x) : (__check_ArrayNum(FSS, x.fraction.a); UnumLarge(x))
 end
 
 #override call to allow direct instantiation using the Unum{ESS,FSS} pseudo-constructor.
@@ -112,6 +112,8 @@ end
 const __SAFE_CONSTRUCTOR_REGISTER = 1
 
 function Base.call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::ArrayNum{FSS}, exponent::UInt64)
+  #just to be sure make sure we got this right.
+  __check_ArrayNum(FSS, fraction.a)
   __general_unum_check(ESS, FSS, fsize, esize, flags, fraction, exponent)
 
   #mask out values outside of the flag range.
@@ -131,7 +133,7 @@ end
 
 #for convenience we can also call a big unum with an
 function Base.call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::Array{UInt64, 1}, exponent::UInt64)
-  #if we have a big fsize, recast fraction as an ArrayNum{FSS}
+  __check_ArrayNum(FSS, fraction)
   fraction = ArrayNum{FSS}(fraction)
   __general_unum_check(ESS, FSS, fsize, esize, flags, fraction, exponent)
 

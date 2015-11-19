@@ -16,17 +16,42 @@ o64 = one(UInt64)
 f64 = 0xFFFF_FFFF_FFFF_FFFF
 t64 = 0x8000_0000_0000_0000
 
-#ArrayNums of size < 7 are disallowed.
-@test_throws ArgumentError Unums.ArrayNum{1}([z64])
-@test_throws ArgumentError Unums.ArrayNum{2}([z64])
-@test_throws ArgumentError Unums.ArrayNum{3}([z64])
-@test_throws ArgumentError Unums.ArrayNum{4}([z64])
-@test_throws ArgumentError Unums.ArrayNum{5}([z64])
-@test_throws ArgumentError Unums.ArrayNum{6}([z64])
+@test_throws ArgumentError Unums.__check_ArrayNum(0, [z64])
+@test_throws ArgumentError Unums.__check_ArrayNum(6, [z64])
+@test_throws ArgumentError Unums.__check_ArrayNum(7, [z64])
+@test_throws ArgumentError Unums.__check_ArrayNum(8, [z64, z64])
 
-#ArrayNums must have the minimum number of elements.
-@test_throws ArgumentError Unums.ArrayNum{7}([z64])
-@test_throws ArgumentError Unums.ArrayNum{8}([z64, z64])
+#test developer safety being disabled on ArrayNum type
+if Unums.__DEV_MODE
+  #unset the development environment
+  dev_check = Unums.__dev_check_state()
+
+  Unums.__set_dev_check()
+  @test Unums.__dev_check_state()
+
+  #ArrayNums of size < 7 are disallowed.
+  @test_throws ArgumentError Unums.ArrayNum{0}([z64])
+  @test_throws ArgumentError Unums.ArrayNum{1}([z64])
+  @test_throws ArgumentError Unums.ArrayNum{2}([z64])
+  @test_throws ArgumentError Unums.ArrayNum{3}([z64])
+  @test_throws ArgumentError Unums.ArrayNum{4}([z64])
+  @test_throws ArgumentError Unums.ArrayNum{5}([z64])
+  @test_throws ArgumentError Unums.ArrayNum{6}([z64])
+
+  #ArrayNums must have the minimum number of elements.
+  @test_throws ArgumentError Unums.ArrayNum{7}([z64])
+  @test_throws ArgumentError Unums.ArrayNum{8}([z64, z64])
+
+  Unums.__unset_dev_check()
+  @test !(Unums.__dev_check_state())
+
+  #these are OK now.
+  Unums.ArrayNum{0}([z64])
+  Unums.ArrayNum{6}([z64])
+  Unums.ArrayNum{7}([z64])
+
+  dev_check && Unums.__set_dev_check()
+end
 
 #but it's ok if we pass an ArrayNum an array with more elements than necessary.
 bigger_array = Unums.ArrayNum{7}([z64, z64, z64, z64])
