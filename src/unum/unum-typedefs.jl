@@ -122,7 +122,7 @@ function Base.call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16
   fsize_override::UInt16 = (flags & UNUM_UBIT_MASK != 0) ? fsize : 0
   #trim fraction to the length of fsize.  Return the trimmed fsize value and
   #ubit, if appropriate.
-  (fsize, ubit) = __frac_trim!(fraction, fsize, Val{__SAFE_CONSTRUCTOR_REGISTER}())
+  (fsize, ubit) = __frac_trim!(fraction, fsize, Val{__SAFE_CONSTRUCTOR_REGISTER})
   #apply the ubit change.
   flags |= ubit
   #if we started as a ubit, override the shortened fsize.
@@ -143,7 +143,7 @@ function Base.call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16
   fsize_override::UInt16 = (flags & UNUM_UBIT_MASK != 0) ? fsize : 0
   #trim fraction to the length of fsize.  Return the trimmed fsize value and
   #ubit, if appropriate.
-  (fsize, ubit) = __frac_trim!(fraction, fsize, Val{__SAFE_CONSTRUCTOR_REGISTER}())
+  (fsize, ubit) = __frac_trim!(fraction, fsize, Val{__SAFE_CONSTRUCTOR_REGISTER})
   #apply the ubit change.
   flags |= ubit
   #if we started as a ubit, override the shortened fsize.

@@ -10,7 +10,7 @@ function __check_frac_trim(frac::UInt64, fsize::UInt16)
   nothing
 end
 
-function __check_frac_trim!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, reg::Val{r})
+function __check_frac_trim!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, ::Type{Val{r}})
   (fsize > max_fsize(FSS)) && throw(ArgumentError("fsize $fsize too large for FSS $FSS"))
   nothing
 end
@@ -37,13 +37,13 @@ end
   (frac, fsize, ubit)
 end
 
-@dev_check function __frac_trim!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, reg::Val{r})
+@dev_check function __frac_trim!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, a::Type{Val{r}})
   #temporarily we have to shim this to __frac_trim_internal because doubling
   #up @dev_check and @gen_code doesn't work.
-  __frac_trim_internal!(frac, fsize, reg)
+  __frac_trim_internal!(frac, fsize, Val{r})
 end
 
-@gen_code function __frac_trim_internal!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, ::Val{r})
+@gen_code function __frac_trim_internal!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, ::Type{Val{r}})
   #set the register, this is a UInt64 array.
   _register = registers[r]
 

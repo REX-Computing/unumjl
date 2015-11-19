@@ -77,4 +77,37 @@ macro dev_check(ips...)
   return Expr(:escape, f)
 end
 
+#necessary to fix get @test into the proper scope.
+import Base.Test.@test
+import Base.Test.@test_throws
+
+macro unum_dev_switch(code)
+  quote
+    if Unums.__DEV_MODE
+      #unset the development environment
+      dev_check = Unums.__dev_check_state()
+
+      $code
+
+      dev_check && Unums.__set_dev_check()
+    end
+  end
+end
+
+macro unum_dev_on()
+  quote
+    Unums.__set_dev_check()
+    @test Unums.__dev_check_state()
+  end
+end
+
+macro unum_dev_off()
+  quote
+    Unums.__unset_dev_check()
+    @test !Unums.__dev_check_state()
+  end
+end
+
+export @unum_dev_switch, @unum_dev_on, @unum_dev_off
+
 nothing
