@@ -3,6 +3,7 @@
 
 #literally calculate the value of the Unum.  Please don't use this for Infs and NaNs
 
+arraynumval(x::UInt64) = x
 function arraynumval{FSS}(v::ArrayNum{FSS})
   (typeof(v) == UInt64) && return big(v)
   sum = big(0)

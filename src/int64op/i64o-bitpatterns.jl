@@ -70,3 +70,18 @@ is_not_top(a::UInt64) = (a != t64)
   end
   @code :(accum != 0)
 end
+
+doc"""
+`is_mmr_frac` has the sole purpose of checking if the fraction looks like mmr.
+"""
+@gen_code function is_mmr_frac{FSS}(n::ArrayNum{FSS})
+  l = __cell_length(FSS)
+  @code :(accum = f64)
+  for idx = 1:l
+    @code :(@inbounds accum &= n.a[$idx])
+  end
+  @code quote
+    accum &= (n.a[$l] $ o64)
+    accum == f64
+  end
+end
