@@ -60,3 +60,31 @@ operation with each other UInt64.
   end
   @code :(nothing)
 end
+
+doc"""
+`Unums.bottom_bit` returns the bottom bit of a fraction with a given fsize.
+"""
+function bottom_bit(fsize::Uint16)
+  reinterpret(UInt64, -9223372036854775808 >>> fsize)
+end
+
+doc"""
+`Unums.bottom_bit!` returns the bottom bit of a fraction with a given fsize.
+If no fsize is provided, it returns a zero arraynum with the lowest bit set.
+"""
+@gen_code function bottom_bit!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
+  @code :( middle_cell = div(fsize, 0x0040) + 1 )
+  for idx = 1:__cell_length(FSS)
+    @code :(@inbounds n.a[$idx] = ($idx != middle_cell ? z64 : bottom_bit(fsize % 0x0040)))
+  end
+  @code :(nothing)
+end
+
+@gen_code function bottom_bit!{FSS}(n::ArrayNum{FSS})
+  l = __cell_length(FSS)
+  @code :( middle_cell = div(fsize, 0x0040) + 1 )
+  for idx = 1:(l-1)
+    @code :(@inbounds n.a[$idx] = z64)
+  end
+  @code :(@inbounds n.a[$l] = o64; nothing)
+end

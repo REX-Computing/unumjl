@@ -173,6 +173,10 @@ function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, flags::UInt16, fraction, exponent:
 end
 export unum
 
+#allows you to modify the flag, in place.
+unum!{ESS,FSS}(x::Unum{ESS,FSS}, flags::UInt16) = (x.flags = flags; x)
+export unum!
+
 #masks for the unum flags variable.
 const UNUM_SIGN_MASK = UInt16(0x0002)
 const UNUM_UBIT_MASK = UInt16(0x0001)

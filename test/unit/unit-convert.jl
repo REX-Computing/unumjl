@@ -7,7 +7,6 @@
 #integer to unum
 
 @test [calculate(convert(Unum{3,6},i)) for i=-50:50] == [BigFloat(i) for i = -50:50]
-@test is_mmr(mmr(Unum{0,0}))
 @test is_mmr(convert(Unum{0,0}, 3))
 @test is_mmr(convert(Unum{1,1}, 7))
 @test is_mmr(convert(Unum{1,1}, 8))

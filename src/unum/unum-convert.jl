@@ -6,20 +6,24 @@ import Base.convert
 ## INTEGER TO UNUM
 
 #CONVERSIONS - INTEGER -> UNUM
-function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Int)
-  #for now, don't handle the uint128 case
-  #do a zero check
-  if (x == 0)
-    return zero(Unum{ESS,FSS})
-  elseif (x < 0)
-    #promote the integer to int64
-    x = UInt64(-x)
-    flags = UNUM_SIGN_MASK
-  else
-    #promote to UInt64
-    x = UInt64(x)
-    flags = z16
+@gen_code function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
+  if (ESS == 0)
+    @code :((x == 1) && return one(Unum{ESS,FSS}))
   end
+  
+  @code quote
+    #do a zero check
+    if (x == 0)
+      return zero(Unum{ESS,FSS})
+    elseif (x < 0)
+      #promote the integer to int64
+      x = UInt64(-x)
+      flags = UNUM_SIGN_MASK
+    else
+      #promote to UInt64
+      x = UInt64(x)
+      flags = z16
+    end
 
   #the "one exception" to this is if ESS == 0 and x == 1, where 1 is a subnormal
   #integer.

@@ -13,10 +13,10 @@ include("./unit/unit-helpers.jl")
 #type constructor testing
 include("./unit/unit-unum.jl")
 #include("./unit/unit-ubound.jl")
-#=
+
 #testing things that get done to unums
 include("unit-convert.jl")
-include("unit-operations.jl")
+#=include("unit-operations.jl")
 #include("unum-test-properties.jl")
 
 #comparison testing
