@@ -191,6 +191,23 @@ msk = Unums.ArrayNum{7}(copy(test_mask))
 Unums.fill_mask!(msk, txt)
 @test msk.a == test_masktex
 
+## bottom bits
+@test Unums.bottom_bit(UInt16(0))  == 0x8000_0000_0000_0000
+@test Unums.bottom_bit(UInt16(1))  == 0x4000_0000_0000_0000
+@test Unums.bottom_bit(UInt16(2))  == 0x2000_0000_0000_0000
+@test Unums.bottom_bit(UInt16(3))  == 0x1000_0000_0000_0000
+@test Unums.bottom_bit(UInt16(13)) == 0x0004_0000_0000_0000
+@test Unums.bottom_bit(UInt16(14)) == 0x0002_0000_0000_0000
+@test Unums.bottom_bit(UInt16(15)) == 0x0001_0000_0000_0000
+@test Unums.bottom_bit(UInt16(63)) == 0x0000_0000_0000_0001
+
+twocellint = zero(Unums.ArrayNum{7})
+@test Unums.bottom_bit!(twocellint, UInt16(63)).a == [o64, z64]
+@test Unums.bottom_bit!(twocellint, UInt16(64)).a == [z64, t64]
+@test Unums.bottom_bit!(twocellint).a == [z64, o64]
+fourcellint = zero(Unums.ArrayNum{8})
+@test Unums.bottom_bit!(fourcellint).a == [z64, z64, z64, o64]
+
 ################################################################################
 ## SHIFTS
 

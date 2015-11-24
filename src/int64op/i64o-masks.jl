@@ -33,7 +33,7 @@ top mask labels the bits which are part of the unum representation.
   for idx = 1:__cell_length(FSS)
     @code :(@inbounds n.a[$idx] = $idx < middle_cell ? f64 : ($idx > middle_cell ? z64 : mask_top(fsize % 0x0040)))
   end
-  @code :(nothing)
+  @code :(n)
 end
 
 doc"""
@@ -47,7 +47,7 @@ scheme.
   for idx = 1:__cell_length(FSS)
     @code :(@inbounds n.a[$idx] = $idx < middle_cell ? z64 : ($idx > middle_cell ? f64 : mask_bot(fsize % 0x0040)))
   end
-  @code :(nothing)
+  @code :(n)
 end
 
 doc"""
@@ -58,7 +58,7 @@ operation with each other UInt64.
   for idx = 1:__cell_length(FSS)
     @code :(@inbounds n.a[$idx] = n.a[$idx] & m.a[$idx])
   end
-  @code :(nothing)
+  @code :(n)
 end
 
 doc"""
@@ -77,7 +77,7 @@ If no fsize is provided, it returns a zero arraynum with the lowest bit set.
   for idx = 1:__cell_length(FSS)
     @code :(@inbounds n.a[$idx] = ($idx != middle_cell ? z64 : bottom_bit(fsize % 0x0040)))
   end
-  @code :(nothing)
+  @code :(n)
 end
 
 @gen_code function bottom_bit!{FSS}(n::ArrayNum{FSS})
@@ -85,5 +85,5 @@ end
   for idx = 1:(l-1)
     @code :(@inbounds n.a[$idx] = z64)
   end
-  @code :(@inbounds n.a[$l] = o64; nothing)
+  @code :(@inbounds n.a[$l] = o64; n)
 end
