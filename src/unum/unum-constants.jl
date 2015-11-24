@@ -53,9 +53,9 @@ export pos_one, neg_one
 #infs and nans look quite similar, so we'll create a generated function that
 #combines the code for both.
 @gen_code function __infnanset!{ESS,FSS}(x::Unum{ESS,FSS}, flags::UInt16)
-  esize::UInt16 = 1 << ESS - 1
-  fsize::UInt16 = 1 << FSS - 1
-  exp::UInt64 = (1 << (esize + 1)) - 1
+  esize::UInt16 = max_esize(FSS)
+  fsize::UInt16 = max_fsize(FSS)
+  exp::UInt64 = max_exponent(ESS)
 
   @code quote
     x.fsize = $fsize
@@ -117,10 +117,10 @@ export pos_inf, neg_inf, inf!, pos_inf!, neg_inf!
 # mmr and big_exact look very similar, so we'll combine the code to generate them
 # here.
 @gen_code function __mmr_bigexact_set!{ESS,FSS}(x::Unum{ESS,FSS}, flags::UInt16)
-  esize   ::UInt16 = 1 << ESS - 1
-  fsize   ::UInt16 = 1 << FSS - 1
+  esize   ::UInt16 = max_esize(ESS)
+  fsize   ::UInt16 = max_fsize(FSS)
   fsmone  ::UInt16 = (FSS != 0) ? fsize - 1 : 0  #prevents an inexact error
-  max_exp ::UInt64 = 1 << (esize + 1) - 1
+  max_exp ::UInt64 = max_exponent(ESS)
   @code quote
     x.fsize = $fsize
     x.esize = $esize
@@ -166,8 +166,8 @@ export mmr, mmr!, pos_mmr, neg_mmr, pos_mmr!, neg_mmr!, big_exact, big_exact!, p
 # fsize parameters have to be maxed out.
 
 @gen_code function sss!{ESS,FSS}(x::Unum{ESS,FSS}, flags::UInt16 = z16)
-  esize   ::UInt16 = 1 << ESS - 1
-  fsize   ::UInt16 = 1 << FSS - 1
+  esize   ::UInt16 = max_esize(ESS)
+  fsize   ::UInt16 = max_fsize(FSS)
   @code quote
     x.fsize = $fsize
     x.esize = $esize
@@ -196,8 +196,8 @@ export sss, sss!, pos_sss, neg_sss, pos_sss!, neg_sss!
 # small_exact is tricky because it generates a very unique signature.
 
 @gen_code function __set_small_exact!{ESS,FSS}(x::Unum{ESS,FSS}, flags::UInt16 = z16)
-  esize   ::UInt16 = 1 << ESS - 1
-  fsize   ::UInt16 = 1 << FSS - 1
+  esize   ::UInt16 = max_esize(ESS)
+  fsize   ::UInt16 = max_fsize(FSS)
   @code quote
     x.fsize = $fsize
     x.esize = $esize

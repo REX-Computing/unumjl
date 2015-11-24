@@ -32,6 +32,18 @@ is_not_zero(n::UInt64) = (n != 0)
 end
 
 doc"""
+`is_all_ones` outputs whether or not all of the bits in an UInt64 or an `ArrayNum`
+are one.
+"""
+@gen_code function is_all_ones{FSS}(n::ArrayNum{FSS})
+  @code :(accum = f64)
+  for idx = 1:__cell_length(FSS)
+    @code :(@inbounds accum &= n.a[$idx])
+  end
+  @code :(accum == f64)
+end
+
+doc"""
 `is_top` outputs whether or not the most significant bit of an UInt64 or an
 `ArrayNum` is a one, while the rest are zero.  Used for checking the subnormal
 one at the Unum level.

@@ -13,6 +13,7 @@
 
 #unum to integer
 
+#=
 #float to unum
 #test that the general conversion works for normal floating points in the {4,6} environment
 
@@ -122,3 +123,4 @@ f64a = [float64(seed[i]) for i = 1:100]
 #test that subnormals convert correctly
 @test 1.0 == convert(Float64, Unum{0,0}(z16, z16, z16, t64, z64))
 #test converting *to* a subnormal float.
+=#

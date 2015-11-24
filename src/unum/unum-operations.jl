@@ -3,22 +3,22 @@
 
 #literally calculate the value of the Unum.  Please don't use this for Infs and NaNs
 
-function superintval(v::VarInt)
+function arraynumval{FSS}(v::ArrayNum{FSS})
   (typeof(v) == UInt64) && return big(v)
   sum = big(0)
-  for i = 1:length(v)
-    sum += big(v[i]) * (big(1) << ((i - 1) * 64))
+  for i = 1:length(v.a)
+    sum += big(v.a[i]) * (big(1) << ((i - 1) * 64))
   end
   sum
 end
 
-function calculate(x::Unum)
+function calculate{ESS,FSS}(x::Unum{ESS,FSS})
   sign = (x.flags & UNUM_SIGN_MASK != 0) ? -1 : 1
   #the sub`normal case
   if (x.exponent == 0)
-    2.0^(decode_exp(x) + 1) * sign * (superintval(x.fraction)) / 2.0^(64 * length(x.fraction))
+    2.0^(decode_exp(x) + 1) * sign * (arraynumval(x.fraction)) / 2.0^(64 * length(x.fraction))
   else #the normalcase
-    2.0^(decode_exp(x)) * sign * (1 + superintval(x.fraction) / 2.0^(64 * length(x.fraction)))
+    2.0^(decode_exp(x)) * sign * (1 + arraynumval(x.fraction) / 2.0^(64 * length(x.fraction)))
   end
 end
 export calculate

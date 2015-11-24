@@ -1,22 +1,23 @@
 #unum-convert.jl
 #implements conversions between unums and ints, floats.
-import Base.convert
 
 ##################################################################
 ## INTEGER TO UNUM
 
 #CONVERSIONS - INTEGER -> UNUM
-@gen_code function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
+@gen_code function Base.convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
+  #in ESS = 0 we are required to use subnormal one, so this requires
+  #special code.
   if (ESS == 0)
     @code :((x == 1) && return one(Unum{ESS,FSS}))
   end
-  
+
   @code quote
     #do a zero check
     if (x == 0)
       return zero(Unum{ESS,FSS})
     elseif (x < 0)
-      #promote the integer to int64
+      #flip the sign and promote the integer to Unt64
       x = UInt64(-x)
       flags = UNUM_SIGN_MASK
     else
@@ -25,25 +26,23 @@ import Base.convert
       flags = z16
     end
 
-  #the "one exception" to this is if ESS == 0 and x == 1, where 1 is a subnormal
-  #integer.
-  (ESS == 0) && (x == 1) && return Unum{ESS,FSS}(z16, z16, flags, t64, z64)
+    #find the msb of x, this will tell us how much to move things
+    msbx = 63 - leading_zeros(x)
+    #do a check to see if we should release almost_infinite
+    (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK)
 
-  #find the msb of x, this will tell us how much to move things
-  msbx = 63 - leading_zeros(x)
-  #do a check to see if we should release almost_infinite
-  (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK)
+    #move it over.  One bit should spill over the side.
+    frac = x << (64 - msbx)
+    #pass the whole shebang to unum_easy.
+    r = unum(Unum{ESS,FSS}, flags, frac, msbx)
 
-  #move it over.  One bit should spill over the side.
-  frac = x << (64 - msbx)
-  #pass the whole shebang to unum_easy.
-  r = unum_easy(Unum{ESS,FSS}, flags, frac, msbx)
-
-  #check for the "infinity hack" where we accidentally generate infinity by having
-  #just the right set of bits.
-  is_inf(r) ? mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK) : r
+    #check for the "infinity hack" where we accidentally generate infinity by having
+    #just the right set of bits.
+    is_inf(r) ? mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK) : r
+  end
 end
 
+#=
 ##################################################################
 ## FLOATING POINT CONVERSIONS
 
@@ -210,5 +209,4 @@ __u_to_64f = __u_to_f_generator(Float64)
 convert(::Type{Float16}, x::Unum) = __u_to_16f(x)
 convert(::Type{Float32}, x::Unum) = __u_to_32f(x)
 convert(::Type{Float64}, x::Unum) = __u_to_64f(x)
-
-export convert
+=#

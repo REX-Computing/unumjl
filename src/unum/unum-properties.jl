@@ -20,12 +20,27 @@ is_pos_def(x::Unum) = (!is_zero(x)) && is_positive(x)
 export is_ulp, is_exact, is_negative, is_positive
 
 #a couple of testing conditions
-import Base.isnan
-function isnan{ESS,FSS}(x::Unum{ESS,FSS})
-  (x.fsize == (1 << FSS - 1)) && (x.esize == (1 << ESS - 1)) && is_ulp(x) && (x.fraction == fillbits(-(1 << FSS), UInt16(length(x.fraction)))) && (x.exponent == mask(1 << ESS))
+@gen_code function Base.isnan{ESS,FSS}(x::Unum{ESS,FSS})
+  #calculate expected fsize and esize.
+  xfsize = (1 << FSS - 1)
+  xesize = (1 << ESS - 1)
+  xexponent = 1 << (1 << ESS) - 1
+  @code quote
+    is_ulp(x) || return false
+    (x.fsize == $xfsize) || return false
+    (x.esize == $xesize) || return false
+    (x.exponent == $xexponent) || return false
+  end
+
+  if FSS < 7
+    xfraction == top_mask(xfsize)
+    @code :(return x.fraction == xfraction)
+  else
+    @code :(return is_all_ones(x.fraction))
+  end
 end
 is_nan(x) = isnan(x)                                                            #alias the unum form with the julia.
-export isnan, is_nan
+export is_nan
 
 import Base.isinf
 import Base.isfinite
