@@ -15,7 +15,8 @@ include("./unit/unit-unum.jl")
 #include("./unit/unit-ubound.jl")
 
 #testing things that get done to unums
-include("unit-convert.jl")
+include("./unit/unit-constants.jl")
+#include("./unit/unit-convert.jl")
 #=include("unit-operations.jl")
 #include("unum-test-properties.jl")
 

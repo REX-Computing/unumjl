@@ -64,7 +64,7 @@ end
 doc"""
 `Unums.bottom_bit` returns the bottom bit of a fraction with a given fsize.
 """
-function bottom_bit(fsize::Uint16)
+function bottom_bit(fsize::UInt16)
   reinterpret(UInt64, -9223372036854775808 >>> fsize)
 end
 
@@ -82,7 +82,6 @@ end
 
 @gen_code function bottom_bit!{FSS}(n::ArrayNum{FSS})
   l = __cell_length(FSS)
-  @code :( middle_cell = div(fsize, 0x0040) + 1 )
   for idx = 1:(l-1)
     @code :(@inbounds n.a[$idx] = z64)
   end

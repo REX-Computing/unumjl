@@ -3,7 +3,7 @@
 ###NB PREPARE THIS FOR DEPRECATION
 
 
-#=
+
 #functions that operate on a unum type and retrieve certain properties.
 #note that type constants come from unum-constants.jl
 
@@ -31,6 +31,7 @@ function esizesize(x::Unum)
 end
 export fsizesize, esizesize
 
+#=
 max_fsize{ESS,FSS}(::Type{Unum{ESS,FSS}}) = max_fsize(FSS)
 max_esize{ESS,FSS}(::Type{Unum{ESS,FSS}}) = max_esize(ESS)
 
