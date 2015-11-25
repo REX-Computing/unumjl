@@ -42,113 +42,75 @@
   end
 end
 
-#=
 ##################################################################
 ## FLOATING POINT CONVERSIONS
 
 #create a type for floating point properties
 immutable FProp
   intequiv::Type
-  esize::Int
-  fsize::Int
+  ESS::Int
+  FSS::Int
+  esize::UInt16
+  fsize::UInt16
 end
 
 #store floating point properties in a dict
-__fp_props = {
-  Float16 => FProp(UInt16, UInt16(5),  UInt16(10)),
-  Float32 => FProp(UInt32, UInt16(8),  UInt16(23)),
-  Float64 => FProp(UInt64, UInt16(11), UInt16(52))
-}
-
+__fp_props = Dict{Type{AbstractFloat},FProp}(
+  Float16 => FProp(UInt16, 3, 4, UInt16(4),  UInt16(9)),
+  Float32 => FProp(UInt32, 4, 5, UInt16(7),  UInt16(22)),
+  Float64 => FProp(UInt64, 4, 6, UInt16(10), UInt16(51)))
 
 ##################################################################
 ## FLOATS TO UNUM
 
-#for some reason we need a shim that provides is_exp_zero support to Float16
-import Base.issubnormal
-issubnormal(x::Float16) = (x != 0) && ((reinterpret(UInt16, x) & 0x7c00) == 0)
-export issubnormal
+doc"""
+`default_convert` takes floating point numbers and converts them to the equivalent
+unums, using the trivial bitshifiting transformation.
+"""
+@gen_code function default_convert(x::AbstractFloat)
+  props = __fp_props[x]
+  I = props.intequiv
+  esize = props.esize
+  fsize = props.fsize
+  ESS = props.ESS
+  FSS = props.FSS
+
+  #generate some bit masks & corresponding shifts
+  signbit = (one(UInt64) << (esize + fsize + 2))
+  signshift = (esize + fsize + 1)
+
+  exponentbits = (signbit - (1 << (fsize + 1)))
+  exponentshift = fsize + 1
+
+  fractionbits = (one(UInt64) << (fsize + 1)) - 1
+  fractionshift = 64 - fsize - 1
+
+  @code quote
+    i::UInt64 = reinterpret($I,x)
+
+    flags::UInt16 = (i & $signbit) >> ($signshift)
+
+    exponent = (i & $exponentbits) >> ($exponentshift)
+
+    fraction = (i & $fractionbits) << ($fractionshift)
+
+    isnan(x) && return nan(Unum{$ESS,$FSS})
+    isinf(x) && return inf(Unum{$ESS,$FSS}, flags)
+    Unum{$ESS,$FSS}($fsize, $esize, flags, fraction, exponent)
+  end
+end
+export default_convert
 
 #helper function to convert from different floating point types.
-function __f_to_u(ESS::Int, FSS::Int, x::FloatingPoint, T::Type)
+@gen_code function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::AbstractFloat)
+  #currently converting from bigfloat is not allowed.
+  (x == BigFloat) && throw(ArgumentError("bigfloat conversion not yet supported"))
   #retrieve the floating point properties of the type to convert from.
-  fp = __fp_props[T]
-
-  #some checks for special values
-  (isnan(x)) && return nan(Unum{ESS,FSS})
-  (isinf(x)) && return ((x < 0) ? neg_inf(Unum{ESS,FSS}) : pos_inf(Unum{ESS,FSS}))
-
-  #convert the floating point x to its integer equivalent
-  I = fp.intequiv                 #the integer type of the same width
-  _esize = fp.esize               #how many bits in the exponent
-  _fsize = fp.fsize               #how many bits in the fraction
-  _bits = _esize + _fsize + 1     #how many total bits
-  _ebias = 1 << (_esize - 1) - 1   #exponent bias (= _emax)
-  _emin = -(_ebias) + 1           #minimum exponent
-
-  ibits = UInt64(reinterpret(I, x)[1])
-
-  fraction = ibits & mask(_fsize) << (64 - _fsize)
-  #make some changes to the data for subnormal numbers.
-  (x == 0) && return zero(Unum{ESS,FSS})
-
-  #grab the sign
-  flags = (ibits & (one(I) << (_esize + _fsize))) != 0 ? UNUM_SIGN_MASK : z16
-  #grab the exponent part
-  biased_exp::Int16 = ibits & mask(_fsize:(_fsize + _esize - 1)) >> _fsize
-  #generate the unbiased exponent and remember to take frac_move into account.
-  unbiased_exp::Int16 = biased_exp - _ebias + ((biased_exp == 0) ? 1 : 0)
-
-  if issubnormal(x)
-    #keeping in mind that the fraction bits are now left-aligned, calculate
-    #how much further we have to push the fraction bits.
-    frac_move::Int16 = leading_zeros(fraction) + 1
-    fraction = fraction << frac_move
-    unbiased_exp -= frac_move
-  end
-
-  #grab the fraction part
-
-  #check to see if the exponent is too low.
-  if (unbiased_exp < min_exponent(ESS))
-    #right shift the fraction by the requisite amount.
-    shift = min_exponent(ESS) - unbiased_exp
-    #make sure we don't have any bits in the shifted segment.
-    #first, are there more bits in the shift than the width?
-    if (shift > 64)
-      ((fraction != 0) || ((shift > 65) && (unbiased_exp != 0))) && (flags |= UNUM_UBIT_MASK)
-    else
-      ((fraction & mask(shift)) == 0) || (flags |= UNUM_UBIT_MASK)
-    end
-    #shift fraction by the amount.
-    fraction = fraction >> shift
-    #punch in the one
-    fraction |= ((biased_exp == 0) ? 0 : t64 >> (shift - 1))
-    #set to subnormal settings.
-    esize = UInt16((1 << ESS) - 1)
-    exponent = z64
-  elseif (unbiased_exp > max_exponent(ESS))
-    return mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK)
-  else
-    (esize, exponent) = encode_exp(unbiased_exp)
-  end
-
-  #for really large FSS fractions pad some zeroes in front.
-  (__frac_cells(FSS) > 1) && (fraction = [zeros(UInt64, __frac_cells(FSS) - 1),fraction])
-
-  r = unum(Unum{ESS,FSS}, min(_fsize, max_fsize(FSS)), esize, flags, fraction, exponent)
-  #check for the "infinity hack" where we "accidentally" create inf.
-  is_inf(r) ? mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK) : r
 end
-
-#bind to convert for multiple dispatch
-convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float16) = __f_to_u(ESS, FSS, x, Float16)
-convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float32) = __f_to_u(ESS, FSS, x, Float32)
-convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float64) = __f_to_u(ESS, FSS, x, Float64)
 
 ##################################################################
 ## UNUMS TO FLOAT
-
+#=
 #a generator that makes float conversion functions, to DRY production of conversions
 function __u_to_f_generator(T::Type)
   #grab and/or calculate things from the properties dictionary.

@@ -9,8 +9,7 @@
 @test [calculate(convert(Unum{3,6},i)) for i=-50:50] == [BigFloat(i) for i = -50:50]
 @test is_mmr(convert(Unum{0,0}, 3))
 
-println(convert(Unum{1,1}, 7))
-
+#test to make sure that accidentally hacking the infinity value instead produces mmr.
 @test is_mmr(convert(Unum{1,1}, 7))
 @test is_mmr(convert(Unum{1,1}, 8))
 

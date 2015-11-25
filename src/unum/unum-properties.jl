@@ -111,7 +111,7 @@ is_neg_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_sss(x)
   xesize = max_esize(ESS)
   xfsize = max_fsize(FSS)
   xfsm1::UInt16 = ESS == 0 ? 0 : xfsize - 1
-  xexponent = max_exponent(ESS)
+  xexponent = max_biased_exponent(ESS)
   @code quote
     is_ulp(x) || return false
     x.esize == $xesize || return false
