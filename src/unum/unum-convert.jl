@@ -1,6 +1,85 @@
 #unum-convert.jl
 #implements conversions between unums and ints, floats.
 
+################################################################################
+## UNUM TO UNUM
+
+@gen_code function Base.convert{ESS1,FSS1,ESS2,FSS2}(::Type{Unum{ESS1,FSS1}}, x::Unum{ESS2,FSS2})
+  #check for NaN, because that doesn't really follow the rules you expect
+  @code :(is_nan(x) && return nan(Unum{ESS1, FSS1}))
+
+  #first, do the exponent part.
+  #trivially, it may be possible to directly copy the data over.
+  if ESS2 <= ESS1
+    @code quote
+      #does this make sense?  mmr converting from a lower unum yields a UBOUND, not
+      #a unum.  So the answer sholud be nan.  Conversions to Ubound should be supported.
+      is_mmr(x) && return nan(Unum{ESS1, FSS1})
+
+      #otherwise, it's pretty much the same going forward.
+      esize = x.esize
+      exponent = x.exponent
+    end
+  else  #handle a shrinking exponent.
+    min_exp = min_exponent(ESS1)
+    max_exp = max_exponent(ESS1)
+    @code quote
+      dexp = decode_exp(x)
+      (dexp < $min_exp) && return sss(Unum{ESS1, FSS1}, x.flags & UNUM_SIGN_MASK)
+      (dexp > $max_exp) && return mmr(Unum{ESS1, FSS1}, x.flags & UNUM_SIGN_MASK)
+      (esize, exponent) = encode_exp(x) #ensures that the representation will fit within the limits of ESS1
+    end
+  end
+
+  #next, do the fraction part.  First, the case where we move from a small fraction
+  #to a big fraction.
+  if FSS2 <= FSS1
+    #since the new fsize will automatically accomodate the old fsize, we should be ok.
+    @code :(fsize = x.fsize)
+    @code :(flags = x.flags)                      #directly copy over the flags.
+    if ((FSS2 < 7) && (FSS1 < 7))
+      #going from a short fraction to another short fraction.
+      @code :(fraction = x.fraction)
+    else
+      leftovers = __cell_length(FSS1) - __cell_length(FSS2)
+      @code :(fraction = ArrayNum{FSS1}(vcat(x.fraction, zeros(UInt64, $leftovers))))
+    end
+  else
+    #then moving from a big fraction to a smaller fraction (much more difficult!)
+    #going from a shortunum to a shortunum.
+    if (FSS1 < 7)
+      @code :(flags = x.flags)
+      if (FSS2 < 7)
+        @code :(fraction = x.fraction)
+      else
+        @code quote
+          fraction = x.fraction.a[1])
+          accum = zero(UInt64)
+        end
+        #check the trailing bits for stray ones.
+        for idx = 2:__cell_length(FSS2)
+          @code :(accum |= x.fraction.a[$idx])
+        end
+        @code :(flags |= (accum != 0) ? UNUM_UBIT_MASK : 0)
+      end
+      mfsize = max_fsize(FSS1)
+      @code quote
+        fsize_override::UInt16 = (flags & UNUM_UBIT_MASK != 0) ? min(x.fsize, $mfsize) : 0
+        #trim fraction to the length of fsize.  Return the trimmed fsize value and
+        #ubit, if appropriate.
+        (fraction, fsize, ubit) = __frac_trim(fraction, $mfsize)
+        #apply the ubit change.
+        flags |= ubit
+        #if we started as a ubit, override the shortened fsize.
+        fsize = max(fsize, fsize_override)
+      end
+    else
+      #deal with having an output fraction that is bigger.
+    end
+  end
+end
+
+
 ##################################################################
 ## INTEGER TO UNUM
 
@@ -68,6 +147,8 @@ doc"""
 unums, using the trivial bitshifiting transformation.
 """
 @gen_code function default_convert(x::AbstractFloat)
+  (x == BigFloat) && throw(ArgumentError("bigfloat conversion not yet supported"))
+
   props = __fp_props[x]
   I = props.intequiv
   esize = props.esize
@@ -104,7 +185,6 @@ export default_convert
 #helper function to convert from different floating point types.
 @gen_code function convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::AbstractFloat)
   #currently converting from bigfloat is not allowed.
-  (x == BigFloat) && throw(ArgumentError("bigfloat conversion not yet supported"))
   #retrieve the floating point properties of the type to convert from.
 end
 
