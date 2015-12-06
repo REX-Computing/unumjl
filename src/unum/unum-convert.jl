@@ -29,52 +29,89 @@
       (dexp > $max_exp) && return mmr(Unum{ESS1, FSS1}, x.flags & UNUM_SIGN_MASK)
       (esize, exponent) = encode_exp(x) #ensures that the representation will fit within the limits of ESS1
     end
+
+    #and then handle flags
+
+    @code :(flags = x.flags)
   end
 
-  #next, do the fraction part.  First, the case where we move from a small fraction
-  #to a big fraction.
+  #set cell_length values
+  LENGTH_DEST = __cell_length(FSS1)
+  LENGTH_SRC =  __cell_length(FSS2)
+
+  #next, do the fraction part.  First the case where we're expanding fsize.
   if FSS2 <= FSS1
     #since the new fsize will automatically accomodate the old fsize, we should be ok.
     @code :(fsize = x.fsize)
-    @code :(flags = x.flags)                      #directly copy over the flags.
     if ((FSS2 < 7) && (FSS1 < 7))
       #going from a short fraction to another short fraction.
       @code :(fraction = x.fraction)
     else
-      leftovers = __cell_length(FSS1) - __cell_length(FSS2)
+      #going from a short or long fraction to a long fraction.
+      leftovers = LENGTH_DEST - LENGTH_SRC
+      #a simple vcat ought to do the trick.
       @code :(fraction = ArrayNum{FSS1}(vcat(x.fraction, zeros(UInt64, $leftovers))))
     end
   else
-    #then moving from a big fraction to a smaller fraction (much more difficult!)
-    #going from a shortunum to a shortunum.
+    #now we're going to handle moving down in fraction size.
     if (FSS1 < 7)
-      @code :(flags = x.flags)
+      tmask = mask_top(FSS1)
+      bmask = mask_bot(FSS1)
       if (FSS2 < 7)
-        @code :(fraction = x.fraction)
-      else
+        #if both are UInt64s, then it's a simple copy operation, followed by
+        #a mask to check the ubits.
         @code quote
-          fraction = x.fraction.a[1])
-          accum = zero(UInt64)
+          fraction = x.fraction
+          ###CHECK MASK HERE.
+          if (flags & bmask != 0)
+            flags |= UNUM_UBIT_MASK
+            fsize = $mfsize
+          else
+            fsize = min($mfsize, x.fsize)
+          end
         end
-        #check the trailing bits for stray ones.
-        for idx = 2:__cell_length(FSS2)
-          @code :(accum |= x.fraction.a[$idx])
+      else
+        #first check the less significant words
+        @code :(accum = z64)
+        for idx = 2:LENGTH_SRC
+          @code :(@inbounds accum |= x.fraction.a[$idx])
         end
-        @code :(flags |= (accum != 0) ? UNUM_UBIT_MASK : 0)
+        mfsize = max_fsize(FSS1)
+        #then check the single most significant word.
+        @code quote
+          @inbounds accum |= (x.fraction.a[1] & $bmask)
+
+          #process the resulting accumulated bits to see if we throw a ubit.
+          if (accum != 0)
+            flags |= UNUM_UBIT_MASK
+            fsize = $mfsize
+          else
+            fsize = min($mfsize, x.fsize)
+          end
+
+          #then transfer the fraction content.
+          @inbounds fraction = x.fraction.a[1] & $tmask
+        end
+      end
+    else
+      #simply check the trailing words for the presence of ones to set the ubit.
+      @code :(accum = z64)
+      for idx = (LENGTH_DEST + 1):LENGTH_SRC
+        @code :(@inbounds accum |= x.fraction.a[$idx])
       end
       mfsize = max_fsize(FSS1)
       @code quote
-        fsize_override::UInt16 = (flags & UNUM_UBIT_MASK != 0) ? min(x.fsize, $mfsize) : 0
-        #trim fraction to the length of fsize.  Return the trimmed fsize value and
-        #ubit, if appropriate.
-        (fraction, fsize, ubit) = __frac_trim(fraction, $mfsize)
-        #apply the ubit change.
-        flags |= ubit
-        #if we started as a ubit, override the shortened fsize.
-        fsize = max(fsize, fsize_override)
+        if (accum != 0)
+          flags |= UNUM_UBIT_MASK
+          fsize = $mfsize
+        else
+          fsize = min($mfsize, x.fsize)
+        end
       end
-    else
-      #deal with having an output fraction that is bigger.
+      #then transfer the contents of the array.
+      for idx = 1:LENGTH_DEST
+        @code :(@inbounds fraction = ArrayNum{FSS1}(x.fraction.a[1:$LENGTH_DEST]))
+      end
     end
   end
 end
