@@ -15,6 +15,10 @@
 
 #unum to integer
 
+#unum to unum
+#from a high, small unum - to a small unum.
+#@test convert(Unum{4,6}, Unum{0,0}(z16, z16, z16, z64, z64)) == Unum{4,6}(z16, z16, z16, z64, z64)
+
 #=
 #float to unum
 #test that the general conversion works for normal floating points in the {4,6} environment

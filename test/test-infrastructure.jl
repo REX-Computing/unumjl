@@ -19,10 +19,12 @@ include("./unit/unit-constants.jl")
 include("./unit/unit-convert.jl")
 #=include("unit-operations.jl")
 #include("unum-test-properties.jl")
+=#
 
 #comparison testing
-include("unit-comparison.jl")
+include("./unit/unit-comparison.jl")
 
+#=
 #mathematics testing
 #include("unum-test-addition.jl")
 #include("unum-test-multiplication.jl")

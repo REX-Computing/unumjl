@@ -84,9 +84,9 @@ function __check_UnumLarge(ESS, FSS, fsize, esize, flags, fraction, exponent)
 end
 
 #override call for copy constructor
-function Base.call{ESS, FSS}(::Type{Unum{ESS,FSS}}, x::Unum{ESS,FSS})
-  __general_unum_check(ESS, FSS, x.fsize, x.esize, x.flags, x.fraction, x.exponent)
-  (FSS < 7) ? UnumSmall(x) : (__check_ArrayNum(FSS, x.fraction.a); UnumLarge(x))
+@gen_code function Base.call{ESS, FSS}(::Type{Unum{ESS,FSS}}, x::Unum{ESS,FSS})
+  @code :(__general_unum_check(ESS, FSS, x.fsize, x.esize, x.flags, x.fraction, x.exponent))
+  @code (FSS < 7) ? (:(UnumSmall(x))) : (:((__check_ArrayNum(FSS, x.fraction.a); UnumLarge(x))))
 end
 
 #override call to allow direct instantiation using the Unum{ESS,FSS} pseudo-constructor.

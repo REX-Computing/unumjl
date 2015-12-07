@@ -29,11 +29,10 @@
       (dexp > $max_exp) && return mmr(Unum{ESS1, FSS1}, x.flags & UNUM_SIGN_MASK)
       (esize, exponent) = encode_exp(x) #ensures that the representation will fit within the limits of ESS1
     end
-
-    #and then handle flags
-
-    @code :(flags = x.flags)
   end
+  
+  #and then handle flags
+  @code :(flags = x.flags)
 
   #set cell_length values
   LENGTH_DEST = __cell_length(FSS1)
@@ -114,6 +113,8 @@
       end
     end
   end
+
+  @code :(Unum{ESS1, FSS1}(fsize, esize, flags, fraction, exponent))
 end
 
 

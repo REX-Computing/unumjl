@@ -2,9 +2,8 @@
 #mathematical odds and ends
 
 #literally calculate the value of the Unum.  Please don't use this for Infs and NaNs
-
-arraynumval(x::UInt64) = x
-function arraynumval{FSS}(v::ArrayNum{FSS})
+__arraynumval(x::UInt64) = x
+function __arraynumval{FSS}(v::ArrayNum{FSS})
   (typeof(v) == UInt64) && return big(v)
   sum = big(0)
   for i = 1:length(v.a)
@@ -17,13 +16,25 @@ function calculate{ESS,FSS}(x::Unum{ESS,FSS})
   sign = (x.flags & UNUM_SIGN_MASK != 0) ? -1 : 1
   #the sub`normal case
   if (x.exponent == 0)
-    2.0^(decode_exp(x) + 1) * sign * (arraynumval(x.fraction)) / 2.0^(64 * length(x.fraction))
+    2.0^(decode_exp(x) + 1) * sign * (__arraynumval(x.fraction)) / 2.0^(64 * length(x.fraction))
   else #the normalcase
-    2.0^(decode_exp(x)) * sign * (1 + arraynumval(x.fraction) / 2.0^(64 * length(x.fraction)))
+    2.0^(decode_exp(x)) * sign * (1 + __arraynumval(x.fraction) / 2.0^(64 * length(x.fraction)))
   end
 end
 export calculate
 
+doc"""
+  `additiveinverse!` creates the additive inverse value of a unum, by flipping
+  the sign.  This can be better than the `-` operator because it doesn't copy
+  the unum.  A reference to the unum is returned.
+"""
+function additiveinverse!{ESS,FSS}(x::Unum{ESS,FSS})
+  x.flags $= UNUM_SIGN_MASK
+  x
+end
+export additiveinverse!
+
+#=
 #sorts two unums by magnitude (distance from zero), and throws in the calculated
 #exponents, while we're at it.  NB.  MAGSORT ignores sign.
 function magsort{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
@@ -71,6 +82,7 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
 
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
+=#
 
 function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   #resolves a unum with an "unusual exponent", i.e. when esize is not
@@ -101,6 +113,7 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   end
 end
 
+#=
 function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   #TODO:  throw in a zero check here.  Maybe?
   l::UInt16 = length(a.fraction)
@@ -198,3 +211,4 @@ function prev_ulp{ESS,FSS}(x::Unum{ESS,FSS})
 end
 
 export outward_ulp, inward_ulp, next_ulp, prev_ulp
+=#

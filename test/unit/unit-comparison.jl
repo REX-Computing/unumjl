@@ -8,9 +8,9 @@ UnumTypes = [Unum{0,0}, Unum{1,1}, Unum{2,2}, Unum{4,6}]
 testfor(f) = map((T) -> (@test f(T)), UnumTypes)
 
 #test sign-independent equality of zeroes
-testfor((T) -> zero(T) == -zero(T))
+testfor((T) -> zero(T) == additiveinverse!(zero(T)))
 #test cross-sign inequality for a nonzero
-testfor((T) -> one(T) != -one(T))
+testfor((T) -> one(T) != additiveinverse!(one(T)))
 #test inequality for NaNs
 testfor((T) -> nan(T) != nan(T))
 #but make sure isequal does see NaNs as equal.
@@ -44,4 +44,6 @@ wwx1 = Unum{4,6}(UInt16(3), 0x0005, Unums.UNUM_UBIT_MASK, 0x8000_0000_0000_0000,
 @test wwu0 == wwu1 && wwu1 == wwu2 && wwu0 == wwu2  #test that the ubits are all the same as each other
 @test wwx1 != wwu0 && wwx1 != wwu1 && wwx1 != wwu2  #but not if you move the fsize so that there are more bits.
 
+#=
 @test !(zero(Unum{4,6}) > zero(Unum{4,6}))
+=#
