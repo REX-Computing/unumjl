@@ -12,8 +12,8 @@ function =={ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (isnan(a) || isnan(b)) && return false
 
   #resolve strange subnormals.
-  is_strange_subnormal(a) && __resolve_subnormal!(a)
-  is_strange_subnormal(b) && __resolve_subnormal!(b)
+  is_strange_subnormal(a) && (a = __resolve_subnormal(a))
+  is_strange_subnormal(b) && (b = __resolve_subnormal(b))
 
   #first calculate the exponents.
   _aexp::Int64 = decode_exp(a)
@@ -41,7 +41,7 @@ end
     is_zero(a) && (b.flags = a.flags & (~UNUM_SIGN_MASK))
 
     #convert strange subnormals.
-    is_strange_subnormal(a) && __resolve_subnormal!(b)
+    is_strange_subnormal(a) && (b = __resolve_subnormal(b))
     if (!is_subnormal(a))
       (esize, exponent) = encode_exp(decode_exp(a))
       b.esize = esize

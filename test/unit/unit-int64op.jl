@@ -212,14 +212,14 @@ fourcellint = zero(Unums.ArrayNum{8})
 ## SHIFTS
 
 #test leftshifts and rightshifts on multi-arrays
-@test Unums.lsh(allbits, 4) == 0xFFFF_FFFF_FFFF_FFF0
-@test Unums.rsh(allbits, 4) == 0x0FFF_FFFF_FFFF_FFFF
+@test Unums.lsh(allbits, UInt16(4)) == 0xFFFF_FFFF_FFFF_FFF0
+@test Unums.rsh(allbits, UInt16(4)) == 0x0FFF_FFFF_FFFF_FFFF
 twocellint = Unums.ArrayNum{7}([allbits, allbits])
-Unums.lsh!(twocellint,4)
+Unums.lsh!(twocellint, UInt16(4))
 @test twocellint.a == [allbits, 0xFFFF_FFFF_FFFF_FFF0]
 
 twocellint.a = [allbits, allbits]
-Unums.rsh!(twocellint,4)
+Unums.rsh!(twocellint, UInt16(4))
 @test twocellint.a == [0x0FFF_FFFF_FFFF_FFFF, allbits]
 
 
@@ -228,28 +228,28 @@ const allfour = [allbits, allbits, allbits, allbits]
 const texture = [0x1234_5678_9ABC_DEF1, 0x2345_6789_ABCD_EF12, 0x3456_789A_BCDE_F123, 0x4567_89AB_CDEF_1234]
 
 fourcellint = Unums.ArrayNum{8}(copy(allfour))
-Unums.lsh!(fourcellint, 68)
+Unums.lsh!(fourcellint, UInt16(68))
 @test fourcellint.a == [allbits, allbits, 0xFFFF_FFFF_FFFF_FFF0, nobits]
 
 fourcellint.a = copy(allfour)
-Unums.rsh!(fourcellint, 68)
+Unums.rsh!(fourcellint, UInt16(68))
 @test fourcellint.a == [nobits, 0x0FFF_FFFF_FFFF_FFFF, allbits, allbits]
 
 #textured shifts to make sure things are actually ok.
 fourcellint.a = copy(texture)
-Unums.lsh!(fourcellint, 4)
+Unums.lsh!(fourcellint, UInt16(4))
 @test fourcellint.a ==  [0x2345_6789_ABCD_EF12, 0x3456_789A_BCDE_F123, 0x4567_89AB_CDEF_1234, 0x5678_9ABC_DEF1_2340]
 
 fourcellint.a = copy(texture)
-Unums.lsh!(fourcellint, 68)
+Unums.lsh!(fourcellint, UInt16(68))
 @test fourcellint.a == [0x3456_789A_BCDE_F123, 0x4567_89AB_CDEF_1234, 0x5678_9ABC_DEF1_2340, nobits]
 
 fourcellint.a = copy(texture)
-Unums.rsh!(fourcellint, 4)
+Unums.rsh!(fourcellint, UInt16(4))
 @test fourcellint.a == [0x0123_4567_89AB_CDEF, 0x1234_5678_9ABC_DEF1, 0x2345_6789_ABCD_EF12, 0x3456_789A_BCDE_F123]
 
 fourcellint.a = copy(texture)
-Unums.rsh!(fourcellint, 68)
+Unums.rsh!(fourcellint, UInt16(68))
 @test fourcellint.a == [nobits, 0x0123_4567_89AB_CDEF, 0x1234_5678_9ABC_DEF1, 0x2345_6789_ABCD_EF12]
 
 ################################################################################

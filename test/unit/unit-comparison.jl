@@ -36,9 +36,9 @@ wwd4 = Unum{4,6}(UInt16(28), 0x0002, z16, 0x0000_0008_0000_0000, 0x0000000000000
 @test wwd0 == wwd4
 
 #let's make sure this works when we are using unums.
-wwu0 = unum_unsafe(wwd0, Unums.UNUM_UBIT_MASK)
-wwu1 = unum_unsafe(wwd1, Unums.UNUM_UBIT_MASK)
-wwu2 = unum_unsafe(wwd2, Unums.UNUM_UBIT_MASK)
+wwu0 = unum!(Unum{4,6}(wwd0), Unums.UNUM_UBIT_MASK)
+wwu1 = unum!(Unum{4,6}(wwd1), Unums.UNUM_UBIT_MASK)
+wwu2 = unum!(Unum{4,6}(wwd2), Unums.UNUM_UBIT_MASK)
 wwx1 = Unum{4,6}(UInt16(3), 0x0005, Unums.UNUM_UBIT_MASK, 0x8000_0000_0000_0000, 0x0000000000000000) #5-subnormal form
 @test wwu0 != wwd0 && wwu1 != wwd1 && wwu2 != wwd2  #test that the ubits are not the same as the exact
 @test wwu0 == wwu1 && wwu1 == wwu2 && wwu0 == wwu2  #test that the ubits are all the same as each other
