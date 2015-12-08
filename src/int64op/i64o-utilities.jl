@@ -1,5 +1,8 @@
 #i64o-utilities.jl
 
+#bits function for hlayer output.
+Base.bits{FSS}(a::ArrayNum{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a.a)
+
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
 @gen_code function __minimum_data_width{FSS}(n::ArrayNum{FSS})

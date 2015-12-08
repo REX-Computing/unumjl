@@ -64,7 +64,7 @@ end
   end
 end
 
-#the corresponding isequal function that uses the hash function.
+#the corresponding isequal function.
 Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
 
 #=

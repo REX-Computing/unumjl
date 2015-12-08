@@ -3,9 +3,9 @@
 #bitshifting operations on superints
 #iterative leftshift and rightshift operations on Array SuperInts
 
-lsh(a::UInt64, b::Int64) = a << b
+lsh(a::UInt64, b::Int16) = a << b
 #destructive version which clobbers the existing verion
-@gen_code function lsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
+@gen_code function lsh!{FSS}(a::ArrayNum{FSS}, b::Int16)
   l = __cell_length(FSS)
   @code quote
     #kick it back to right shift if it's negative
@@ -39,8 +39,8 @@ lsh(a::UInt64, b::Int64) = a << b
   end
 end
 
-rsh(a::UInt64, b::Int) = a >> b
-@gen_code function rsh!{FSS}(a::ArrayNum{FSS}, b::Int)
+rsh(a::UInt64, b::Int16) = a >> b
+@gen_code function rsh!{FSS}(a::ArrayNum{FSS}, b::Int16)
   l = __cell_length(FSS)
   @code quote
     #kick it back to right shift if it's negative
@@ -72,10 +72,4 @@ rsh(a::UInt64, b::Int) = a >> b
   for idx = l:-1:1
     @code :(@inbounds a.a[$idx] = ($idx > splitdex) ? a.a[$idx - celldiff] : 0)
   end
-end
-
-function rsh(a::Array{UInt64}, b::Int)
-  res = copy(a)
-  rsh!(res, b)
-  res
 end
