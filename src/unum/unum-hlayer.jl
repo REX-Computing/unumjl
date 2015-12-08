@@ -7,6 +7,15 @@
 #types.
 
 function Base.show{ESS,FSS}(io::IO, x::UnumSmall{ESS,FSS})
+
+  is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS})"); return)
+  is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS})"); return)
+  is_pos_sss(x) && (print(io, "sss(Unum{$ESS,$FSS})"); return)
+  is_neg_inf(x) && (print(io, "neg_inf(Unum{$ESS,$FSS})"); return)
+  is_neg_mmr(x) && (print(io, "neg_mmr(Unum{$ESS,$FSS})"); return)
+  is_neg_sss(x) && (print(io, "neg_sss(Unum{$ESS,$FSS})"); return)
+  isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS})");return)
+
   fsize_string = @sprintf "0x%04X" x.fsize
   esize_string = @sprintf "0x%04X" x.esize
   flags_string = @sprintf "0x%04X" x.flags
@@ -16,6 +25,15 @@ function Base.show{ESS,FSS}(io::IO, x::UnumSmall{ESS,FSS})
 end
 
 function Base.show{ESS,FSS}(io::IO, x::UnumLarge{ESS,FSS})
+
+  is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS})"); return)
+  is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS})"); return)
+  is_pos_sss(x) && (print(io, "sss(Unum{$ESS,$FSS})"); return)
+  is_neg_inf(x) && (print(io, "neg_inf(Unum{$ESS,$FSS})"); return)
+  is_neg_mmr(x) && (print(io, "neg_mmr(Unum{$ESS,$FSS})"); return)
+  is_neg_sss(x) && (print(io, "neg_sss(Unum{$ESS,$FSS})"); return)
+  isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS})");return)
+
   fsize_string = @sprintf "0x%04X" x.fsize
   esize_string = @sprintf "0x%04X" x.esize
   flags_string = @sprintf "0x%04X" x.flags
@@ -29,44 +47,15 @@ function Base.show{ESS,FSS}(io::IO, ::Type{Unum{ESS,FSS}})
   print(io, "Unum{$ESS,$FSS}")
 end
 
-#=
-import Base.bits
-function describe{ESS,FSS}(x::Unum{ESS, FSS})
-  dstring = is_ulp(x) ? string(calculate(prev_exact(x)), " -> ", calculate(next_exact(x))) : string("exact ", calculate(x))
-  is_pos_mmr(x) && (dstring = "mmr{$ESS, $FSS}")
-  is_neg_mmr(x) && (dstring = "-mmr{$ESS, $FSS}")
-  is_pos_sss(x) && (dstring = "sss{$ESS, $FSS}")
-  is_neg_sss(x) && (dstring = "-sss{$ESS, $FSS}")
-
-  string(bits(x, " "), " (aka ", dstring, ")")
-end
-
-###NOTE THIS NEEDS TO BE FIXED
-
-
-function bits{ESS,FSS}(x::Unum{ESS,FSS}, space::ASCIIString = "")
-  res = ""
-  for idx = 0:FSS - 1
-    res = string((x.fsize >> idx) & 0b1, res)
-  end
-  res = string(space, res)
-  for idx = 0:ESS - 1
-    res = string((x.esize >> idx) & 0b1, res)
-  end
-  res = string(space, x.flags & 0b1, space, res)
-  tl = length(x.fraction) * 64 - 1
-  for idx = (tl-x.fsize):tl
-    res = string(bits(x.fraction), res)
-  end
-  res = string(space, res)
-  for idx = 0:x.esize
-    res = string(((x.exponent[integer(ceil((idx + 1) / 64))] >> (idx % 64)) & 0b1), res)
-  end
-  res = string((x.flags & 0b10) >> 1, space, res)
+function Base.bits{ESS,FSS}(x::Unum{ESS,FSS}, space::ASCIIString = "")
+  res = string((x.flags & 0b10) >> 1,       space,
+         bits(x.exponent)[64 - x.esize:64], space,
+         bits(x.fraction)[1:(x.fsize + 1)], space,
+         x.flags & 0b1)
+  ESS > 0 && (res = string(res, space, bits(x.esize)[17-ESS:16]))
+  FSS > 0 && (res = string(res, space, bits(x.fsize)[17-ESS:16]))
   res
 end
-export bits
-=#
 
 ################################################################################
 #default environment settings

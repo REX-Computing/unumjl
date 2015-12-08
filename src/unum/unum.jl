@@ -9,7 +9,7 @@ include("./unum-properties.jl")
 include("./unum-operations.jl")
 include("./unum-convert.jl")
 include("./unum-comparison.jl")
-#=
-include("./unum-addition.jl")
-=#
+
+#h-layer stuff
+
 include("./unum-hlayer.jl")

@@ -84,7 +84,7 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
 end
 =#
 
-function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
+function __resolve_subnormal!{ESS,FSS}(a::Unum{ESS,FSS})
   #resolves a unum with an "unusual exponent", i.e. when esize is not
   #max_esize.  This is an "unsafe" operation, in that it does not check
   #if the passed value is actually subnormal, or that esize isn't pushed to the brim.
