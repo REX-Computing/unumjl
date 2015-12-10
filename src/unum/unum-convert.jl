@@ -27,10 +27,10 @@
       dexp = decode_exp(x)
       (dexp < $min_exp) && return sss(Unum{ESS1, FSS1}, x.flags & UNUM_SIGN_MASK)
       (dexp > $max_exp) && return mmr(Unum{ESS1, FSS1}, x.flags & UNUM_SIGN_MASK)
-      (esize, exponent) = encode_exp(x) #ensures that the representation will fit within the limits of ESS1
+      (esize, exponent) = encode_exp(dexp) #ensures that the representation will fit within the limits of ESS1
     end
   end
-  
+
   #and then handle flags
   @code :(flags = x.flags)
 
@@ -54,15 +54,16 @@
   else
     #now we're going to handle moving down in fraction size.
     if (FSS1 < 7)
-      tmask = mask_top(FSS1)
-      bmask = mask_bot(FSS1)
+      mfsize = max_fsize(FSS1)
+      tmask = mask_top(mfsize)
+      bmask = mask_bot(mfsize)
       if (FSS2 < 7)
         #if both are UInt64s, then it's a simple copy operation, followed by
         #a mask to check the ubits.
         @code quote
           fraction = x.fraction
           ###CHECK MASK HERE.
-          if (flags & bmask != 0)
+          if (flags & $bmask != 0)
             flags |= UNUM_UBIT_MASK
             fsize = $mfsize
           else
@@ -75,7 +76,6 @@
         for idx = 2:LENGTH_SRC
           @code :(@inbounds accum |= x.fraction.a[$idx])
         end
-        mfsize = max_fsize(FSS1)
         #then check the single most significant word.
         @code quote
           @inbounds accum |= (x.fraction.a[1] & $bmask)

@@ -150,27 +150,56 @@ end
 
 ################################################################################
 # EXPONENT ENCODING AND DECODING
-#encodes an exponent as a biased 2-tuple (esize, exponent)
-#remember msb is zero-indexed, but outputs a zero for the zero value
+doc"""
+`Unums.encode_exp(::Int64)` returns a duple `(esize, exponent)` which returns the
+most compact Unum representation for an unbiased exponent.  This does not
+account for subnormal representations.
+"""
 function encode_exp(unbiasedexp::Int64)
   #make sure our unbiased exponent is a signed integer
   unbiasedexp = Int64(unbiasedexp)
   esize = UInt16(64 - leading_zeros(UInt64(abs(unbiasedexp - 1))))
   (esize, UInt64(unbiasedexp + 1 << esize - 1))
 end
+
+doc"""
+`Unums.encode_exp(::UInt16, ::UInt64)` takes a duple `(esize, exponent)` and
+returns the unbiased exponent which is represented by this value.  This does
+not account for subnormal representations.
+"""
 #the inverse operation is finding the unbiased exponent of an Unum.
 decode_exp(esize::UInt16, exponent::UInt64) = Int64(exponent) - (1 << esize) + 1
 
-#maxfsize returns the the maximum fraction size for a given FSS.
-max_fsize(FSS) = UInt16((1 << FSS) - 1)
-max_esize(ESS) = UInt16((1 << ESS) - 1)
+doc"""
+`Unums.max_fsize(::Int64)` retrieves the maximum possible fsize value based on
+the FSS value.
+"""
+max_fsize(FSS::Int64) = UInt16((1 << FSS) - 1)
+doc"""
+`Unums.max_esize(::Int64)` retrieves the maximum possible esize value based on
+the ESS value.
+"""
+max_esize(ESS::Int64) = UInt16((1 << ESS) - 1)
 
-#note the difference here.  ESS values are determined by julia's type system
-#and therefore take the value Int.  esize values are set by the type definition
-#and are unsigned 16-bit integers always.
+doc"""
+`Unums.max_biased_exponent(::Int64)` retrieves the maximum possible biased exponent
+for a given ESS.  Passing a UInt16 instead to `max_biased_exponent(::UInt16)`
+signals that your are passing an esize value, instead of a ESS value.  Note that
+there is no correspoding min_biased_exponent, because that is always 0.
+"""
 max_biased_exponent(ESS::Int64) = UInt64((1 << (1 << ESS))) - one(UInt64)
 max_biased_exponent(esize::UInt16) = UInt64(1 << (esize + 1)) - one(UInt64)
 
-#note that these are the unbiased exponent values.
-max_exponent(ESS) = Int64(1 << (1 << ESS - 1))
-min_exponent(ESS) = Int64(-(1 << (1 << ESS - 1)) + 2)
+doc"""
+`Unums.max_exponent(::Int64)` retrieves the maximum possible unbiased exponent for a given ESS.
+"""
+max_exponent(ESS::Int64) = Int64(1 << (1 << ESS - 1))
+
+doc"""
+`Unums.min_exponent(::Int64)` retrieves the minimum possible unbiased exponent
+for a given ESS, not counting subnormal representations.
+`min_exponent(ESS::Int64, FSS::Int64)` accounts for this.
+"""
+min_exponent(ESS::Int64) = Int64(-(1 << (1 << ESS - 1)) + 2)
+#and then a minimum exponent that takes into account subnormality.
+min_exponent(ESS::Int64, FSS::Int64) = min_exponent(ESS) - (max_fsize(FSS) + 1)
