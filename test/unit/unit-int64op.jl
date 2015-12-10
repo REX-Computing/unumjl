@@ -122,23 +122,23 @@ bigger_array = Unums.ArrayNum{7}([z64, z64, z64, z64])
 ## CLZ AND CTZ
 
 #leading_zeros
-@test leading_zeros(allbits) == 0
-@test leading_zeros(nobits) == 64
-@test leading_zeros(msb8) == 0
-@test leading_zeros(lsb6) == 58
-@test leading_zeros(UInt64(0b0001111000)) == 57
-@test leading_zeros(Unums.ArrayNum{7}([nobits, 0x00FF_0000_0000_0000])) == 72
-@test leading_zeros(Unums.ArrayNum{7}([0x0000_0000_0000_F00F, nobits])) == 48
-@test leading_zeros(Unums.ArrayNum{7}([nobits, nobits])) == 128
+@test clz(allbits) == 0
+@test clz(nobits) == 64
+@test clz(msb8) == 0
+@test clz(lsb6) == 58
+@test clz(UInt64(0b0001111000)) == 57
+@test clz(Unums.ArrayNum{7}([nobits, 0x00FF_0000_0000_0000])) == 72
+@test clz(Unums.ArrayNum{7}([0x0000_0000_0000_F00F, nobits])) == 48
+@test clz(Unums.ArrayNum{7}([nobits, nobits])) == 128
 #test trailing_zeros
-@test trailing_zeros(allbits) == 0
-@test trailing_zeros(nobits) == 64
-@test trailing_zeros(msb8) == 56
-@test trailing_zeros(lsb6) == 0
-@test trailing_zeros(UInt64(0b0001111000)) == 3
-@test trailing_zeros(Unums.ArrayNum{7}([nobits, 0x00FF_0000_0000_0000])) == 48
-@test trailing_zeros(Unums.ArrayNum{7}([0x0000_0000_0000_F00F, nobits])) == 64
-@test trailing_zeros(Unums.ArrayNum{7}([nobits, nobits])) == 128
+@test ctz(allbits) == 0
+@test ctz(nobits) == 64
+@test ctz(msb8) == 56
+@test ctz(lsb6) == 0
+@test ctz(UInt64(0b0001111000)) == 3
+@test ctz(Unums.ArrayNum{7}([nobits, 0x00FF_0000_0000_0000])) == 48
+@test ctz(Unums.ArrayNum{7}([0x0000_0000_0000_F00F, nobits])) == 64
+@test ctz(Unums.ArrayNum{7}([nobits, nobits])) == 128
 
 ################################################################################
 ## MASKS

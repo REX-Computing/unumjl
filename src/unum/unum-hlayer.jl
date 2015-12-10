@@ -222,7 +222,7 @@ Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float64) = convert(Unum{ESS,FSS}, 
 
 ################################################################################
 # unum string parsing
-function Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, s::String)
+function Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, s::AbstractString)
   println("parsing the prettyprint string $s")
   #first there should be a numerical section.  Scan for this.
 

@@ -8,7 +8,58 @@
 #in appendix a of "The End of Error"
 
 decode_exp{ESS,FSS}(x::Unum{ESS,FSS}) = decode_exp(x.esize, x.exponent)
-export decode_exp
+
+doc"""
+`decode_exp_frac(::Unum{ESS,FSS})` decodes an exponent but if the exponent is
+subnormal (strange or otherwise) it shifts the fraction and adjusts the frac_size.
+the triple (unbiased_exponent, fraction, fsize) is returned.
+
+`decode_exp_frac(::Unum{ESS,FSS}, ::ArrayNum{FSS})` is for `FSS > 6`, and returns
+the same triple, except preallocated space for the new fraction should be passed
+to function, and the contents of this space will be bashed.
+"""
+@gen_code function decode_exp_frac{ESS,FSS}(x::Unum{ESS,FSS})
+  FSS > 6 && throw(ArgumentError("FSS $FSS > 6 is invalid for this form of decode_exp_frac"))
+  @code quote
+    unbiased_exponent::Int = decode_exp(x)
+    fraction::UInt64 = x.fraction
+    fsize::UInt16 = x.fsize
+
+    #make modifications if we're subnormal.
+    if is_subnormal(x)
+      shft::UInt16 = clz(x.fraction) + 1
+      unbiased_exponent -= (shft - 1)
+      fraction <<= shft
+      fsize -= min(shft, fsize)
+    end
+
+    (unbiased_exponent, fraction, fsize)
+  end
+end
+
+@gen_code function decode_exp_frac{ESS,FSS}(x::Unum{ESS,FSS}, f::ArrayNum{FSS})
+  FSS < 6 && throw(ArgumentError("FSS $FSS < 6 is invalid for this form of decode_exp_frac"))
+
+  #copy from the original arraynum into the new arraynum.
+  for idx=1:__cell_length(FSS)
+    @code :(@inbounds f.a[$idx] = x.fraction.a[$idx])
+  end
+
+  @code quote
+    unbiased_exponent::Int = decode_exp(x)
+    fsize::UInt16 = x.fsize
+
+    #make modifications if we're subnormal.
+    if is_subnormal(x)
+      shft::UInt16 = clz(x.fraction) + 1
+      unbiased_exponent -= (shft - 1)
+      lsh!(f, shft)
+      fsize -= min(shft > fsize)
+    end
+
+    (unbiased_exponent, f, fsize)
+  end
+end
 
 #some really dumb ones, but we'll put these in for legibility.
 is_ulp{ESS,FSS}(x::Unum{ESS,FSS})      = ((x.flags & UNUM_UBIT_MASK) != 0)

@@ -91,7 +91,7 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   _aexp::Int64 = decode_exp(a)
   #don't forget to add one, because in theory we're going to want to move that
   #first one PAST the left end of the fraction value.
-  _ashl::UInt16 = leading_zeros(a.fraction) + 1
+  _ashl::UInt16 = clz(a.fraction) + 1
 
   is_zero(a) && return zero(Unum{ESS,FSS})
 

@@ -6,8 +6,11 @@ Base.bits{FSS}(a::ArrayNum{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
 @gen_code function __minimum_data_width{FSS}(n::ArrayNum{FSS})
-  l = (__cell_length(FSS) << 6) - 1
-  @code :(UInt16(max(0, $l - trailing_zeros(n))))
+  l = max_fsize(FSS)
+  @code quote
+    res = max(z16, $l - ctz(n))
+    res == 0xFFFF ? z16 : res
+  end
 end
   #explanation of formula:
   #length(a) << 6:            total bits in the array representation
@@ -18,7 +21,7 @@ end
   #                           has width 0, not width "-1".
 
 #this is a better formula for a single-width unsigned integer representation.
-__minimum_data_width(n::UInt64) = UInt16(max(0, 63 - trailing_zeros(n)))
+__minimum_data_width(n::UInt64) = (res = max(z16, 0x003F - ctz(n)); res == 0xFFFF ? z16 : res)
 
 #=
 
