@@ -3,6 +3,23 @@
 #bits function for hlayer output.
 Base.bits{FSS}(a::ArrayNum{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a.a)
 
+#forwarding getindex and setindex!
+Base.getindex{FSS}(a::ArrayNum{FSS}, key...) = getindex(a.a, key...)
+Base.setindex!{FSS}(a::ArrayNum{FSS}, X, keys...) = setindex!(a.a, X, keys...)
+
+doc"""
+`set_bit!` sets a bit in the ArrayNum referred to by the value b, this bit is
+one-indexed with the top bit being the highest value.  A value of zero has
+undefined effects.
+"""
+function set_bit!{FSS}(a::ArrayNum{FSS}, b::UInt16)
+  a_index = ((b - o16) >> 6) + o16
+  b_index = ((b - o16) % 64)
+  @inbounds a[a_index] = a[a_index] | (0x8000_0000_0000_0000 >> b_index)
+  a
+end
+export set_bit!
+
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
 @gen_code function __minimum_data_width{FSS}(n::ArrayNum{FSS})

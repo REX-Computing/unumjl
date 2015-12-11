@@ -160,6 +160,10 @@ end
 #warlpiri one is a subnormal number.
 @test Unums.decode_exp_frac(one(Unum{0,0})) == (0, z64, z16)
 
+##################################
+#TODO:   WRITE NEW UNIT TESTS HERE
+##################################
+
 #checking max_fsize function
 #helpful table.
 #FSS    maximum fsize bitrep   fsize  real_fsize

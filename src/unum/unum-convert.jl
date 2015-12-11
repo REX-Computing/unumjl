@@ -4,106 +4,110 @@
 ################################################################################
 ## UNUM TO UNUM
 
-function Base.convert{ESS1,FSS1,ESS2,FSS2}(::Type{Unum{ESS1,FSS1}}, x::Unum{ESS2,FSS2})
+function __rightshift_with_underflow_check(f::UInt64, s::UInt16, flags::UInt16)
+  #first generate the mask.
+  mask = (1 << s) - 1
+  ((f & mask) != 0) && (flags |= UNUM_UBIT_MASK)
+  f >>= s
+  (f,  flags)
+end
+
+function __rightshift_with_underflow_check{FSS}(f::ArrayNum{FSS}, s::UInt16, flags::UInt16)
+  #generate the mask holder.
+  mask = zero(ArrayNum{FSS})
+  #actually generate the mask.
+  mask_bot!(mask, max_fsize(FSS) - s)  #double check that this is correct.
+  #compare the mask with the target.
+  fill_mask!(mask, f)
+  is_not_zero(mask) && (flags |= UNUM_UBIT_MASK)
+  #right shift.
+  rsh!(f, s)
+  (f, flags)
+end
+
+function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DEST_FSS}}, x::Unum{SRC_ESS,SRC_FSS})
+
+  ############################################
+  # TODO:  TURN THIS INTO A GENERATED FUNCTION
+  ############################################
+
   #check for NaN, because that doesn't really follow the rules you expect
-  is_nan(x) && return nan(Unum{ESS1, FSS1})
-
-  #first, do the exponent part.
-  #trivially, it may be possible to directly copy the data over.
-  if ESS2 <= ESS1
-    #does this make sense?  mmr converting from a lower unum yields a UBOUND, not
-    #a unum.  So the answer sholud be nan.  Conversions to Ubound could be supported in the future.
-    is_mmr(x) && return nan(Unum{ESS1, FSS1})
-
-    #otherwise, it's pretty much the same going forward.
-    esize = x.esize
-    exponent = x.exponent
-  else  #handle a shrinking exponent.
-    min_exp = min_exponent(ESS1)
-    max_exp = max_exponent(ESS1)
-
-    dexp = decode_exp(x)
-    (dexp < min_exp) && return sss(Unum{ESS1, FSS1}, x.flags & UNUM_SIGN_MASK)
-    (dexp > max_exp) && return mmr(Unum{ESS1, FSS1}, x.flags & UNUM_SIGN_MASK)
-    (esize, exponent) = encode_exp(dexp) #ensures that the representation will fit within the limits of ESS1
-  end
+  is_nan(x) && return nan(Unum{DEST_ESS, DEST_FSS})
 
   #and then handle flags
-  flags = x.flags
+  flags::UInt16 = x.flags
 
-  #set cell_length values
-  LENGTH_DEST = __cell_length(FSS1)
-  LENGTH_SRC =  __cell_length(FSS2)
-
-  #next, do the fraction part.  First the case where we're expanding fsize.
-  #since the new fsize will automatically accomodate the old fsize, we should be ok.
-  fsize = x.fsize
-  if (FSS2 <= FSS1)
-    if ((FSS2 < 7) && (FSS1 < 7))
-      #going from a short fraction to another short fraction.
-      fraction = x.fraction
-    else
-      #going from a short or long fraction to a long fraction.
-      leftovers = LENGTH_DEST - LENGTH_SRC
-      #a simple vcat ought to do the trick.
-      fraction = ArrayNum{FSS1}(vcat(x.fraction, zeros(UInt64, leftovers)))
-    end
+  if (SRC_FSS < 7)
+    (destination_exp, src_frac, fsize) = decode_exp_frac(x)
   else
-    #now we're going to handle moving down in fraction size.
-    if (FSS1 < 7)
-      mfsize = max_fsize(FSS1)
-      tmask = mask_top(mfsize)
-      bmask = mask_bot(mfsize)
-      if (FSS2 < 7)
-        #if both are UInt64s, then it's a simple copy operation, followed by
-        #a mask to check the ubits.
-        fraction = x.fraction
-        ###CHECK MASK HERE.
-        if (flags & bmask != 0)
-          flags |= UNUM_UBIT_MASK
-          fsize = mfsize
-        else
-          fsize = min(mfsize, x.fsize)
-        end
-      else
-        #first check the less significant words
-        accum = z64
-        for idx = 2:LENGTH_SRC
-          @inbounds accum |= x.fraction.a[idx]
-        end
-        #then check the single most significant word.
-        @inbounds accum |= (x.fraction.a[1] & bmask)
-        #process the resulting accumulated bits to see if we throw a ubit.
-        if (accum != 0)
-          flags |= UNUM_UBIT_MASK
-          fsize = mfsize
-        else
-          fsize = min(mfsize, x.fsize)
-        end
-        #then transfer the fraction content.
-        @inbounds fraction = x.fraction.a[1] & tmask
-      end
-    else
-      #simply check the trailing words for the presence of ones to set the ubit.
-      accum = z64
-      for idx = (LENGTH_DEST + 1):LENGTH_SRC
-        @inbounds accum |= x.fraction.a[idx]
-      end
-      mfsize = max_fsize(FSS1)
-      if (accum != 0)
-        flags |= UNUM_UBIT_MASK
-        fsize = mfsize
-      else
-        fsize = min(mfsize, x.fsize)
-      end
-      #then transfer the contents of the array.
-      for idx = 1:LENGTH_DEST
-        @inbounds fraction = ArrayNum{FSS1}(x.fraction.a[idx])
-      end
-    end
+    (destination_exp, src_frac, fsize) = decode_exp_frac(x, ArrayNum{SRC_FSS}(zeros(UInt64, __cell_length(SRC_FSS))))
   end
 
-  Unum{ESS1, FSS1}(fsize, esize, flags, fraction, exponent)
+  #first, do the exponent part..
+  (SRC_ESS <= DEST_ESS) && is_mmr(x) && return nan(Unum{DEST_ESS, DEST_FSS})
+
+  #determine properties of the destination type.
+  min_exp_subnormal = min_exponent(DEST_ESS, DEST_FSS)
+  min_exp_normal = min_exponent(DEST_ESS)
+  max_exp = max_exponent(DEST_ESS)
+
+  #check to see if we are beyond the extremes of the numerical range.
+  (destination_exp > max_exp) && return mmr(Unum{DEST_ESS,DEST_FSS}, x.flags & UNUM_SIGN_MASK)
+  (destination_exp < min_exp_subnormal) && return sss(Unum{DEST_ESS,DEST_FSS}, x.flags & UNUM_SIGN_MASK)
+
+  if (destination_exp < min_exp_normal)
+    #set the exponent and esize to be the smallest possible exponent
+    esize = max_esize(DEST_ESS)
+    exponent = z64
+    shft = UInt16(min_exp_normal - destination_exp)
+    #change fsize.  If fraction starts out as zero, we're just shifting the virtual
+    #one over.
+    if (src_frac == 0)
+      fsize = shft - o16
+      src_frac = t64 >> (shft - 0x0001)
+    else
+      #recalculate fsize
+      fsize = min(fsize + shft, max_fsize(DEST_FSS))
+      #rightshift the fraction
+      (src_frac, flags) = __rightshift_with_underflow_check(src_frac, shft, flags)
+      #add in the the
+      set_bit!(src_frac, shft)
+    end
+  else
+    #do the default exponent encoding.  No mucking with fractions necessary.
+    (esize, exponent) = encode_exp(destination_exp)
+  end
+
+  #set cell_length values
+  LENGTH_DEST = __cell_length(DEST_FSS)
+  LENGTH_SRC =  __cell_length(SRC_FSS)
+
+  #next, transcribe the fraction.  First, allocate the space necessary for the
+  #result.
+  fraction = (DEST_FSS > 6) ? zero(ArrayNum{FSS}) : z64
+
+  #First, go through everything between destination length and source length and check to make sure it's zero.
+  if (DEST_FSS > 6)
+    accum = z64
+    for idx = (LENGTH_DEST + 1):LENGTH_SRC
+      @inbounds accum |= src_frac[idx]
+    end
+    (accum != 0) && (flags |= UNUM_UBIT_MASK)
+  end
+
+  #next, if DEST_FSS < 7, then do a masking operation.
+  if (DEST_FSS < 7)
+    @inbounds fraction = mask_top(DEST_FSS) & src_frac[1]
+    @inbounds flags |= ((mask_bot(DEST_FSS) & src_frac[1]) != 0) ? UNUM_UBIT_MASK : z16
+  else
+    for idx = (1:LENGTH_DEST)
+      @inbounds fraction[idx] = src_frac[idx]
+    end
+  end
+  #trim fsize, if necessary.
+  fsize = min(max_fsize(DEST_FSS), fsize)
+
+  Unum{DEST_ESS, DEST_FSS}(fsize, esize, flags, fraction, exponent)
 end
 
 

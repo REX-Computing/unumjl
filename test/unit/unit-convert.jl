@@ -20,6 +20,10 @@
 @test convert(Unum{4,6}, Unum{0,0}(z16, z16, z16, z64, z64)) == Unum{4,6}(z16, z16, z16, z64, z64)
 #from a bigger small unum - to a smaller unum, with no trimming.
 @test convert(Unum{1,1}, one(Unum{4,6})) == one(Unum{1,1})
+#from a big small unum to a smaller unum which requires subnormality.
+@test convert(Unum{0,0}, one(Unum{4,6})) == one(Unum{0,0})
+#from a really big unum to a small unum requiring subnormality.
+@test convert(Unum{0,0}, one(Unum{4,7})) == one(Unum{0,0})
 
 #=
 #float to unum

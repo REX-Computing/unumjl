@@ -8,10 +8,14 @@ doc"""
 The top mask labels the bits which are part of the unum representation.  Note
 that this is only valid for single UInt64s.  For ArrayNums, you will need the
 Unums.mask_top! function.
+
+Passing an Int64 to `mask_top(FSS::Int64)` automatically detects it to generate
+a mask for the FSS in general.
 """
 function mask_top(fsize::UInt16)
   reinterpret(UInt64, -9223372036854775808 >> fsize)
 end
+mask_top(FSS::Int64) = mask_top(max_fsize(FSS))
 
 doc"""
 `Unums.mask_bot` returns an UInt64 with the 'bottom mask' of a particular fsize.
@@ -19,10 +23,14 @@ The bottom mask labels the bits which are going to be thrown away and are not
 part of the unum representation and are there only because of the padding
 scheme.   Note that this is only valid for single UInt64s.  For ArrayNums, you
 will need the Unums.mask_bot! function.
+
+Passing an Int64 to `mask_top(FSS::Int64)` automatically detects it to generate
+a mask for the FSS in general.
 """
 function mask_bot(fsize::UInt16)
   ~reinterpret(UInt64, -9223372036854775808 >> fsize)
 end
+mask_bot(FSS::Int64) = mask_bot(max_fsize(FSS))
 
 doc"""
 `Unums.mask_top!` fills an array with the 'top mask' of a particular fsize.  The
