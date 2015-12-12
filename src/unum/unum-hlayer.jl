@@ -5,21 +5,21 @@
 #
 #N.B. typeof() will correctly identify the Unums.UnumSmall and Unums.UnumLarge
 #types.
-@gen_code function Base.show{ESS,FSS}(io::IO, x::UnumSmall{ESS,FSS})
+@gen_code function Base.show{ESS,FSS}(io::IO, x::Unum{ESS,FSS})
   @code quote
     is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS})"); return)
     is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS})"); return)
     is_pos_sss(x) && (print(io, "sss(Unum{$ESS,$FSS})"); return)
-    is_neg_inf(x) && (print(io, "neg_inf(Unum{$ESS,$FSS})"); return)
-    is_neg_mmr(x) && (print(io, "neg_mmr(Unum{$ESS,$FSS})"); return)
-    is_neg_sss(x) && (print(io, "neg_sss(Unum{$ESS,$FSS})"); return)
+    is_neg_inf(x) && (print(io, "-inf(Unum{$ESS,$FSS})"); return)
+    is_neg_mmr(x) && (print(io, "-mmr(Unum{$ESS,$FSS})"); return)
+    is_neg_sss(x) && (print(io, "-sss(Unum{$ESS,$FSS})"); return)
     isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS})");return)
 
     fsize_string = @sprintf "0x%04X" x.fsize
     esize_string = @sprintf "0x%04X" x.esize
     flags_string = @sprintf "0x%04X" x.flags
   end
-  @code (FSS < 7) ? :(fraction_string = @sprintf "0x%016X" x.fraction) : :(string(x.fraction.a))
+  @code (FSS < 7) ? :(fraction_string = @sprintf "0x%016X" x.fraction) : :(fraction_string = string(x.fraction.a))
   @code quote
     exponent_string = @sprintf "0x%016X" x.exponent
     print(io, "Unum{$ESS,$FSS}($fsize_string, $esize_string, $flags_string, $fraction_string, $exponent_string)")

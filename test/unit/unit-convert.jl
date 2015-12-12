@@ -25,17 +25,17 @@
 #from a really big unum to a small unum requiring subnormality.
 @test convert(Unum{0,0}, one(Unum{4,7})) == one(Unum{0,0})
 
-#=
+
 #float to unum
 #test that the general conversion works for normal floating points in the {4,6} environment
 
 seed = randn(100)
-f16a = [BigFloat(float16(seed[i])) for i = 1:100]
-f32a = [BigFloat(float32(seed[i])) for i = 1:100]
-f64a = [BigFloat(float64(seed[i])) for i = 1:100]
-c16a = [calculate(convert(Unum{4,6}, float16(seed[i]))) for i = 1:100]
-c32a = [calculate(convert(Unum{4,6}, float32(seed[i]))) for i = 1:100]
-c64a = [calculate(convert(Unum{4,6}, float64(seed[i]))) for i = 1:100]
+f16a = [BigFloat(Float16(seed[i])) for i = 1:100]
+f32a = [BigFloat(Float32(seed[i])) for i = 1:100]
+f64a = [BigFloat(Float64(seed[i])) for i = 1:100]
+c16a = [calculate(convert(Unum{4,6}, Float16(seed[i]))) for i = 1:100]
+c32a = [calculate(convert(Unum{4,6}, Float32(seed[i]))) for i = 1:100]
+c64a = [calculate(convert(Unum{4,6}, Float64(seed[i]))) for i = 1:100]
 @test f16a == c16a
 @test f32a == c32a
 @test f64a == c64a
@@ -98,9 +98,9 @@ tinyfloat = reinterpret(Float64, o64)
 
 #test random numbers by bootstropping off of the float to unum conversion.
 seed = randn(100)
-f16a = [float16(seed[i]) for i = 1:100]
-f32a = [float32(seed[i]) for i = 1:100]
-f64a = [float64(seed[i]) for i = 1:100]
+f16a = [Float16(seed[i]) for i = 1:100]
+f32a = [Float32(seed[i]) for i = 1:100]
+f64a = [Float64(seed[i]) for i = 1:100]
 @test f16a == map((x) -> convert(Float16, convert(Unum{4,6}, x)), f16a)
 @test f32a == map((x) -> convert(Float32, convert(Unum{4,6}, x)), f32a)
 @test f64a == map((x) -> convert(Float64, convert(Unum{4,6}, x)), f64a)
@@ -135,4 +135,3 @@ f64a = [float64(seed[i]) for i = 1:100]
 #test that subnormals convert correctly
 @test 1.0 == convert(Float64, Unum{0,0}(z16, z16, z16, t64, z64))
 #test converting *to* a subnormal float.
-=#

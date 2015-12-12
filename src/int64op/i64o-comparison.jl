@@ -7,8 +7,8 @@
 #next significant cell and seeks a decesion for that.  If all of the cells are
 #equal then it spits out false.
 
-import Base.<
-import Base.>
+import Base: <, >, ==, !=
+
 @gen_code function <{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   @code quote
     res::Bool = false
@@ -37,4 +37,20 @@ end
     end
   end
   @code :(res)
+end
+
+@gen_code function !={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
+  @code :(accum = z64)
+  for idx = 1:__cell_length(FSS)
+    @code :(accum |= a[$idx] $ b[$idx])
+  end
+  @code :(accum != 0)
+end
+
+@gen_code function =={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
+  @code :(accum = z64)
+  for idx = 1:__cell_length(FSS)
+    @code :(accum |= a[$idx] $ b[$idx])
+  end
+  @code :(accum == 0)
 end

@@ -34,6 +34,9 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
   #check for NaN, because that doesn't really follow the rules you expect
   is_nan(x) && return nan(Unum{DEST_ESS, DEST_FSS})
 
+  is_inf(x) && return inf(Unum{DEST_ESS, DEST_FSS}, x.flags & UNUM_SIGN_MASK)
+  is_zero(x) && return zero(Unum{DEST_ESS, DEST_FSS})
+
   #and then handle flags
   flags::UInt16 = x.flags
 
@@ -84,7 +87,7 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
 
   #next, transcribe the fraction.  First, allocate the space necessary for the
   #result.
-  fraction = (DEST_FSS > 6) ? zero(ArrayNum{FSS}) : z64
+  fraction = (DEST_FSS > 6) ? zero(ArrayNum{DEST_FSS}) : z64
 
   #First, go through everything between destination length and source length and check to make sure it's zero.
   if (DEST_FSS > 6)
@@ -100,7 +103,7 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
     @inbounds fraction = mask_top(DEST_FSS) & src_frac[1]
     @inbounds flags |= ((mask_bot(DEST_FSS) & src_frac[1]) != 0) ? UNUM_UBIT_MASK : z16
   else
-    for idx = (1:LENGTH_DEST)
+    for idx = (1:min(LENGTH_DEST, LENGTH_SRC))
       @inbounds fraction[idx] = src_frac[idx]
     end
   end
@@ -235,9 +238,9 @@ for F in [Float16, Float32, Float64]
     emin = -(ebias) + 1           #minimum exponent, not including subnormals.
 
     quote
-      isnan(x) && return nan(T)
-      is_pos_inf(x) && return inf(T)
-      is_neg_inf(x) && return -inf(T)
+      isnan(x) && return convert(T, NaN)
+      is_pos_inf(x) && return convert(T, Inf)
+      is_neg_inf(x) && return -convert(T, Inf)
       is_zero(x) && return zero(T)
 
       #create a dummy value that will hold our result.
@@ -257,7 +260,7 @@ for F in [Float16, Float32, Float64]
       else
         fraction = src_frac[1]
       end
-      
+
       #calculate the rebiased exponent and push it into the result.
       res |= convert($I, unbiased_exp + $ebias) << ($fsize + 1)
 
