@@ -2,7 +2,7 @@
 #testing each of the unum constant generators in four unum environments:
 # Unum{0,0}, Unum{1,1}, Unum{4,6}, Unum{4,8}
 
-#it's best to do this with a
+#it's best to do this with a macro
 macro uctest(T, f, fs, es, fl, fr, ex)
   creationstmt = :($f($T))
   arraytest = T.args[3] > 6 ? (:(x.fraction.a == $fr)) : (:(x.fraction == $fr))
