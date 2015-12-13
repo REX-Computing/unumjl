@@ -38,11 +38,12 @@ end
     high_value_rep::UInt16 = (0x0001 << esize) + fsize
     #find the appropriate esize to rerepresent this value.
 
-    suggested_esize::UInt16 = 0x0015 - leading_zeros(high_value_rep)
+    suggested_esize::UInt16 = 0x000F - leading_zeros(high_value_rep)
     esize::UInt16 = min(suggested_esize, $mesize)
 
     suggested_fsize::UInt16 = high_value_rep - (0x0001 << esize)
     fsize::UInt16 = min(suggested_fsize, $mfsize)
+
     (esize, fsize)
   end
 end

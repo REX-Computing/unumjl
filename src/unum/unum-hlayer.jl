@@ -37,7 +37,7 @@ function Base.bits{ESS,FSS}(x::Unum{ESS,FSS}, space::ASCIIString = "")
          bits(x.fraction)[1:(x.fsize + 1)], space,
          x.flags & 0b1)
   ESS > 0 && (res = string(res, space, bits(x.esize)[17-ESS:16]))
-  FSS > 0 && (res = string(res, space, bits(x.fsize)[17-ESS:16]))
+  FSS > 0 && (res = string(res, space, bits(x.fsize)[17-FSS:16]))
   res
 end
 

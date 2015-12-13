@@ -25,6 +25,12 @@
 #from a really big unum to a small unum requiring subnormality.
 @test convert(Unum{0,0}, one(Unum{4,7})) == one(Unum{0,0})
 
+@test convert(Unum{0,0}, zero(Unum{4,6})) == zero(Unum{0,0})
+@test convert(Unum{4,6}, zero(Unum{0,0})) == zero(Unum{0,0})
+
+@test convert(Unum{0,0}, sss(Unum{4,7})) == sss(Unum{0,0})
+@test convert(Unum{4,6}, sss(Unum{0,0})) == Unum{4,7}(z16, z16, Unums.UNUM_UBIT_MASK, z64, z64)
+
 
 #float to unum
 #test that the general conversion works for normal floating points in the {4,6} environment

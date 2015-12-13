@@ -118,7 +118,7 @@ Base.isfinite{ESS,FSS}(x::Unum{ESS,FSS}) = is_finite(x)
 is_subnormal{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && is_not_zero(x.fraction)
 is_exp_zero{ESS,FSS}(x::Unum{ESS,FSS}) = x.exponent == z64
 @gen_code function is_strange_subnormal{ESS,FSS}(x::Unum{ESS,FSS})
-  mesize = max_esize(ESS)
+  mesize::UInt16 = max_esize(ESS)
   @code :((x.exponent == z64) && (x.esize < $mesize))
 end
 
@@ -141,7 +141,10 @@ end
 is_one{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_unit(x)
 is_neg_one{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_unit(x)
 #checks if the value is sss ("smaller than small subnormal")
-is_sss{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && is_ulp(x) && is_all_zero(x.fraction)
+@generated function is_sss{ESS,FSS}(x::Unum{ESS,FSS})
+  mesize::UInt16 = max_esize(ESS)
+  :(is_ulp(x) && (x.esize == $mesize) && (x.exponent == z64) && is_all_zero(x.fraction))
+end
 is_pos_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_sss(x)
 is_neg_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_sss(x)
 #checks if the value is more than maxreal
