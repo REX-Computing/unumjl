@@ -12,52 +12,39 @@ decode_exp{ESS,FSS}(x::Unum{ESS,FSS}) = decode_exp(x.esize, x.exponent)
 doc"""
 `decode_exp_frac(::Unum{ESS,FSS})` decodes an exponent but if the exponent is
 subnormal (strange or otherwise) it shifts the fraction and adjusts the frac_size.
-the triple (unbiased_exponent, fraction, fsize) is returned.
+the quad (unbiased_exponent, fraction, fsize, zeroish) is returned.  Zeroish refers
+to the state of both exponent and fraction being zero.
 
 `decode_exp_frac(::Unum{ESS,FSS}, ::ArrayNum{FSS})` is for `FSS > 6`, and returns
-the same triple, except preallocated space for the new fraction should be passed
+the same quad, except preallocated space for the new fraction should be passed
 to function, and the contents of this space will be bashed.
 """
-@gen_code function decode_exp_frac{ESS,FSS}(x::Unum{ESS,FSS})
-  FSS > 6 && throw(ArgumentError("FSS $FSS > 6 is invalid for this form of decode_exp_frac"))
-  @code quote
-    unbiased_exponent::Int = decode_exp(x)
-    fraction::UInt64 = x.fraction
-    fsize::UInt16 = x.fsize
+@gen_code function decode_exp_frac{ESS,FSS}(x::Unum{ESS,FSS}, f::Union{ArrayNum{FSS}, UInt64} = z64)
+  FSS > 6 && (f == UInt64) && throw(ArgumentError("FSS $FSS > 6 is invalid for this form of decode_exp_frac"))
+  FSS < 7 && (f == ArrayNum{FSS}) && throw(ArgumentError("FSS $FSS < 6 is invalid for this form of decode_exp_frac"))
 
-    #make modifications if we're subnormal.
-    if is_subnormal(x)
-      shft::UInt16 = clz(x.fraction) + 1
-      unbiased_exponent -= (shft - 1)
-      fraction <<= shft
-      fsize -= min(shft, fsize)
-    end
-
-    (unbiased_exponent, fraction, fsize)
-  end
-end
-
-@gen_code function decode_exp_frac{ESS,FSS}(x::Unum{ESS,FSS}, f::ArrayNum{FSS})
-  FSS < 6 && throw(ArgumentError("FSS $FSS < 6 is invalid for this form of decode_exp_frac"))
-
-  #copy from the original arraynum into the new arraynum.
-  for idx=1:__cell_length(FSS)
-    @code :(@inbounds f.a[$idx] = x.fraction.a[$idx])
-  end
+  ftype = f
+  shift_code = FSS < 7 ? :(fraction <<= shft) : :(lsh!(fraction, shft))
 
   @code quote
     unbiased_exponent::Int = decode_exp(x)
+    fraction::$ftype = x.fraction
     fsize::UInt16 = x.fsize
+    zeroish::Bool = false
 
     #make modifications if we're subnormal.
-    if is_subnormal(x)
-      shft::UInt16 = clz(x.fraction) + 1
-      unbiased_exponent -= (shft - 1)
-      lsh!(f, shft)
-      fsize -= min(shft > fsize)
+    if is_exp_zero(x)
+      if is_frac_zero(x)
+        zeroish = true
+      else
+        shft::UInt16 = clz(x.fraction) + 1
+        unbiased_exponent -= (shft - 1)
+        $shift_code
+        fsize -= min(shft, fsize)
+      end
     end
 
-    (unbiased_exponent, f, fsize)
+    (unbiased_exponent, fraction, fsize, zeroish)
   end
 end
 

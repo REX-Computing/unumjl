@@ -156,9 +156,12 @@ end
 #testing decode_exp_frac.
 
 #a one in a big environment is not a subnormal number.
-@test Unums.decode_exp_frac(one(Unum{4,6})) == (0, z64, z16)
+@test Unums.decode_exp_frac(one(Unum{4,6})) == (0, z64, z16, false)
 #warlpiri one is a subnormal number.
-@test Unums.decode_exp_frac(one(Unum{0,0})) == (0, z64, z16)
+@test Unums.decode_exp_frac(one(Unum{0,0})) == (0, z64, z16, false)
+#test to make sure zeroish works.
+@test Unums.decode_exp_frac(zero(Unum{0,0})) == (0, z64, z16, true)
+@test Unums.decode_exp_frac(sss(Unum{0,0})) == (0, z64, z16, true)
 
 ##################################
 #TODO:   WRITE NEW UNIT TESTS HERE

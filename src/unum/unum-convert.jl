@@ -25,6 +25,28 @@ function __rightshift_with_underflow_check{FSS}(f::ArrayNum{FSS}, s::UInt16, fla
   (f, flags)
 end
 
+@generated function __subnormal_ubit_trim{ESS,FSS}(::Type{Unum{ESS,FSS}}, esize::UInt16, fsize::UInt16)
+  #this function handles the situation where we're trying to convert a zero ulp
+  #into a zero ulp of another size, which may or may not have the appropriate
+  #capacity to handle the ulp.
+
+  #pre-calculate the max esize and max fsize.
+  mesize::UInt16 = max_esize(ESS)
+  mfsize::UInt16 = max_fsize(FSS)
+  quote
+    #calculate the (negative) exponent + 1 on the high value of the subnormal number
+    high_value_rep::UInt16 = (0x0001 << esize) + fsize
+    #find the appropriate esize to rerepresent this value.
+
+    suggested_esize::UInt16 = 0x0015 - leading_zeros(high_value_rep)
+    esize::UInt16 = min(suggested_esize, $mesize)
+
+    suggested_fsize::UInt16 = high_value_rep - (0x0001 << esize)
+    fsize::UInt16 = min(suggested_fsize, $mfsize)
+    (esize, fsize)
+  end
+end
+
 function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DEST_FSS}}, x::Unum{SRC_ESS,SRC_FSS})
 
   ############################################
@@ -35,15 +57,15 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
   is_nan(x) && return nan(Unum{DEST_ESS, DEST_FSS})
 
   is_inf(x) && return inf(Unum{DEST_ESS, DEST_FSS}, x.flags & UNUM_SIGN_MASK)
-  is_zero(x) && return zero(Unum{DEST_ESS, DEST_FSS})
 
   #and then handle flags
   flags::UInt16 = x.flags
 
+
   if (SRC_FSS < 7)
-    (destination_exp, src_frac, fsize) = decode_exp_frac(x)
+    (destination_exp, src_frac, fsize, zeroish) = decode_exp_frac(x)
   else
-    (destination_exp, src_frac, fsize) = decode_exp_frac(x, ArrayNum{SRC_FSS}(zeros(UInt64, __cell_length(SRC_FSS))))
+    (destination_exp, src_frac, fsize, zeroish) = decode_exp_frac(x, ArrayNum{SRC_FSS}(zeros(UInt64, __cell_length(SRC_FSS))))
   end
 
   #first, do the exponent part..
@@ -58,7 +80,16 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
   (destination_exp > max_exp) && return mmr(Unum{DEST_ESS,DEST_FSS}, x.flags & UNUM_SIGN_MASK)
   (destination_exp < min_exp_subnormal) && return sss(Unum{DEST_ESS,DEST_FSS}, x.flags & UNUM_SIGN_MASK)
 
-  if (destination_exp < min_exp_normal)
+  if (zeroish)
+    #check to see if ubit is thrown.
+    if (flags & UNUM_UBIT_MASK != 0)
+      (esize, fsize) = __subnormal_ubit_trim(Unum{DEST_ESS, DEST_FSS}, x.esize, x.fsize)
+      exponent = z64
+    else
+      esize = z16
+      exponent = z64
+    end
+  elseif (destination_exp < min_exp_normal)
     #set the exponent and esize to be the smallest possible exponent
     esize = max_esize(DEST_ESS)
     exponent = z64
@@ -180,7 +211,7 @@ doc"""
 `default_convert` takes floating point numbers and converts them to the equivalent
 unums, using the trivial bitshifiting transformation.
 """
-@gen_code function default_convert(x::AbstractFloat)
+@generated function default_convert(x::AbstractFloat)
   (x == BigFloat) && throw(ArgumentError("bigfloat conversion not yet supported"))
 
   props = __fp_props[x]
@@ -200,7 +231,7 @@ unums, using the trivial bitshifiting transformation.
   fractionbits = (one(UInt64) << (fsize + 1)) - 1
   fractionshift = 64 - fsize - 1
 
-  @code quote
+  quote
     i::UInt64 = reinterpret($I,x)
 
     flags::UInt16 = (i & $signbit) >> ($signshift)
@@ -249,7 +280,7 @@ for F in [Float16, Float32, Float64]
       #first, transfer the sign bit over.
       res |= (convert($I, x.flags & UNUM_SIGN_MASK) << $bits)
 
-      (unbiased_exp, src_frac, _) = decode_exp_frac(x)
+      (unbiased_exp, src_frac, _, __) = decode_exp_frac(x)
 
       #check to see that unbiased_exp is within appropriate bounds for Float32
       (unbiased_exp > $ebias) && return inf(F) * ((x.flags & UNUM_SIGN_MASK == 0) ? 1 : -1)
