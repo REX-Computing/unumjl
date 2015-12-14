@@ -13,3 +13,7 @@ include("./unum-comparison.jl")
 #h-layer stuff
 
 include("./unum-hlayer.jl")
+
+#mathematical stuff
+
+include("./unum-addition.jl")

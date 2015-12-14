@@ -27,7 +27,9 @@ include("./int64op/i64o-typedefs.jl")
 #type definition of unum.
 include("./unum/unum-typedefs.jl")
 #type definition of ubound
-#include("./ubound/ubound-typedefs.jl")
+include("./ubound/ubound-typedefs.jl")
+#type definition of gnum.
+include("./gnum/gnum-typedefs.jl")
 
 ################################################################################
 #IMPLEMENTATION FILES
@@ -36,7 +38,9 @@ include("./int64op/int64ops.jl")
 #implementation of unums.
 include("./unum/unum.jl")
 #ubound-related code
-#include("./ubound/ubound.jl")
+include("./ubound/ubound.jl")
+#gnums-related code
+include("./gnum/gnum.jl")
 
 #utility files
 #include("unum-bitwalk.jl")

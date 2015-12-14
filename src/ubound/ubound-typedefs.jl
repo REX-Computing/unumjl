@@ -3,8 +3,8 @@
 #basic ubound type, which contains two unums, as well as some properties of ubounds
 
 immutable Ubound{ESS,FSS} <: Utype
-  lowbound::Unum{ESS,FSS}
-  highbound::Unum{ESS,FSS}
+  lower::Unum{ESS,FSS}
+  upper::Unum{ESS,FSS}
 
   function Ubound(a, b)
     __check_block_ubound_dev(a, b)

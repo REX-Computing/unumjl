@@ -176,7 +176,7 @@ export mmr, mmr!, pos_mmr, neg_mmr, pos_mmr!, neg_mmr!, big_exact, big_exact!, p
   end
 
   if FSS < 7
-    @code :(x.fraction = zero(UInt64); x)
+    @code :(x.fraction = z64; x)
   else
     @code :(zero!(x.fraction); x)
   end

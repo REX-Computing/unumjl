@@ -7,10 +7,16 @@ Base.bits{FSS}(a::ArrayNum{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "
 Base.getindex{FSS}(a::ArrayNum{FSS}, key...) = getindex(a.a, key...)
 Base.setindex!{FSS}(a::ArrayNum{FSS}, X, keys...) = setindex!(a.a, X, keys...)
 
+@gen_code function copydata!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
+  for idx = 1:__cell_length(FSS)
+    @code :(b.a[$idx] = a.a[$idx])
+  end
+end
+
 doc"""
-`set_bit!` sets a bit in the ArrayNum referred to by the value b, this bit is
-one-indexed with the top bit being the highest value.  A value of zero has
-undefined effects.
+`Unums.set_bit!` sets a bit in the ArrayNum referred to by the value b, this bit
+is one-indexed with the bit 1 being the most significant.  A value of zero has
+undefined effects.  Useful for setting bits after shifting a non-subnormal value.
 """
 function set_bit!{FSS}(a::ArrayNum{FSS}, b::UInt16)
   a_index = ((b - o16) >> 6) + o16
@@ -18,7 +24,15 @@ function set_bit!{FSS}(a::ArrayNum{FSS}, b::UInt16)
   @inbounds a[a_index] = a[a_index] | (0x8000_0000_0000_0000 >> b_index)
   a
 end
-export set_bit!
+
+doc"""
+`Unums.set_bit` sets a bit in a UInt64, this bit is one-indexed with the top bit
+being the the most significant.  A value of zero has undefined effects.  Useful
+for setting bits after shifting a non-subnormal value.
+"""
+function set_bit(a::UInt64, b::UInt16)
+  0x8000_0000_0000_0000 >> (b - o16)
+end
 
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.

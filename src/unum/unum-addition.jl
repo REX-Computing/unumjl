@@ -1,6 +1,128 @@
 #unum-addition.jl
 #Performs addition with unums.  Requires two unums to have the same
-#environment signature.  Also included here is subtraction.
+#environment signature.
+
+
+doc"""
+  `add!(::Unum{ESS,FSS}, ::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and
+  adds them, storing the result in the third, g-layer
+
+  `add!(::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and adds them, storing
+  the result and overwriting the second, g-layer
+
+  In both cases, a reference to the result unum is returned.
+"""
+@generated function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  #implementation of the three-argument add.
+
+  quote
+    #three argument check.
+    override::Bool = __addition_check!(a, b, c)
+    (override) && return
+
+    #check to see if one or both Unums is indefinite.
+    if ((a.flags & UNUM_UBIT_MASK) | (b.flags & UNUM_UBIT_MASK) != 0)
+      inexact_add!(a, b, c)
+    else
+      exact_add!(a, b, c)
+    end
+  end
+end
+
+function __addition_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  #zeros, and return the other value.
+  is_zero(a) && (copy_gnum!(b, c); return true)
+  is_zero(b) && (copy_gnum!(a, c); return true)
+  #nans are really easy.
+  is_nan(a) && (nan!(c); return true)
+  is_nan(b) && (nan!(c); return true)
+
+  #check for infinity.
+  if (is_inf(a))
+    (is_inf(b)) && (a.flags & UNUM_SIGN_MASK != b.flags & UNUM_SIGN_MASK) && (nan!(c); return true)
+    inf!(c, a.flags & UNUM_SIGN_MASK)
+    return true
+  end
+  #since infinity a is known, we don't need a complicated check.
+  is_inf(b) && (inf!(c, b.flags & UNUM_SIGN_MASK); return true)
+
+  (is_mmr(a)) && (a.flags & UNUM_SIGN_MASK == b.flags & UNUM_SIGN_MASK) && (mmr!(c, a.flags & UNUM_SIGN_MASK); return true)
+  (is_mmr(b)) && (a.flags & UNUM_SIGN_MASK == b.flags & UNUM_SIGN_MASK) && (mmr!(c, b.flags & UNUM_SIGN_MASK); return true)
+end
+export add!
+
+@gen_code function exact_add!(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  #calculate the exact sum between two unums.  You may pass this function a unum
+  #with a ubit, but it will calculate the sum as if it didn't have the ubit there
+
+  @code quote
+    #retrieve the sign of the result.
+    flags::UInt16 = a.flags & UNUM_SIGN_MASK
+
+    a_exp::Int64 = decode_exp(a)
+    b_exp::Int64 = decode_exp(b)
+
+    a_dev::Int64 = is_exp_zero(a) ? 1 : 0
+    b_dev::Int64 = is_exp_zero(b) ? 1 : 0
+
+    #derive the "contexts" for each, which is a combination of the exponent and
+    #deviation.
+    a_ctx::Int64 = a_exp + a_dev
+    b_ctx::Int64 = b_exp + b_dev
+
+    (b_ctx > a_ctx) && ((a, b, a_exp, b_exp, a_ctx, b_ctx) = (b, a, b_exp, a_exp, b_ctx, a_ctx))
+
+    #zero out the gnum.
+    zero!(c)
+
+    #copy the contents of a into c.
+    shift::UInt16 = c_ctx - b_ctx
+
+    copy_frac!(b.fraction, c)
+
+    flags = __rightshift_frac_with_underflow_check!(c, shift, flags, Val{:lower}))
+
+    (shift != 0) && (b_dev == 0) && (set_frac_bit!(c, shift, Val{:lower}))
+
+    #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
+    #b's phantom bit if they are overlapping.
+    carry::UInt64 = (1 - a_dev) + ((shift == 0) ? (1 - b_dev) : 0)
+
+    carry = __carried_add_frac!(carry, a.fraction, c)
+
+    #how much the exponent must be shifted.
+    shift::UInt16 = (a_dev == 0) ? 0 : carry
+
+    is_ubit = __shift_carry!(carry, c.lower_fraction, is_ubit)
+
+    (fraction, fsize, is_ubit) = __frac_analyze(scratchpad, is_ubit, FSS)
+
+  #if we started as subnormal, shift cannot be one, but we might have to addprocs
+  #one to the exponent to account for the promotion from subnormal.  Otherwise,
+  #exponent gets augmented as if it were a shift.
+  _nexp = _aexp + shift
+
+  #handle the carry bit (which may be up to three? or more).
+  if (carry == 0)
+    #don't use encode_exp because that might do strange things to subnormals.
+    #just pass through esize, exponent from the a value.
+    esize = a.esize
+    exponent = a.exponent
+  else
+    #check for overflow, and return mmr if that happens.
+    (_nexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
+
+    (esize, exponent) = encode_exp(_nexp)
+  end
+
+  #another way to get overflow is: by adding just enough bits to exactly
+  #make the binary value for infinity.  This should, instead, yield mmr.
+  (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (fraction == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
+
+  flags |= is_ubit
+end
+
+#=
 
 #instead of making unary plus "do nothing at all", we will have it "firewall"
 #the variable by creating a copy of it.  Use the "unsafe" constructor to save
@@ -31,8 +153,6 @@ function +{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #infinities b (infinity a is ruled out) plus anything is b
   (isinf(b)) && return inf(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK)
 
-  (is_mmr(a)) && (a.flags & UNUM_SIGN_MASK == b.flags & UNUM_SIGN_MASK) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
-  (is_mmr(b)) && (a.flags & UNUM_SIGN_MASK == b.flags & UNUM_SIGN_MASK) && return mmr(Unum{ESS,FSS}, b.flags & UNUM_SIGN_MASK)
 
   #sort a and b and then add them using the gateway operation.
   __add_ordered(magsort(a,b)...)
@@ -141,69 +261,8 @@ function __sum_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _b
 end
 
 function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp::Int64, _bexp::Int64)
-  #calculate the exact sum between two unums.  You may pass this function a unum
-  #with a ubit, but it will calculate the sum as if it didn't have the ubit there
-  l::UInt16 = length(a.fraction)
-  #check for deviations due to subnormality.
-  a_dev = is_exp_zero(a) ? 1 : 0
-  b_dev = is_exp_zero(b) ? 1 : 0
 
-  #calculate the bit offset.
-  bit_offset = (_aexp + a_dev) - (_bexp + b_dev)
-
-  #check to see if the offset is too big, just copy A with the unum bit flipped on, but also
-  #make sure that the fraction is thrown all the way to the right.
-  (bit_offset > max_fsize(FSS) + 1 - b_dev) && return Unum{ESS,FSS}(max_fsize(FSS), a.esize, a.flags | UNUM_UBIT_MASK, a.fraction, a.exponent)
-
-  #generate the scratchpad by moving b.
-  scratchpad = rsh(b.fraction, bit_offset)
-
-  #check to see if there's bits that are falling off.
-  is_ubit::UInt16 = allzeros(b.fraction & fillbits(bit_offset, l)) ? 0 : UNUM_UBIT_MASK
-
-  #don't forget b's phantom bit (1-b_dev) so it's zero if we are subnormal
-  (bit_offset != 0) && (b_dev != 1) && (scratchpad |= __bit_from_top(bit_offset, l))
-
-  #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
-  #b's phantom bit if they are overlapping.
-  carry::UInt64 = (1 - a_dev) + ((bit_offset == 0) ? (1 - b_dev) : 0)
-
-  (carry, scratchpad) = __carried_add(carry, a.fraction, scratchpad)
-  flags = a.flags & UNUM_SIGN_MASK
-  fsize::UInt16 = 0
-
-  #how much the exponent must be shifted.
-  shift::UInt16 = (a_dev == 0) ? 0 : carry
-
-  if (carry > 1)
-    (scratchpad, shift, is_ubit) = __shift_after_add(carry, scratchpad, is_ubit)
-  end
-
-  (fraction, fsize, is_ubit) = __frac_analyze(scratchpad, is_ubit, FSS)
-
-  #if we started as subnormal, shift cannot be one, but we might have to addprocs
-  #one to the exponent to account for the promotion from subnormal.  Otherwise,
-  #exponent gets augmented as if it were a shift.
-  _nexp = _aexp + shift
-
-  #handle the carry bit (which may be up to three? or more).
-  if (carry == 0)
-    #don't use encode_exp because that might do strange things to subnormals.
-    #just pass through esize, exponent from the a value.
-    esize = a.esize
-    exponent = a.exponent
-  else
-    #check for overflow, and return mmr if that happens.
-    (_nexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
-
-    (esize, exponent) = encode_exp(_nexp)
-  end
-
-  #another way to get overflow is: by adding just enough bits to exactly
-  #make the binary value for infinity.  This should, instead, yield mmr.
-  (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (fraction == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
-
-  flags |= is_ubit
 
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
+=#
