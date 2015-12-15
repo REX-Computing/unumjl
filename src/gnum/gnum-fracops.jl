@@ -31,7 +31,12 @@ end
 
 @generated function __rightshift_frac_with_underflow_check!{ESS,FSS,side}(x::Gnum{ESS,FSS}, s::UInt16, f::UInt16, Type{Val{side}} = Val{:lower})
   @gnum_interpolate #creates the $frc member that matches the side.
-  :(__rightshift_with_underflow_check(x.$frc, s, f))
+  if (FSS < 7)
+    :()
+  elseif (FSS == 6)
+    :(ubit = __rightshift_with_underflow_check(x.$frc, s, f))
+  else
+    :(__rightshift_with_underflow_check(x.$frc, s, f))
 end
 
 @generated function __carried_add_frac!{ESS,FSS,side}(carry::UInt64, fraction::UInt64, x::Gnum{ESS,FSS}, Type{Val{side}} = Val{:lower})

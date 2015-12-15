@@ -37,7 +37,7 @@ top mask labels the bits which are part of the unum representation.
 """
 @gen_code function mask_top!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
   @code quote
-    middle_cell = div(fsize, 0x0040) + 1 )
+    middle_cell = div(fsize, 0x0040) + 1
     top_array[2] = mask_top(fsize % 0x0040)
   end
   for idx = 1:__cell_length(FSS)

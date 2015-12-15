@@ -107,8 +107,6 @@ function Base.call{ESS, FSS}(::Type{Unum{ESS,FSS}}, fsize::UInt16, esize::UInt16
   UnumSmall{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
 
-const __SAFE_CONSTRUCTOR_REGISTER = 1
-
 function Base.call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16, flags::UInt16, fraction::ArrayNum{FSS}, exponent::UInt64)
   #just to be sure make sure we got this right.
   __check_ArrayNum(FSS, fraction.a)
@@ -120,7 +118,7 @@ function Base.call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16
   fsize_override::UInt16 = (flags & UNUM_UBIT_MASK != 0) ? fsize : 0
   #trim fraction to the length of fsize.  Return the trimmed fsize value and
   #ubit, if appropriate.
-  (fsize, ubit) = __frac_trim!(fraction, fsize, Val{__SAFE_CONSTRUCTOR_REGISTER})
+  (fsize, ubit) = __frac_trim!(fraction, fsize)
   #apply the ubit change.
   flags |= ubit
   #if we started as a ubit, override the shortened fsize.
@@ -141,7 +139,7 @@ function Base.call{ESS,FSS}(::Type{Unum{ESS, FSS}}, fsize::UInt16, esize::UInt16
   fsize_override::UInt16 = (flags & UNUM_UBIT_MASK != 0) ? fsize : 0
   #trim fraction to the length of fsize.  Return the trimmed fsize value and
   #ubit, if appropriate.
-  (fsize, ubit) = __frac_trim!(fraction, fsize, Val{__SAFE_CONSTRUCTOR_REGISTER})
+  (fsize, ubit) = __frac_trim!(fraction, fsize)
   #apply the ubit change.
   flags |= ubit
   #if we started as a ubit, override the shortened fsize.

@@ -2,24 +2,6 @@
 
 ################################################################################
 #__frac_trim
-@test_throws ArgumentError Unums.__check_frac_trim(z64, UInt16(64))
-ftt = Unums.ArrayNum{7}([z64, z64])
-@test_throws ArgumentError Unums.__check_frac_trim!(ftt, UInt16(128), Val{1})
-
-#check that disabling checks on frac_trim works.
-@unum_dev_switch begin
-  @unum_dev_on
-
-  @test_throws ArgumentError Unums.__frac_trim(z64, UInt16(64))
-  ftt = Unums.ArrayNum{7}([z64, z64])
-  @test_throws ArgumentError Unums.__frac_trim!(ftt, UInt16(128), Val{1})
-
-  @unum_dev_off
-
-  #these don't throw errors anymore
-  Unums.__frac_trim(z64, UInt16(64))
-  Unums.__frac_trim!(ftt, UInt16(128), Val{1})
-end
 
 #in a 64-bit single width superint.  Trim for fsize = 0, i.e. down to 1 bit.
 @test Unums.__frac_trim(nobits,  UInt16(0)) == (nobits, 0, 0)
@@ -37,34 +19,28 @@ end
 
 #test two-cell VarInt with fractrim.
 f7array = Unums.ArrayNum{7}([nobits, nobits])
-@test Unums.__frac_trim!(f7array, UInt16(0), Val{1}) == (0, 0)
+@test Unums.__frac_trim!(f7array, UInt16(0)) == (0, 0)
 @test f7array.a == [nobits, nobits]
 
-@test Unums.__frac_trim!(f7array, UInt16(127), Val{1}) == (0, 0)
-@test f7array.a == [nobits, nobits]
-
-f7array.a = [nobits, lsb1]
-@test Unums.__frac_trim!(f7array, UInt16(0), Val{1}) == (0, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim!(f7array, UInt16(127)) == (0, 0)
 @test f7array.a == [nobits, nobits]
 
 f7array.a = [nobits, lsb1]
-@test Unums.__frac_trim!(f7array, UInt16(63), Val{1}) == (63, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim!(f7array, UInt16(0)) == (0, Unums.UNUM_UBIT_MASK)
+@test f7array.a == [nobits, nobits]
+
+f7array.a = [nobits, lsb1]
+@test Unums.__frac_trim!(f7array, UInt16(63)) == (63, Unums.UNUM_UBIT_MASK)
 @test f7array.a == [nobits, nobits]
 
 f7array.a = [lsb1, nobits]
-@test Unums.__frac_trim!(f7array, UInt16(63), Val{1}) == (63, 0)
+@test Unums.__frac_trim!(f7array, UInt16(63)) == (63, 0)
 @test f7array.a == [lsb1, nobits]
-#=
-#test three-cell SuperInts with fractrim.
-@test Unums.__frac_trim([nobits, nobits, nobits], UInt16(0)) == ([nobits, nobits, nobits], 0, 0)
-@test Unums.__frac_trim([nobits, nobits, nobits], UInt16(191)) == ([nobits, nobits, nobits], 0 ,0)
-@test Unums.__frac_trim([allbits, allbits, allbits], UInt16(63)) == ([allbits, nobits, nobits], 63, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim([allbits, allbits, allbits], UInt16(191)) == ([allbits, allbits, allbits,], 191, 0)
 
 
 ################################################################################
 #__frac_analyze
-
+#=
 #nothing special
 @test Unums.__frac_analyze(0x8000_0000_0000_0000, zero(UInt16), 0) == (0x8000_0000_0000_0000, 0, 0)
 #assert we are a unum.

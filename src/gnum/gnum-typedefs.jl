@@ -47,3 +47,16 @@ GNUM_INF_MASK  = 0x0800
 GNUM_MMR_MASK  = 0x0400
 GNUM_SSS_MASK  = 0x0200
 GNUM_ZERO_MASK = 0x0100
+
+
+#takes a "side" symbol and appends appropriate suffixes to it to create the
+#corresponding members of the gnum type.
+macro gnum_interpolate()
+  esc(quote
+    fs = symbol(side, :_fsize)
+    es = symbol(side, :_esize)
+    fl = symbol(side, :_flags)
+    exp = symbol(side, :_exponent)
+    frc = symbol(side, :_fraction)
+  end)
+end

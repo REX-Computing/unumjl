@@ -126,6 +126,7 @@ export add!
   #make the binary value for infinity.  This should, instead, yield mmr.
   (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (fraction == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
 
+end
   ##DICK AROUND WITH THE ABOVE PROCEDURES
 end
 

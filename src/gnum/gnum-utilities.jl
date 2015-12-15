@@ -1,16 +1,3 @@
-
-#takes a "side" symbol and appends appropriate suffixes to it to create the
-#corresponding members of the gnum type.
-macro gnum_interpolate()
-  esc(quote
-    fs = symbol(side, :_fsize)
-    es = symbol(side, :_esize)
-    fl = symbol(side, :_flags)
-    exp = symbol(side, :_exponent)
-    frc = symbol(side, :_fraction)
-  end)
-end
-
 @gen_code function copy_gnum!{ESS,FSS, side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
 
   @gnum_interpolate
@@ -65,7 +52,7 @@ macro srcdest(fields::Array{Symbol,1})
   esc(q)
 end
 
-@gen_code function get_ubound!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::UBound{ESS,FSS})
+@gen_code function get_ubound!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Ubound{ESS,FSS})
   #transfer most of the fields
   @code :(@srcdest [:fsize, :esize, :flags, :exponent])
   if (FSS < 7)

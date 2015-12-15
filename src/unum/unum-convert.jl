@@ -83,7 +83,11 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
       #recalculate fsize
       fsize = min(fsize + shft, max_fsize(DEST_FSS))
       #rightshift the fraction
-      (src_frac, flags) = __rightshift_with_underflow_check(src_frac, shft, flags)
+      if (SRC_FSS < 7)
+        (src_frac, flags) = __rightshift_with_underflow_check(src_frac, shft, flags)
+      else
+        (src_frac, flags) = __rightshift_with_underflow_check!(src_frac, shft, flags)
+      end
       #add in the the
       set_bit!(src_frac, shft)
     end

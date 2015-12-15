@@ -4,22 +4,11 @@
 ###########################################################
 #Utility functions
 
-#checking to make sure the parameters of frac_trim make sense.
-function __check_frac_trim(frac::UInt64, fsize::UInt16)
-  (fsize >= 64) && throw(ArgumentError("fsize $fsize too large for FSS < 7"))
-  nothing
-end
-
-function __check_frac_trim!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, ::Type{Val{r}})
-  (fsize > max_fsize(FSS)) && throw(ArgumentError("fsize $fsize too large for FSS $FSS"))
-  nothing
-end
-
 #_frac_trim:  Takes a Uint64 value and returns a triplet: (fraction, fsize, ubit)
 #this triplet represents the fraction VarInt trimmed to fsize, a new fsize,
 #in the case that it's exact and some zeros can be trimmed, and whether or not
 #ubit needs to be thrown (were there values cast out by fsize)?
-@dev_check function __frac_trim(frac::UInt64, fsize::UInt16)
+function __frac_trim(frac::UInt64, fsize::UInt16)
   #generate masks from fsize values using the internal functions.
   high_mask = mask_top(fsize)
   low_mask = mask_bot(fsize)
@@ -37,34 +26,32 @@ end
   (frac, fsize, ubit)
 end
 
-@dev_check function __frac_trim!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, rx::Type{Val{r}})
-  #temporarily we have to shim this to __frac_trim_internal because doubling
-  #up @dev_check and @gen_code doesn't work.
-  __frac_trim_internal!(frac, fsize, Val{r})
-end
+@gen_code function __frac_trim!{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
+  @code quote
+    middle_cell = div(fsize, 0x0040) + 1
 
-@gen_code function __frac_trim_internal!{FSS, r}(frac::ArrayNum{FSS}, fsize::UInt16, rx::Type{Val{r}})
-  #set the register, this is a UInt64 array.
-  _register = registers[r]
+    #use bot_array from i64o-masks.jl.
+    bot_array[2] = mask_bot(fsize % 0x0040)
+
+    #set up an accumulator, and a mask variable.
+    accum::UInt64 = z64
+    mask::UInt64 = z64
+  end
+
+  for (idx = 1:__cell_length(FSS))
+    @code quote
+      @inbounds mask = bot_array[sign($idx - middle_cell) + 2]
+      @inbounds accum |= mask & frac[$idx]
+      @inbounds frac[$idx] &= ~mask
+    end
+  end
 
   @code quote
-    register = ArrayNum{FSS}($_register)
-    #zero out the register.
-    zero!(register)
-    #set the register to be the mask bottom
-    mask_bot!(register, fsize)
-    #fill in the register with bits from the fraction.
-    fill_mask!(register, frac)
-    #check to see if it's all zero.
-    ubit = is_all_zero(register) ? z16 : UNUM_UBIT_MASK
-    #fill the register with bits from the top.
-    mask_top!(register, fsize)
-    #backfill the fraction comparing with the mask.
-    fill_mask!(frac, register)
-    #reset fsize by calculating _minimum_data_width
-    fsize = (ubit == 0) ? __minimum_data_width(frac) : fsize
-    #return the relevant triplet.
-    (fsize, ubit)
+    if (accum == 0)
+      return (__minimum_data_width(frac), 0)
+    else
+      return (fsize, UNUM_UBIT_MASK)
+    end
   end
 end
 

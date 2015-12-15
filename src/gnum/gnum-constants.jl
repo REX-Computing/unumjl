@@ -24,11 +24,11 @@
   end
 end
 
-function inf!{ESS,FSS,side}(x::Gnum{ESS,FSS}, flags::UInt16, ::Type{Val{side}} = Val{:lower})
+function inf!{ESS,FSS,side}(x::Gnum{ESS,FSS}, flags::UInt16, ::Type{Val{side}})
   __infnanset!(x, flags | UNUM_UBIT_MASK, Val{side})
 end
 
-function nan!{ESS,FSS,side}(x::Gnum{ESS,FSS}, flags::UInt16)
+function nan!{ESS,FSS}(x::Gnum{ESS,FSS}, flags::UInt16)
   __infnanset!(x, UNUM_UBIT_MASK | GNUM_SBIT_MASK, Val{:lower})
 end
 
@@ -82,7 +82,7 @@ end
   end
 end
 
-@gen_code function sss!{ESS,FSS,side}
+@gen_code function sss!{ESS,FSS,side}(x::Gnum{ESS,FSS},::Type{Val{side}})
   esize   ::UInt16 = max_esize(ESS)
   fsize   ::UInt16 = max_fsize(FSS)
   @code quote
