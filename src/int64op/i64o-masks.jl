@@ -30,18 +30,23 @@ function mask_bot(fsize::UInt16)
 end
 mask_bot(FSS::Int64) = mask_bot(max_fsize(FSS))
 
+const top_array = [f64, z64, z64]
 doc"""
 `Unums.mask_top!` fills an array with the 'top mask' of a particular fsize.  The
 top mask labels the bits which are part of the unum representation.
 """
 @gen_code function mask_top!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
-  @code :( middle_cell = div(fsize, 0x0040) + 1 )
+  @code quote
+    middle_cell = div(fsize, 0x0040) + 1 )
+    top_array[2] = mask_top(fsize % 0x0040)
+  end
   for idx = 1:__cell_length(FSS)
-    @code :(@inbounds n.a[$idx] = $idx < middle_cell ? f64 : ($idx > middle_cell ? z64 : mask_top(fsize % 0x0040)))
+    @code :(@inbounds n.a[$idx] = top_array[sign($idx - middle_cell) + 2])
   end
   @code :(n)
 end
 
+const bot_array = [z64, z64, f64]
 doc"""
 `Unums.mask_bot!` fills an array with the 'bottom mask' of a particular fsize.
 The bottom mask labels the bits which are going to be thrown away and are not
@@ -49,9 +54,12 @@ part of the unum representation and are there only because of the padding
 scheme.
 """
 @gen_code function mask_bot!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
-  @code :( middle_cell = div(fsize, 0x0040) + 1 )
+  @code quote
+     middle_cell = div(fsize, 0x0040) + 1
+     bot_array[2] = mask_bot(fsize % 0x0040)
+  end
   for idx = 1:__cell_length(FSS)
-    @code :(@inbounds n.a[$idx] = $idx < middle_cell ? z64 : ($idx > middle_cell ? f64 : mask_bot(fsize % 0x0040)))
+    @code :(@inbounds n.a[$idx] = bot_array[sign($idx - middle_cell) + 2])
   end
   @code :(n)
 end
@@ -73,6 +81,11 @@ doc"""
 function bottom_bit(fsize::UInt16)
   reinterpret(UInt64, -9223372036854775808 >>> fsize)
 end
+
+doc"""
+`Unums.top_bit!` returns the ArrayNum with the top bit set.
+"""
+top_bit!{FSS}(n::ArrayNum{FSS}) = (n[1] |= t64 ; n)
 
 doc"""
 `Unums.bottom_bit!` returns the bottom bit of a fraction with a given fsize.

@@ -73,3 +73,29 @@ rsh(a::UInt64, b::UInt16) = a >> b
     @code :(@inbounds a.a[$idx] = ($idx > splitdex) ? a.a[$idx - celldiff] : 0)
   end
 end
+
+################################################################################
+## a common operation is to rightshift with an underflow check.  Note that this
+## doesn't check at the FSS boundaries, and only checks for underflows at the
+## ends of integers or integer arrays.
+
+function __rightshift_with_underflow_check(f::UInt64, s::UInt16, flags::UInt16)
+  #first generate the mask.
+  mask = (1 << s) - 1
+  ((f & mask) != 0) && (flags |= UNUM_UBIT_MASK)
+  f >>= s
+  (f,  flags)
+end
+
+function __rightshift_with_underflow_check!{FSS}(f::ArrayNum{FSS}, s::UInt16, flags::UInt16)
+  #generate the mask holder.
+  mask = zero(ArrayNum{FSS})
+  #actually generate the mask.
+  mask_bot!(mask, max_fsize(FSS) - s)  #double check that this is correct.
+  #compare the mask with the target.
+  fill_mask!(mask, f)
+  is_not_zero(mask) && (flags |= UNUM_UBIT_MASK)
+  #right shift.
+  rsh!(f, s)
+  (f, flags)
+end

@@ -11,7 +11,7 @@ macro gnum_interpolate()
   end)
 end
 
-@gen_code function copy_gnum!{ESS,FSS, side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}} = Val{:lower})
+@gen_code function copy_gnum!{ESS,FSS, side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
 
   @gnum_interpolate
 
@@ -31,7 +31,7 @@ end
   end
 end
 
-@gen_code function get_unum!{ESS,FSS,side}(src::Gnum{ESS,FSS}, dest::Unum{ESS,FSS}, ::Type{Val{side}} = Val{:lower})
+@gen_code function get_unum!{ESS,FSS,side}(src::Gnum{ESS,FSS}, dest::Unum{ESS,FSS}, ::Type{Val{side}})
   @gnum_interpolate
 
   @code quote

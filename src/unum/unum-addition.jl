@@ -51,13 +51,18 @@ function __addition_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{
 end
 export add!
 
-@gen_code function exact_add!(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+@gen_code function exact_add!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS}, ::Type{Val{side}})
   #calculate the exact sum between two unums.  You may pass this function a unum
   #with a ubit, but it will calculate the sum as if it didn't have the ubit there
 
+  @gnum_interpolate #set shortcuts make exact_add operate on the correct side of the gnum.
+
+  mfsize = max_fsize(FSS)
+  rside = Val{side}
+
   @code quote
-    #retrieve the sign of the result.
-    flags::UInt16 = a.flags & UNUM_SIGN_MASK
+    #retrieve the sign of the result, store in c.flags.
+    c.$fl = a.flags & UNUM_SIGN_MASK
 
     a_exp::Int64 = decode_exp(a)
     b_exp::Int64 = decode_exp(b)
@@ -78,29 +83,31 @@ export add!
     #copy the contents of a into c.
     shift::UInt16 = c_ctx - b_ctx
 
-    copy_frac!(b.fraction, c)
+    copy_frac!(b, c, $rside)
 
-    flags = __rightshift_frac_with_underflow_check!(c, shift, flags, Val{:lower}))
+    c.$fl = __rightshift_with_underflow_check!(c, shift, c.$fl)
 
-    (shift != 0) && (b_dev == 0) && (set_frac_bit!(c, shift, Val{:lower}))
+    (shift != 0) && (b_dev == 0) && (set_bit!(c, shift))
 
     #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
     #b's phantom bit if they are overlapping.
     carry::UInt64 = (1 - a_dev) + ((shift == 0) ? (1 - b_dev) : 0)
 
-    carry = __carried_add_frac!(carry, a.fraction, c)
+    carry = __carried_add_frac!(carry, a.fraction, c, $rside)
 
-    #how much the exponent must be shifted.
-    shift::UInt16 = (a_dev == 0) ? 0 : carry
+    #set the new exponent
+    _nexp::Int = _aexp
 
-    is_ubit = __shift_carry!(carry, c.lower_fraction, is_ubit)
+    if (carry != 0)
+      _nexp += 1
+      flags = __rightshift_frac_with_underflow_check!(c, 0x0001, flags, $rside)
+      (carry == 3) && set_frac_top!(c, $rside)
+    end
 
-    (fraction, fsize, is_ubit) = __frac_analyze(scratchpad, is_ubit, FSS)
+    #set the fsize.
+    fsize = $mfsize - (is_ubit) ? 0 : __frac_ctz(c, $rside)
 
-  #if we started as subnormal, shift cannot be one, but we might have to addprocs
-  #one to the exponent to account for the promotion from subnormal.  Otherwise,
-  #exponent gets augmented as if it were a shift.
-  _nexp = _aexp + shift
+    #set exponent stuff.
 
   #handle the carry bit (which may be up to three? or more).
   if (carry == 0)
@@ -119,7 +126,7 @@ export add!
   #make the binary value for infinity.  This should, instead, yield mmr.
   (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (fraction == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
 
-  flags |= is_ubit
+  ##DICK AROUND WITH THE ABOVE PROCEDURES
 end
 
 #=

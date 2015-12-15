@@ -36,5 +36,14 @@ type Gnum_Large{ESS,FSS} <: Gnum{ESS,FSS}
   upper_exponent::UInt64
 end
 
+#two g-layer flags that only apply to the "lower" slots.
 #throws a bit saying that this gnum only contains one unum.
 GNUM_SBIT_MASK = 0x8000
+#throws a bit saying this number is NaN
+GNUM_NAN_MASK  = 0x4000
+
+#g-layer flags that apply to both "lower" and "higher" slots.
+GNUM_INF_MASK  = 0x0800
+GNUM_MMR_MASK  = 0x0400
+GNUM_SSS_MASK  = 0x0200
+GNUM_ZERO_MASK = 0x0100

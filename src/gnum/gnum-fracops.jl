@@ -28,6 +28,7 @@ end
   :(x.$frc = a; nothing)
 end
 
+
 @generated function __rightshift_frac_with_underflow_check!{ESS,FSS,side}(x::Gnum{ESS,FSS}, s::UInt16, f::UInt16, Type{Val{side}} = Val{:lower})
   @gnum_interpolate #creates the $frc member that matches the side.
   :(__rightshift_with_underflow_check(x.$frc, s, f))
