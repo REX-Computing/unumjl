@@ -6,9 +6,9 @@ doc"""
 
   Fast calculations will get sent to the Gnum Type.
 """
-abstract Gnum{ESS, FSS} <: Utype
+abstract Gnum{ESS,FSS} <: Utype
 
-type Gnum_Small{ESS,FSS} <: Gnum{ESS,FSS}
+type GnumSmall{ESS,FSS} <: Gnum{ESS,FSS}
   lower_fsize::UInt16
   lower_esize::UInt16
   lower_flags::UInt16
@@ -22,7 +22,7 @@ type Gnum_Small{ESS,FSS} <: Gnum{ESS,FSS}
   upper_exponent::UInt64
 end
 
-type Gnum_Large{ESS,FSS} <: Gnum{ESS,FSS}
+type GnumLarge{ESS,FSS} <: Gnum{ESS,FSS}
   lower_fsize::UInt16
   lower_esize::UInt16
   lower_flags::UInt16
@@ -34,6 +34,13 @@ type Gnum_Large{ESS,FSS} <: Gnum{ESS,FSS}
   upper_flags::UInt16
   upper_fraction::ArrayNum{FSS}
   upper_exponent::UInt64
+end
+
+Base.zero{ESS,FSS}(t::Type{GnumSmall{ESS,FSS}}) = GnumSmall{ESS,FSS}(z16, z16, z16, z64, z64, z16, z16, z16, z64, z64)
+Base.zero{ESS,FSS}(t::Type{GnumLarge{ESS,FSS}}) = GnumLarge{ESS,FSS}(z16, z16, z16, zero(ArrayNum{FSS}), z64, z16, z16, z16, zero(ArrayNum{FSS}), z64)
+
+@generated function Base.zero{ESS,FSS}(t::Type{Gnum{ESS,FSS}})
+  (FSS < 7) ? :(zero(GnumSmall{ESS,FSS})) : :(zero(GnumLarge{ESS,FSS}))
 end
 
 #two g-layer flags that only apply to the "lower" slots.

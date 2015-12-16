@@ -2,7 +2,6 @@
 #Performs addition with unums.  Requires two unums to have the same
 #environment signature.
 
-
 doc"""
   `add!(::Unum{ESS,FSS}, ::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and
   adds them, storing the result in the third, g-layer
@@ -24,7 +23,7 @@ doc"""
     if ((a.flags & UNUM_UBIT_MASK) | (b.flags & UNUM_UBIT_MASK) != 0)
       inexact_add!(a, b, c)
     else
-      exact_add!(a, b, c)
+      exact_add!(a, b, c, Val{:lower})
     end
   end
 end
@@ -57,8 +56,10 @@ export add!
 
   @gnum_interpolate #set shortcuts make exact_add operate on the correct side of the gnum.
 
-  mfsize = max_fsize(FSS)
-  rside = Val{side}
+  mesize::UInt16 = max_esize(ESS)
+  mfsize::UInt16 = max_fsize(FSS)
+  (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
+  mexp::UInt64 = max_exponent(ESS)
 
   @code quote
     #retrieve the sign of the result, store in c.flags.
@@ -77,61 +78,75 @@ export add!
 
     (b_ctx > a_ctx) && ((a, b, a_exp, b_exp, a_ctx, b_ctx) = (b, a, b_exp, a_exp, b_ctx, a_ctx))
 
-    #zero out the gnum.
-    zero!(c)
-
     #copy the contents of a into c.
-    shift::UInt16 = c_ctx - b_ctx
+    shift::UInt16 = a_ctx - b_ctx
 
-    copy_frac!(b, c, $rside)
+    copy_frac!(a.fraction, c, Val{side})
 
-    c.$fl = __rightshift_with_underflow_check!(c, shift, c.$fl)
+    __rightshift_frac_with_underflow_check!(c, shift, Val{side})
 
-    (shift != 0) && (b_dev == 0) && (set_bit!(c, shift))
+    (shift != 0) && (b_dev == 0) && (set_frac_bit!(c, shift, Val{side}))
 
     #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
     #b's phantom bit if they are overlapping.
     carry::UInt64 = (1 - a_dev) + ((shift == 0) ? (1 - b_dev) : 0)
 
-    carry = __carried_add_frac!(carry, a.fraction, c, $rside)
+    carry = __carried_add_frac!(carry, a.fraction, c, Val{side})
 
     #set the new exponent
-    _nexp::Int = _aexp
+    n_exp::Int = a_exp
 
-    if (carry != 0)
-      _nexp += 1
-      flags = __rightshift_frac_with_underflow_check!(c, 0x0001, flags, $rside)
-      (carry == 3) && set_frac_top!(c, $rside)
+    if (carry > 1)
+      n_exp += 1
+      __rightshift_frac_with_underflow_check!(c, 0x0001, Val{side})
+      (carry == 3) && set_frac_top!(c, Val{side})
     end
 
     #set the fsize.
-    fsize = $mfsize - (is_ubit) ? 0 : __frac_ctz(c, $rside)
+    c.$fs = $mfsize - min(((c.$fs & UNUM_UBIT_MASK != 0) ? 0 : ctz(c.$frc)), $mfsize)
 
     #set exponent stuff.
+    #handle the carry bit (which may be up to three? or more).
+    if (carry == 0)
+      #don't use encode_exp because that might do strange things to subnormals.
+      #just pass through esize, exponent from the a value.
+      c.$es = a.esize
+      c.$exp = a.exponent
+    else
+      #check for overflow, and return mmr if that happens.
+      (n_exp > max_exponent(ESS)) && (mmr!(c, c.$fl, Val{side}); return)
+      #we know it can't be subnormal, because we've added one to the exponent.
+      (c.$es, c.$exp) = encode_exp(n_exp)
+    end
 
-  #handle the carry bit (which may be up to three? or more).
-  if (carry == 0)
-    #don't use encode_exp because that might do strange things to subnormals.
-    #just pass through esize, exponent from the a value.
-    esize = a.esize
-    exponent = a.exponent
-  else
-    #check for overflow, and return mmr if that happens.
-    (_nexp > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
-
-    (esize, exponent) = encode_exp(_nexp)
+    #another way to get overflow is: by adding just enough bits to exactly
+    #make the binary value for infinity.  This should, instead, yield mmr.
   end
 
-  #another way to get overflow is: by adding just enough bits to exactly
-  #make the binary value for infinity.  This should, instead, yield mmr.
-  (esize == max_esize(ESS)) && (fsize == max_fsize(FSS)) && (exponent == mask(1 << ESS)) && (fraction == fillbits(-(fsize + 1), l)) && return mmr(Unum{ESS,FSS}, a.flags & UNUM_SIGN_MASK)
+  if (FSS < 7)
+    @code quote
+      (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (c.$fs == $mfrac) && (mmr!(c, c.$fl, Val{side}))
+    end
+  else
+    @code quote
+      (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (is_all_ones(c.$fs)) && (mmr!(c, c.$fl, Val{side}))
+    end
+  end
 
+  #@code :(nothing)
 end
-  ##DICK AROUND WITH THE ABOVE PROCEDURES
+
+import Base.+
+function +{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
+  temp = zero(Gnum{ESS,FSS})
+  res = zero(Unum{ESS,FSS})
+
+  add!(x, y, temp)
+  get_unum!(temp, res, Val{:lower})
+  res
 end
 
 #=
-
 #instead of making unary plus "do nothing at all", we will have it "firewall"
 #the variable by creating a copy of it.  Use the "unsafe" constructor to save
 #on checking since we know the source unum is valid.

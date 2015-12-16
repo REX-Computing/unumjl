@@ -1,7 +1,6 @@
 #int64o-math.jl
 
 #implements mathematical stuff for int64ops
-
 function carrytoken(idx)
   return (idx == 1) ? :(carry) : :(b.a[$idx - 1])
 end
@@ -25,4 +24,5 @@ end
       end
     end
   end
+  @code :(carry)
 end

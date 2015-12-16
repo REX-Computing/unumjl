@@ -31,7 +31,6 @@
 @test convert(Unum{0,0}, sss(Unum{4,7})) == sss(Unum{0,0})
 @test convert(Unum{4,6}, sss(Unum{0,0})) == Unum{4,6}(z16, z16, Unums.UNUM_UBIT_MASK, z64, z64)
 
-
 #float to unum
 #test that the general conversion works for normal floating points in the {4,6} environment
 

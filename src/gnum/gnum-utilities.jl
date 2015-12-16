@@ -30,9 +30,7 @@ end
   if (FSS < 7)
     @code :(dest.fraction = src.$frc)
   else
-    for idx = 1:__cell_length(FSS)
-      @code :(dest.fraction.a[$idx] = src.$frc.a[$idx])
-    end
+    @code :(copy_data!(src.$frc, dest.fraction))
   end
 end
 
