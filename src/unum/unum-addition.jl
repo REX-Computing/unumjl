@@ -9,132 +9,181 @@ doc"""
   `add!(::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and adds them, storing
   the result and overwriting the second, g-layer
 
-  In both cases, a reference to the result unum is returned.
+  In both cases, a reference to the result gnum is returned.
 """
-@generated function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
-  #implementation of the three-argument add.
-
-  quote
-    #three argument check.
-    override::Bool = __addition_check!(a, b, c)
-    (override) && return
-
-    #check to see if one or both Unums is indefinite.
-    if ((a.flags & UNUM_UBIT_MASK) | (b.flags & UNUM_UBIT_MASK) != 0)
-      inexact_add!(a, b, c)
-    else
-      exact_add!(a, b, c, Val{:lower})
-    end
-  end
+function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  put_unum!(b, c, LOWER_SIDE)
+  set_onesided!(c)
+  add!(a, c)
 end
-
-function __addition_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
-  #zeros, and return the other value.
-  is_zero(a) && (copy_gnum!(b, c); return true)
-  is_zero(b) && (copy_gnum!(a, c); return true)
-  #nans are really easy.
-  is_nan(a) && (nan!(c); return true)
-  is_nan(b) && (nan!(c); return true)
-
-  #check for infinity.
-  if (is_inf(a))
-    (is_inf(b)) && (a.flags & UNUM_SIGN_MASK != b.flags & UNUM_SIGN_MASK) && (nan!(c); return true)
-    inf!(c, a.flags & UNUM_SIGN_MASK)
-    return true
-  end
-  #since infinity a is known, we don't need a complicated check.
-  is_inf(b) && (inf!(c, b.flags & UNUM_SIGN_MASK); return true)
-
-  (is_mmr(a)) && (a.flags & UNUM_SIGN_MASK == b.flags & UNUM_SIGN_MASK) && (mmr!(c, a.flags & UNUM_SIGN_MASK); return true)
-  (is_mmr(b)) && (a.flags & UNUM_SIGN_MASK == b.flags & UNUM_SIGN_MASK) && (mmr!(c, b.flags & UNUM_SIGN_MASK); return true)
-end
-export add!
-
-@gen_code function exact_add!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS}, ::Type{Val{side}})
-  #calculate the exact sum between two unums.  You may pass this function a unum
-  #with a ubit, but it will calculate the sum as if it didn't have the ubit there
-
-  @gnum_interpolate #set shortcuts make exact_add operate on the correct side of the gnum.
-
-  mesize::UInt16 = max_esize(ESS)
-  mfsize::UInt16 = max_fsize(FSS)
-  (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
-  mexp::UInt64 = max_exponent(ESS)
-
-  @code quote
-    #retrieve the sign of the result, store in c.flags.
-    c.$fl = a.flags & UNUM_SIGN_MASK
-
-    a_exp::Int64 = decode_exp(a)
-    b_exp::Int64 = decode_exp(b)
-
-    a_dev::Int64 = is_exp_zero(a) ? 1 : 0
-    b_dev::Int64 = is_exp_zero(b) ? 1 : 0
-
-    #derive the "contexts" for each, which is a combination of the exponent and
-    #deviation.
-    a_ctx::Int64 = a_exp + a_dev
-    b_ctx::Int64 = b_exp + b_dev
-
-    (b_ctx > a_ctx) && ((a, b, a_exp, b_exp, a_ctx, b_ctx) = (b, a, b_exp, a_exp, b_ctx, a_ctx))
-
-    #copy the contents of a into c.
-    shift::UInt16 = a_ctx - b_ctx
-
-    copy_frac!(a.fraction, c, Val{side})
-
-    __rightshift_frac_with_underflow_check!(c, shift, Val{side})
-
-    (shift != 0) && (b_dev == 0) && (set_frac_bit!(c, shift, Val{side}))
-
-    #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
-    #b's phantom bit if they are overlapping.
-    carry::UInt64 = (1 - a_dev) + ((shift == 0) ? (1 - b_dev) : 0)
-
-    carry = __carried_add_frac!(carry, a.fraction, c, Val{side})
-
-    #set the new exponent
-    n_exp::Int = a_exp
-
-    if (carry > 1)
-      n_exp += 1
-      __rightshift_frac_with_underflow_check!(c, 0x0001, Val{side})
-      (carry == 3) && set_frac_top!(c, Val{side})
-    end
-
-    #set the fsize.
-    c.$fs = $mfsize - min(((c.$fs & UNUM_UBIT_MASK != 0) ? 0 : ctz(c.$frc)), $mfsize)
-
-    #set exponent stuff.
-    #handle the carry bit (which may be up to three? or more).
-    if (carry == 0)
-      #don't use encode_exp because that might do strange things to subnormals.
-      #just pass through esize, exponent from the a value.
-      c.$es = a.esize
-      c.$exp = a.exponent
-    else
-      #check for overflow, and return mmr if that happens.
-      (n_exp > max_exponent(ESS)) && (mmr!(c, c.$fl, Val{side}); return)
-      #we know it can't be subnormal, because we've added one to the exponent.
-      (c.$es, c.$exp) = encode_exp(n_exp)
-    end
-
-    #another way to get overflow is: by adding just enough bits to exactly
-    #make the binary value for infinity.  This should, instead, yield mmr.
-  end
-
-  if (FSS < 7)
-    @code quote
-      (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (c.$fs == $mfrac) && (mmr!(c, c.$fl, Val{side}))
-    end
+function add!{ESS,FSS}(a::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  if ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK) == 0)
+    __arithmetic_addition(a, c)
   else
-    @code quote
-      (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (is_all_ones(c.$fs)) && (mmr!(c, c.$fl, Val{side}))
+    __arithmetic_subtraction(a, c)
+  end
+end
+
+#trampoline for using the arithmetic addition algorithm on numbers which are
+#guaranteed to have identical parity.  Otherwise subtraction is necessary.
+function __arithmetic_addition(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
+  #override
+  __addition_override_check!(a, b)
+
+  #check to see if one or both Unums is indefinite.
+  if ((a.flags & UNUM_UBIT_MASK) | (b.flags & UNUM_UBIT_MASK) != 0)
+    inexact_add!(a, b, c)
+  else
+    exact_add!(a, b, c, Val{:lower})
+    c.lower_flags |= GNUM_SBIT_MASK
+  end
+  clear_ignore_sides!(b)
+  nothing
+end
+
+
+#a function which checks for special values that will override actually performing
+#calculations.
+function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  ############################################
+  # deal with zeros.
+  #if our addend is zero, then we just leave both sides alone.
+  is_zero(a) && (ignore_both_sides!(b); return)
+  #if either side is zero, then copy the addend in to the Gnum.
+  is_zero(b, LOWER_SIDE) && (copy_gnum!(a, b); set_ignore_side!(b, LOWER_SIDE))
+  is_zero(b, UPPER_SIDE) && is_twosided(b) && (copy_gnum!(a, b); set_ignore_side!(b, UPPER_SIDE))
+  ############################################
+  # deal with NaNs.
+  #if our addend is nan, then set the addend to nan.
+  is_nan(a) && (@scratch_this_operation!(b))
+  is_nan(b) && (ignore_both_sides!(b); return)
+  ############################################
+  # deal with infinities.
+  if (is_inf(a))
+    #check to see if lower infinity is the opposite infinity.
+    is_inf(b, LOWER_SIDE) && ((a.flags & UNUM_SIGN_MASK) != (b.lower_flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
+    is_inf(b, UPPER_SIDE) && ((a.flags & UNUM_SIGN_MASK) != (b.upper_flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
+    #since we know it's a finite, real value, we can set one or both sides of our gnum to infinity as needed.
+    inf!(b, a.flags & UNUM_SIGN_MASK, LOWER_SIDE)
+    set_ignore_side!(b, LOWER_SIDE)
+
+    is_twosided(b) && (inf!(b, a.flags & UNUM_SIGN_MASK, UPPER_SIDE); set_ignore_side!(b, UPPER_SIDE))
+  end
+  #since a is known to be finite real, we don't need a complicated check.
+  should_calculate(b, LOWER_SIDE) && is_inf(b, LOWER_SIDE) && (set_ignore_side!(b, LOWER_SIDE))
+  should_calculate(b, UPPER_SIDE) && is_inf(b, UPPER_SIDE) && (set_ignore_side!(b, UPPER_SIDE))
+
+  ############################################
+  #deal with mmr collapsing.
+  if (is_mmr(a))
+    if (should_calculate(b, LOWER_SIDE) && (a.flags & UNUM_SIGN_MASK == b.lower_flags & UNUM_SIGN_MASK))
+      mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_SIDE)
+      set_ignore_side!(b, LOWER_SIDE)
+    end
+    if (should_calculate(b, UPPER_SIDE) && (a.flags & UNUM_SIGN_MASK == b.upper_flags & UNUM_SIGN_MASK))
+      mmr!(b, a.flags & UNUM_SIGN_MASK, UPPER_SIDE)
+      set_ignore_side!(b, UPPER_SIDE)
     end
   end
-
-  #@code :(nothing)
+  if (should_calculate(b, LOWER_SIDE) && is_mmr(b, LOWER_SIDE) && (a.flags & UNUM_SIGN_MASK == b.lower_flags & UNUM_SIGN_MASK))
+    set_ignore_side!(b, LOWER_SIDE)
+  end
+  if (should_calculate(b, UPPER_SIDE) && is_mmr(b, UPPER_SIDE) && (a.flags & UNUM_SIGN_MASK == b.upper_flags & UNUM_SIGN_MASK))
+    set_ignore_side!(b, UPPER_SIDE)
+  end
 end
+
+################################################################################
+# exact_add!  - a function which takes a general addition algorithm and distributes
+# it to both sides of the unum.
+
+function exact_add!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
+  should_calculate(b, LOWER_SIDE) && exact_add_one_side!(b, LOWER_SIDE)
+  should_calculate(b, UPPER_SIDE) && exact_add_one_ised!(b, UPPER_SIDE)
+  b
+end
+
+@gen_code function exact_add_one_side!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}) 
+################################################################################
+#behold!  The actual addition algorithm
+
+mesize::UInt16 = max_esize(ESS)
+mfsize::UInt16 = max_fsize(FSS)
+(FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
+mexp::UInt64 = max_exponent(ESS)
+
+
+  #retrieve the sign of the result, store in c.flags.
+  c.$fl = a.flags & UNUM_SIGN_MASK
+
+  a_exp::Int64 = decode_exp(a)
+  b_exp::Int64 = decode_exp(b)
+
+  a_dev::Int64 = is_exp_zero(a) ? 1 : 0
+  b_dev::Int64 = is_exp_zero(b) ? 1 : 0
+
+  #derive the "contexts" for each, which is a combination of the exponent and
+  #deviation.
+  a_ctx::Int64 = a_exp + a_dev
+  b_ctx::Int64 = b_exp + b_dev
+
+  (b_ctx > a_ctx) && ((a, b, a_exp, b_exp, a_ctx, b_ctx) = (b, a, b_exp, a_exp, b_ctx, a_ctx))
+
+  #copy the contents of a into c.
+  shift::UInt16 = a_ctx - b_ctx
+
+  copy_frac!(a.fraction, c, Val{side})
+
+  __rightshift_frac_with_underflow_check!(c, shift, Val{side})
+
+  (shift != 0) && (b_dev == 0) && (set_frac_bit!(c, shift, Val{side}))
+
+  #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
+  #b's phantom bit if they are overlapping.
+  carry::UInt64 = (1 - a_dev) + ((shift == 0) ? (1 - b_dev) : 0)
+
+  carry = __carried_add_frac!(carry, a.fraction, c, Val{side})
+
+  #set the new exponent
+  n_exp::Int = a_exp
+
+  if (carry > 1)
+    n_exp += 1
+    __rightshift_frac_with_underflow_check!(c, 0x0001, Val{side})
+    (carry == 3) && set_frac_top!(c, Val{side})
+  end
+
+  #set the fsize.
+  c.$fs = $mfsize - min(((c.$fs & UNUM_UBIT_MASK != 0) ? 0 : ctz(c.$frc)), $mfsize)
+
+  #set exponent stuff.
+  #handle the carry bit (which may be up to three? or more).
+  if (carry == 0)
+    #don't use encode_exp because that might do strange things to subnormals.
+    #just pass through esize, exponent from the a value.
+    c.$es = a.esize
+    c.$exp = a.exponent
+  else
+    #check for overflow, and return mmr if that happens.
+    (n_exp > max_exponent(ESS)) && (mmr!(c, c.$fl, Val{side}); return)
+    #we know it can't be subnormal, because we've added one to the exponent.
+    (c.$es, c.$exp) = encode_exp(n_exp)
+  end
+
+  #another way to get overflow is: by adding just enough bits to exactly
+  #make the binary value for infinity.  This should, instead, yield mmr.
+end
+
+if (FSS < 7)
+  @code quote
+    (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (c.$fs == $mfrac) && (mmr!(c, c.$fl, Val{side}))
+  end
+else
+  @code quote
+    (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (is_all_ones(c.$fs)) && (mmr!(c, c.$fl, Val{side}))
+  end
+end
+
 
 import Base.+
 function +{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
@@ -142,8 +191,9 @@ function +{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
   res = zero(Unum{ESS,FSS})
 
   add!(x, y, temp)
-  get_unum!(temp, res, Val{:lower})
-  res
+
+  #return the result as the appropriate data type.
+  emit_data(temp)
 end
 
 #=

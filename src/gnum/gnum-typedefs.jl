@@ -46,15 +46,28 @@ end
 #two g-layer flags that only apply to the "lower" slots.
 #throws a bit saying that this gnum only contains one unum.
 GNUM_SBIT_MASK = 0x8000
-#throws a bit saying this number is NaN
+#throws a bit saying this number is NaN.
 GNUM_NAN_MASK  = 0x4000
 
 #g-layer flags that apply to both "lower" and "higher" slots.
+#temporary flag saying to ignore calculations on this side of the gnum.
+GNUM_IGNORE_SIDE_MASK = 0x2000
+
+#################################
+#precedence of bits:
+# NAN > SBIT > IGNORE
+# A nan is automatically single, even if sbit isn't thrown.
+# An SBIT automatically ignores the second value, even if ignore isn't thrown.
+
+#informational flags that report on the identity of the number.
 GNUM_INF_MASK  = 0x0800
 GNUM_MMR_MASK  = 0x0400
 GNUM_SSS_MASK  = 0x0200
 GNUM_ZERO_MASK = 0x0100
 
+#make lower and upper side designations more elegant.
+const LOWER_SIDE = Val{:lower}
+const UPPER_SIDE = Val{:upper}
 
 #takes a "side" symbol and appends appropriate suffixes to it to create the
 #corresponding members of the gnum type.
@@ -65,5 +78,14 @@ macro gnum_interpolate()
     fl = symbol(side, :_flags)
     exp = symbol(side, :_exponent)
     frc = symbol(side, :_fraction)
+  end)
+end
+
+#scratches an operation.
+macro scratch_this_operation!(s)
+  esc(quote
+    nan!(s)
+    ignore_both_sides!(s)
+    return
   end)
 end
