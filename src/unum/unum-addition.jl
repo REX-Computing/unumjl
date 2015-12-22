@@ -12,46 +12,54 @@ doc"""
   In both cases, a reference to the result gnum is returned.
 """
 function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
-  put_unum!(b, c, LOWER_SIDE)
-  set_onesided!(c)
+  put_unum!(b, c)
   add!(a, c)
 end
-function add!{ESS,FSS}(a::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
-  if ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK) == 0)
-    __arithmetic_addition(a, c)
-  else
-    __arithmetic_subtraction(a, c)
+function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
+  #override
+  __addition_override_check!(a, b)
+
+  if should_calculate(b, LOWER_UNUM)
+    if ((a.flags & UNUM_SIGN_MASK) == (b.lower.flags & UNUM_SIGN_MASK))
+      __arithmetic_addition!(a, b, LOWER_UNUM)
+    else
+      __arithmetic_subtraction!(a, b, LOWER_UNUM)
+    end
+  end
+
+  if should_calculate(b, UPPER_UNUM)
+    if ((a.flags & UNUM_SIGN_MASK) == (b.upper.flags & UNUM_SIGN_MASK))
+      __arithmetic_addition!(a, b, UPPER_UNUM)
+    else
+      __arithmetic_subtraction!(a, b, UPPER_UNUM)
+    end
   end
 end
 
 #trampoline for using the arithmetic addition algorithm on numbers which are
 #guaranteed to have identical parity.  Otherwise subtraction is necessary.
-function __arithmetic_addition(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
-  #override
-  __addition_override_check!(a, b)
-
+function __arithmetic_addition!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
   #check to see if one or both Unums is indefinite.
-  if ((a.flags & UNUM_UBIT_MASK) | (b.flags & UNUM_UBIT_MASK) != 0)
-    inexact_add!(a, b, c)
+  if ((a.flags & UNUM_UBIT_MASK) != 0)
+    inexact_add!(a, b, Val{side})
   else
-    exact_add!(a, b, c, Val{:lower})
+    exact_add!(a, b, Val{side})
     c.lower_flags |= GNUM_SBIT_MASK
   end
   clear_ignore_sides!(b)
   nothing
 end
 
-
 #a function which checks for special values that will override actually performing
 #calculations.
-function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   ############################################
   # deal with zeros.
   #if our addend is zero, then we just leave both sides alone.
   is_zero(a) && (ignore_both_sides!(b); return)
   #if either side is zero, then copy the addend in to the Gnum.
-  is_zero(b, LOWER_SIDE) && should_calculate(b, LOWER_SIDE) && (put_unum!(a, b, LOWER_SIDE); set_ignore_side!(b, LOWER_SIDE))
-  is_zero(b, UPPER_SIDE) && should_calculate(b, UPPER_SIDE) && (put_unum!(a, b, UPPER_SIDE); set_ignore_side!(b, UPPER_SIDE))
+  is_zero(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (put_unum!(a, b, LOWER_UNUM); set_ignore_side!(b, LOWER_UNUM))
+  is_zero(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (put_unum!(a, b, UPPER_UNUM); set_ignore_side!(b, UPPER_UNUM))
   ############################################
   # deal with NaNs.
   #if our addend is nan, then set the addend to nan.
@@ -61,57 +69,45 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
   # deal with infinities.
   if (is_inf(a))
     #check to see if lower infinity is the opposite infinity.
-    is_inf(b, LOWER_SIDE) && should_calculate(b, LOWER_SIDE) && ((a.flags & UNUM_SIGN_MASK) != (b.lower.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
-    is_inf(b, UPPER_SIDE) && should_calculate(b, UPPER_SIDE) && ((a.flags & UNUM_SIGN_MASK) != (b.upper.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
+    is_inf(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && ((a.flags & UNUM_SIGN_MASK) != (b.lower.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
+    is_inf(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && ((a.flags & UNUM_SIGN_MASK) != (b.upper.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
     #since we know it's a finite, real value, we can set one or both sides of our gnum to infinity as needed.
-    should_calculate(b, LOWER_SIDE) && (inf!(b, a.flags & UNUM_SIGN_MASK, LOWER_SIDE); set_ignore_side!(b, LOWER_SIDE))
-    should_calculate(b, UPPER_SIDE) && (inf!(b, a.flags & UNUM_SIGN_MASK, UPPER_SIDE); set_ignore_side!(b, UPPER_SIDE))
+    should_calculate(b, LOWER_UNUM) && (inf!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM); set_ignore_side!(b, LOWER_UNUM))
+    should_calculate(b, UPPER_UNUM) && (inf!(b, a.flags & UNUM_SIGN_MASK, UPPER_UNUM); set_ignore_side!(b, UPPER_UNUM))
   end
 
   #since a is known to be finite real, we don't need a complicated check.
-  is_inf(b, LOWER_SIDE) && should_calculate(b, LOWER_SIDE) && (set_ignore_side!(b, LOWER_SIDE))
-  is_inf(b, UPPER_SIDE) && should_calculate(b, UPPER_SIDE) && (set_ignore_side!(b, UPPER_SIDE))
+  is_inf(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (set_ignore_side!(b, LOWER_UNUM))
+  is_inf(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (set_ignore_side!(b, UPPER_UNUM))
 
   ############################################
   #deal with mmr collapsing.
   if (is_mmr(a))
-    if (should_calculate(b, LOWER_SIDE) && (a.flags & UNUM_SIGN_MASK == b.lower_flags & UNUM_SIGN_MASK))
-      mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_SIDE)
-      set_ignore_side!(b, LOWER_SIDE)
+    if (should_calculate(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower_flags & UNUM_SIGN_MASK))
+      mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
+      set_ignore_side!(b, LOWER_UNUM)
     end
-    if (should_calculate(b, UPPER_SIDE) && (a.flags & UNUM_SIGN_MASK == b.upper_flags & UNUM_SIGN_MASK))
-      mmr!(b, a.flags & UNUM_SIGN_MASK, UPPER_SIDE)
-      set_ignore_side!(b, UPPER_SIDE)
+    if (should_calculate(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper_flags & UNUM_SIGN_MASK))
+      mmr!(b, a.flags & UNUM_SIGN_MASK, UPPER_UNUM)
+      set_ignore_side!(b, UPPER_UNUM)
     end
   end
-  if (should_calculate(b, LOWER_SIDE) && is_mmr(b, LOWER_SIDE) && (a.flags & UNUM_SIGN_MASK == b.lower_flags & UNUM_SIGN_MASK))
-    set_ignore_side!(b, LOWER_SIDE)
+  if (should_calculate(b, LOWER_UNUM) && is_mmr(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower_flags & UNUM_SIGN_MASK))
+    set_ignore_side!(b, LOWER_UNUM)
   end
-  if (should_calculate(b, UPPER_SIDE) && is_mmr(b, UPPER_SIDE) && (a.flags & UNUM_SIGN_MASK == b.upper_flags & UNUM_SIGN_MASK))
-    set_ignore_side!(b, UPPER_SIDE)
+  if (should_calculate(b, UPPER_UNUM) && is_mmr(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper_flags & UNUM_SIGN_MASK))
+    set_ignore_side!(b, UPPER_UNUM)
   end
 end
 
-################################################################################
-# exact_add!  - a function which takes a general addition algorithm and distributes
-# it to both sides of the unum.
-
-function exact_add!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
-  should_calculate(b, LOWER_SIDE) && exact_add_one_side!(b, LOWER_SIDE)
-  should_calculate(b, UPPER_SIDE) && exact_add_one_side!(b, UPPER_SIDE)
-  b
-end
-
-################################################################################
-#behold!  The actual addition algorithm
-@gen_code function exact_add_one_side!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+@generated function exact_add!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
 
   mesize::UInt16 = max_esize(ESS)
   mfsize::UInt16 = max_fsize(FSS)
   (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
   mexp::UInt64 = max_exponent(ESS)
 
-  @code quote
+  quote
     a_exp::Int64 = decode_exp(a)
     b_exp::Int64 = decode_exp(b.$side)
 
@@ -125,6 +121,9 @@ end
 
     #set up a placeholder for the addend.
     addend::Unum{ESS,FSS}
+    shift::Int64
+    carry::UInt64
+    scratchpad_exp::Int64
     #check to see which context is bigger.
     if (a_ctx > b_ctx)
       #set the placeholder to the value a.
@@ -132,20 +131,20 @@ end
       #then move b to the scratchpad.
       copy_unum!(b.$side, b.scratchpad)
       #calculate shift as the difference between a and b
-      shift::Int64 = a_ctx - b_ctx
+      shift = a_ctx - b_ctx
       #set up the carry bit.
-      carry::UInt64 = (o64 - a_dev) + ((shift == z64) ? (o64 - b_dev) : z64)
-      scratchpad_exp::Int64 = a_exp
+      carry = (o64 - a_dev) + ((shift == z64) ? (o64 - b_dev) : z64)
+      scratchpad_exp = a_exp
     else
       #set the placeholder to the value b.
       addend = b.$side
       #move the unum value to the scratchpad.
-      put_unum!(a, b.scratchpad)
+      put_unum!(a, b, SCRATCHPAD)
       #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
       #set up the carry bit.
       carry = (o64 - b_dev) + ((shift == z64) ? (o64 - a_dev) : z64)
-      scratchpad_exp::Int64 = b_exp
+      scratchpad_exp = b_exp
     end
 
     #rightshift the scratchpad, then set the invisible bit that may have moved.
@@ -169,11 +168,11 @@ end
     #no need to touch the exponent already loaded into the scratchpad.
     if (carry != 0)
       #check for overflow, and return mmr if that happens.
-      if (scratchpad_exponent > max_exponent(ESS))
+      if (scratchpad_exp > max_exponent(ESS))
         mmr!(b, SCRATCHPAD)
       else
         #we know it can't be subnormal, because we've added one to the exponent.
-        (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exponent)
+        (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
       end
     end
 

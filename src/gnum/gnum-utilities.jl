@@ -1,12 +1,3 @@
-#scratches an operation.
-macro scratch_this_operation!(s)
-  esc(quote
-    nan!(s)
-    ignore_both_sides!(s)
-    return
-  end)
-end
-
 #testing the sbit state of the Gnum.
 set_onesided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags |= GNUM_SINGLE_MASK; x)
 set_twosided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags &= ~GNUM_SINGLE_MASK; x)
@@ -32,9 +23,9 @@ end
 #reports on whether or not the side referred to should be calculated.
 @generated function should_calculate{ESS,FSS,side}(x::Gnum{ESS,FSS}, ::Type{Val{side}})
   if (side == :lower)
-    :((x.lower.flag & GNUM_IGNORE_SIDE_MASK) == 0)
+    :((x.lower.flags & GNUM_IGNORE_SIDE_MASK) == 0)
   else
-    :(((x.scratchpad.flag & GNUM_SINGLE_MASK) == 0) && ((x.upper.flag & GNUM_IGNORE_SIDE_MASK) == 0))
+    :(((x.scratchpad.flags & GNUM_SINGLE_MASK) == 0) && ((x.upper.flags & GNUM_IGNORE_SIDE_MASK) == 0))
   end
 end
 
@@ -42,7 +33,7 @@ function put_unum!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Gnum{ESS,FSS})
   #puts a unum into the gnum, assuming it is going to be a single-sided unum.
   copy_unum!(src, dest.lower)
   set_flags!(dest, LOWER_UNUM)
-  dest.scratchpad.flag |= GNUM_SINGLE_MASK
+  dest.scratchpad.flags |= GNUM_SINGLE_MASK
   nothing
 end
 
@@ -58,7 +49,7 @@ end
   #sets the unum value on either side of the Gnum (or possibly the scratchpad.)
   quote
     copy_unum!(src, dest.$side)
-    set_flags!(src, Val{$side})
+    set_flags!(dest, Val{side})
     nothing
   end
 end
@@ -71,11 +62,11 @@ end
   end
 end
 
-function put_ubound!{ESS,FSS}(src::Ubound{ESS,FSS}, dest::Unum{ESS,FSS})
+function put_ubound!{ESS,FSS}(src::Ubound{ESS,FSS}, dest::Gnum{ESS,FSS})
   #fills the Gnum data from a source Ubound.
   copy_unum!(src.lower, dest.lower)
   copy_unum!(src.upper, dest.upper)
-  set_flags!(src)
+  set_flags!(dest)
   nothing
 end
 
@@ -88,6 +79,22 @@ function get_ubound!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Ubound{ESS,FSS})
   force_from_flags!(src, dest, UPPER_UNUM) || copy_unum!(src.upper, dest.upper)
   nothing
 end
+
+doc"""
+  `set_flags(::Gnum{ESS,FSS}, ::Type{Val{side}})` sets flags on one side of the
+  gnum by examining the value.
+"""
+@generated function set_flags!{ESS,FSS,side}(v::Gnum{ESS,FSS}, ::Type{Val{side}})
+  println("what is up here $side")
+  quote
+    is_nan(v.$side) && (v.scratchpad.flags |= GNUM_NAN_MASK; return)
+    is_inf(v.$side) && (v.$side.flags |= GNUM_INF_MASK; return)
+    is_mmr(v.$side) && (v.$side.flags |= GNUM_MMR_MASK; return)
+    is_sss(v.$side) && (v.$side.flags |= GNUM_SSS_MASK; return)
+    is_zero(v.$side) && (v.$side.flags |= GNUM_ZERO_MASK; return)
+  end
+end
+
 
 doc"""
   `emit_data(::Gnum{ESS,FSS})` takes the contents of a gnum and decides if it's

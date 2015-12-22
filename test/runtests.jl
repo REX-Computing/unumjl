@@ -9,4 +9,4 @@ using Base.Test
 g = zero(Unums.Gnum{3,4})
 uno = one(Unum{3,4})
 two = convert(Unum{3,4}, 2)
-add!(uno, two, g)
+Unums.add!(uno, two, g)

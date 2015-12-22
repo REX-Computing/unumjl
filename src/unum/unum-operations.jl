@@ -34,28 +34,25 @@ function additiveinverse!{ESS,FSS}(x::Unum{ESS,FSS})
 end
 export additiveinverse!
 
-#=
-#sorts two unums by magnitude (distance from zero), and throws in the calculated
-#exponents, while we're at it.  NB.  MAGSORT ignores sign.
-function magsort{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  _aexp::Int64 = decode_exp(a)
-  _bexp::Int64 = decode_exp(b)
+@gen_code function copy_unum!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
 
-  if (_aexp < _bexp)                #first parse through the exponents
-    (b, a, _bexp, _aexp)
-  elseif (_aexp > _bexp)
-    (a, b, _aexp, _bexp)
-  elseif (a.fraction < b.fraction)  #then parse through the fractions
-    (b, a, _bexp, _aexp)
-  elseif (a.fraction > b.fraction)
-    (a, b, _aexp, _bexp)
-  elseif (is_ulp(a) && !is_ulp(b))
-    (a, b, _aexp, _bexp)
+  @code quote
+    dest.fsize = src.fsize
+    dest.esize = src.esize
+    dest.flags = src.flags
+    dest.exponent = src.exponent
+  end
+
+  if FSS < 7
+    @code :(dest.fraction = src.fraction)
   else
-    (b, a, _bexp, _aexp)
+    for idx = 1:__cell_length(FSS)
+      @code :(@inbounds dest.fraction[$idx] = src.fraction[$idx])
+    end
   end
 end
 
+#=
 #note the difference between "more/less", and "next/prev" - next/prev refers
 #to position along the number line, "more/less" refers to magnitude along the
 #number line.  NB:  __bigger_exact and __smaller_exact do *not* perform checks

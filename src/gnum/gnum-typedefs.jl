@@ -28,7 +28,7 @@ end
 
 @generated function Base.zero{ESS,FSS}(t::Type{Gnum{ESS,FSS}})
   if (FSS < 7)
-    :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS), zero(Unum{ESS,FSS}, zero(Unum{ESS,FSS}))
+    :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS})))
   else
     :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}),
       Unum{ESS,FSS}(z16, z16, z16, ArrayNum{FSS}(GNUM_SCRATCHPAD), z64)))
@@ -64,3 +64,12 @@ const SCRATCHPAD = Val{:scratchpad}
 #create a global scratchpad array.
 const GLOBAL_SCRATCHPAD_SIZE = __cell_length(11) + (__cell_length(11) >> 1)
 const GLOBAL_SCRATCHPAD = zeros(UInt64, GLOBAL_SCRATCHPAD_SIZE)
+
+#scratches an operation.
+macro scratch_this_operation!(s)
+  esc(quote
+    nan!(s)
+    ignore_both_sides!(s)
+    return
+  end)
+end
