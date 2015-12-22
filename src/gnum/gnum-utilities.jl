@@ -13,8 +13,10 @@ set_twosided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags &= ~GNUM_SINGLE_M
 is_onesided{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags & (GNUM_SINGLE_MASK | GNUM_NAN_MASK) != 0)
 is_twosided{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags & (GNUM_SINGLE_MASK | GNUM_NAN_MASK) == 0)
 
+#the ignore_side utility is used for operations that do identity checks before
+#proceeding with calculations, and flags that a side has already been checked
+#and should not be altered.  the `should_calculate` directive runs this downstream
 @generated function ignore_side!{ESS,FSS,side}(x::Gnum{ESS,FSS}, ::Type{Val{side}})
-  @gnum_interpolate
   :(x.$side.flags |= GNUM_IGNORE_SIDE_MASK; nothing)
 end
 function ignore_both_sides!{ESS,FSS}(x::Gnum{ESS,FSS})
@@ -27,6 +29,7 @@ function clear_ignore_sides!{ESS,FSS}(x::Gnum{ESS,FSS})
   x.upper.flags &= ~GNUM_IGNORE_SIDE_MASK
   nothing
 end
+#reports on whether or not the side referred to should be calculated.
 @generated function should_calculate{ESS,FSS,side}(x::Gnum{ESS,FSS}, ::Type{Val{side}})
   if (side == :lower)
     :((x.lower.flag & GNUM_IGNORE_SIDE_MASK) == 0)
@@ -36,18 +39,23 @@ end
 end
 
 function put_unum!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Gnum{ESS,FSS})
+  #puts a unum into the gnum, assuming it is going to be a single-sided unum.
   copy_unum!(src, dest.lower)
-  set_flags!(dest)
+  set_flags!(dest, LOWER_UNUM)
   dest.scratchpad.flag |= GNUM_SINGLE_MASK
   nothing
 end
+
 function get_unum!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Unum{ESS,FSS})
+  #puts a unum into the gnum, assuming it already is a single-sided unum.
   (is_twosided(src) || !is_nan(src)) && throw(ArgumentError("Error: Gnum represents a Ubound"))
   is_nan(src) && return nan(Unum{ESS,FSS})
+  force_from_flags!(src, dest, LOWER_UNUM) || copy_unum!(src.lower, dest)
   nothing
 end
 
 @generated function put_unum!{ESS,FSS,side}(src::Unum{ESS,FSS}, dest::Gnum{ESS,FSS}, ::Type{Val{side}})
+  #sets the unum value on either side of the Gnum (or possibly the scratchpad.)
   quote
     copy_unum!(src, dest.$side)
     set_flags!(src, Val{$side})
@@ -56,6 +64,7 @@ end
 end
 
 @generated function get_unum!{ESS,FSS,side}(src::Gnum{ESS,FSS}, dest::Unum{ESS,FSS}, ::Type{Val{side}})
+  #retrieves the unum value from either side of the Gnum (or possibly the scratchpad.)
   quote
     force_from_flags!(src, dest, Val{$side}) || copy_unum!(src.$side, dest);
     nothing

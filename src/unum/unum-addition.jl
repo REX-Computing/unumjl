@@ -50,8 +50,8 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
   #if our addend is zero, then we just leave both sides alone.
   is_zero(a) && (ignore_both_sides!(b); return)
   #if either side is zero, then copy the addend in to the Gnum.
-  is_zero(b, LOWER_SIDE) && (copy_gnum!(a, b); set_ignore_side!(b, LOWER_SIDE))
-  is_zero(b, UPPER_SIDE) && is_twosided(b) && (copy_gnum!(a, b); set_ignore_side!(b, UPPER_SIDE))
+  is_zero(b, LOWER_SIDE) && should_calculate(b, LOWER_SIDE) && (put_unum!(a, b, LOWER_SIDE); set_ignore_side!(b, LOWER_SIDE))
+  is_zero(b, UPPER_SIDE) && should_calculate(b, UPPER_SIDE) && (put_unum!(a, b, UPPER_SIDE); set_ignore_side!(b, UPPER_SIDE))
   ############################################
   # deal with NaNs.
   #if our addend is nan, then set the addend to nan.
@@ -61,17 +61,16 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
   # deal with infinities.
   if (is_inf(a))
     #check to see if lower infinity is the opposite infinity.
-    is_inf(b, LOWER_SIDE) && ((a.flags & UNUM_SIGN_MASK) != (b.lower_flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
-    is_inf(b, UPPER_SIDE) && ((a.flags & UNUM_SIGN_MASK) != (b.upper_flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
+    is_inf(b, LOWER_SIDE) && should_calculate(b, LOWER_SIDE) && ((a.flags & UNUM_SIGN_MASK) != (b.lower.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
+    is_inf(b, UPPER_SIDE) && should_calculate(b, UPPER_SIDE) && ((a.flags & UNUM_SIGN_MASK) != (b.upper.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
     #since we know it's a finite, real value, we can set one or both sides of our gnum to infinity as needed.
-    inf!(b, a.flags & UNUM_SIGN_MASK, LOWER_SIDE)
-    set_ignore_side!(b, LOWER_SIDE)
-
-    is_twosided(b) && (inf!(b, a.flags & UNUM_SIGN_MASK, UPPER_SIDE); set_ignore_side!(b, UPPER_SIDE))
+    should_calculate(b, LOWER_SIDE) && (inf!(b, a.flags & UNUM_SIGN_MASK, LOWER_SIDE); set_ignore_side!(b, LOWER_SIDE))
+    should_calculate(b, UPPER_SIDE) && (inf!(b, a.flags & UNUM_SIGN_MASK, UPPER_SIDE); set_ignore_side!(b, UPPER_SIDE))
   end
+
   #since a is known to be finite real, we don't need a complicated check.
-  should_calculate(b, LOWER_SIDE) && is_inf(b, LOWER_SIDE) && (set_ignore_side!(b, LOWER_SIDE))
-  should_calculate(b, UPPER_SIDE) && is_inf(b, UPPER_SIDE) && (set_ignore_side!(b, UPPER_SIDE))
+  is_inf(b, LOWER_SIDE) && should_calculate(b, LOWER_SIDE) && (set_ignore_side!(b, LOWER_SIDE))
+  is_inf(b, UPPER_SIDE) && should_calculate(b, UPPER_SIDE) && (set_ignore_side!(b, UPPER_SIDE))
 
   ############################################
   #deal with mmr collapsing.
@@ -99,7 +98,7 @@ end
 
 function exact_add!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   should_calculate(b, LOWER_SIDE) && exact_add_one_side!(b, LOWER_SIDE)
-  should_calculate(b, UPPER_SIDE) && exact_add_one_ised!(b, UPPER_SIDE)
+  should_calculate(b, UPPER_SIDE) && exact_add_one_side!(b, UPPER_SIDE)
   b
 end
 
@@ -112,92 +111,79 @@ end
   (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
   mexp::UInt64 = max_exponent(ESS)
 
-  @gnum_interpolate #set the fs es fl frc exp values to match the side!
-
   @code quote
     a_exp::Int64 = decode_exp(a)
-    b_exp::Int64 = decode_exp(b, Val{side})
+    b_exp::Int64 = decode_exp(b.$side)
 
-    a_dev::Int64 = is_exp_zero(a) ? 1 : 0
-    b_dev::Int64 = is_exp_zero(b, Val{side}) ? 1 : 0
+    a_dev::UInt64 = is_exp_zero(a) ? o64 : z64
+    b_dev::UInt64 = is_exp_zero(b.$side) ? o64 : z64
 
     #derive the "contexts" for each, which is a combination of the exponent and
     #deviation.
     a_ctx::Int64 = a_exp + a_dev
     b_ctx::Int64 = b_exp + b_dev
 
+    #set up a placeholder for the addend.
+    addend::Unum{ESS,FSS}
     #check to see which context is bigger.
     if (a_ctx > b_ctx)
+      #set the placeholder to the value a.
+      addend = a
       #then move b to the scratchpad.
-      move_to_scratchpad!(b, Val{side})
+      copy_unum!(b.$side, b.scratchpad)
       #calculate shift as the difference between a and b
-      shift::UInt16 = a_ctx - b_ctx
-
-      #rightshift the scratchpad.
-      __rightshift_frac_with_underflow_check!(b, shift, SCRATCHPAD)
-      (shift != 0) && (b_dev == 0) && (set_frac_bit!(b, shift, SCRATCHPAD))
-
+      shift::Int64 = a_ctx - b_ctx
       #set up the carry bit.
-      carry::UInt64 = (1 - a_dev) + ((shift == 0) ? (1 - b_dev) : 0)
-
-      carry = __carried_add_frac!(carry, a.fraction, c, Val{side})
-
-      #set the new exponent
-      n_exp::Int = a_exp
+      carry::UInt64 = (o64 - a_dev) + ((shift == z64) ? (o64 - b_dev) : z64)
+      scratchpad_exp::Int64 = a_exp
     else
-      #move a to the scratchpad.
-      put_unum!(a, b, SCRATCHPAD)
-      #calculate shift as the difference between b a nd a
+      #set the placeholder to the value b.
+      addend = b.$side
+      #move the unum value to the scratchpad.
+      put_unum!(a, b.scratchpad)
+      #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
-
-      #rightshift the scratchpad.
-      __rightshift_frac_with_underflow_check!(b, shift, SCRATCHPAD)
-      (shift != 0) && (a_dev == 0) && (set_frac_bit!(b, shift, SCRATCHPAD))
-
       #set up the carry bit.
-      carry = (1 - b_dev) + ((shift == 0) ? (1 - a_dev) : 0)
-
-      carry = __carried_add_frac!(carry, a.fraction, c, Val{side})
-
-      #set the new exponent
-      n_exp::Int = b_exp
+      carry = (o64 - b_dev) + ((shift == z64) ? (o64 - a_dev) : z64)
+      scratchpad_exp::Int64 = b_exp
     end
 
+    #rightshift the scratchpad, then set the invisible bit that may have moved.
+    __rightshift_frac_with_underflow_check!(b.scratchpad, shift)
+    (shift != 0) && (b_dev == 0) && (set_frac_bit!(b.scratchpad, shift))
+
+    #perform the carried add.
+    carry = __carried_add_frac!(carry, addend.fraction, b.scratchpad)
+
     if (carry > 1)
-      n_exp += 1
-      __rightshift_frac_with_underflow_check!(c, 0x0001, Val{side})
-      (carry == 3) && set_frac_top!(c, Val{side})
+      scratchpad_exp += 1
+      __rightshift_frac_with_underflow_check!(b.scratchpad, 1)
+      (carry == 3) && set_frac_top!(b.scratchpad)
     end
 
     #set the fsize.
-    c.$fs = $mfsize - min(((c.$fs & UNUM_UBIT_MASK != 0) ? 0 : ctz(c.$frc)), $mfsize)
+    b.scratchpad.fsize = $mfsize - min(((b.scratchpad.fsize & UNUM_UBIT_MASK != 0) ? 0 : ctz(b.scratchpad.fraction)), $mfsize)
 
     #set exponent stuff.
-    #handle the carry bit (which may be up to three? or more).
-    if (carry == 0)
-      #don't use encode_exp because that might do strange things to subnormals.
-      #just pass through esize, exponent from the a value.
-      c.$es = a.esize
-      c.$exp = a.exponent
-    else
+    #handle the carry bit (which may be up to three? or more). If carry is zero,
+    #no need to touch the exponent already loaded into the scratchpad.
+    if (carry != 0)
       #check for overflow, and return mmr if that happens.
-      (n_exp > max_exponent(ESS)) && (mmr!(c, c.$fl, Val{side}); return)
-      #we know it can't be subnormal, because we've added one to the exponent.
-      (c.$es, c.$exp) = encode_exp(n_exp)
+      if (scratchpad_exponent > max_exponent(ESS))
+        mmr!(b, SCRATCHPAD)
+      else
+        #we know it can't be subnormal, because we've added one to the exponent.
+        (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exponent)
+      end
     end
 
     #another way to get overflow is: by adding just enough bits to exactly
     #make the binary value for infinity.  This should, instead, yield mmr.
-  end
+    #nb:  the is_inf call is the UNUM is_inf, which checks bitwise, not the
+    #gnum is_inf, which only looks at the flag in the flags holder.
+    is_inf(b.scratchpad) && mmr!(b, SCRATCHPAD)
 
-  if (FSS < 7)
-    @code quote
-      (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (c.$fs == $mfrac) && (mmr!(c, c.$fl, Val{side}))
-    end
-  else
-    @code quote
-      (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (is_all_ones(c.$fs)) && (mmr!(c, c.$fl, Val{side}))
-    end
+    copy_unum!(b.scratchpad, b.$side)
   end
 end
 
