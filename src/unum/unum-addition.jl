@@ -103,84 +103,101 @@ function exact_add!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   b
 end
 
-@gen_code function exact_add_one_side!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}) 
 ################################################################################
 #behold!  The actual addition algorithm
+@gen_code function exact_add_one_side!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
 
-mesize::UInt16 = max_esize(ESS)
-mfsize::UInt16 = max_fsize(FSS)
-(FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
-mexp::UInt64 = max_exponent(ESS)
+  mesize::UInt16 = max_esize(ESS)
+  mfsize::UInt16 = max_fsize(FSS)
+  (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
+  mexp::UInt64 = max_exponent(ESS)
 
+  @gnum_interpolate #set the fs es fl frc exp values to match the side!
 
-  #retrieve the sign of the result, store in c.flags.
-  c.$fl = a.flags & UNUM_SIGN_MASK
+  @code quote
+    a_exp::Int64 = decode_exp(a)
+    b_exp::Int64 = decode_exp(b, Val{side})
 
-  a_exp::Int64 = decode_exp(a)
-  b_exp::Int64 = decode_exp(b)
+    a_dev::Int64 = is_exp_zero(a) ? 1 : 0
+    b_dev::Int64 = is_exp_zero(b, Val{side}) ? 1 : 0
 
-  a_dev::Int64 = is_exp_zero(a) ? 1 : 0
-  b_dev::Int64 = is_exp_zero(b) ? 1 : 0
+    #derive the "contexts" for each, which is a combination of the exponent and
+    #deviation.
+    a_ctx::Int64 = a_exp + a_dev
+    b_ctx::Int64 = b_exp + b_dev
 
-  #derive the "contexts" for each, which is a combination of the exponent and
-  #deviation.
-  a_ctx::Int64 = a_exp + a_dev
-  b_ctx::Int64 = b_exp + b_dev
+    #check to see which context is bigger.
+    if (a_ctx > b_ctx)
+      #then move b to the scratchpad.
+      move_to_scratchpad!(b, Val{side})
+      #calculate shift as the difference between a and b
+      shift::UInt16 = a_ctx - b_ctx
 
-  (b_ctx > a_ctx) && ((a, b, a_exp, b_exp, a_ctx, b_ctx) = (b, a, b_exp, a_exp, b_ctx, a_ctx))
+      #rightshift the scratchpad.
+      __rightshift_frac_with_underflow_check!(b, shift, SCRATCHPAD)
+      (shift != 0) && (b_dev == 0) && (set_frac_bit!(b, shift, SCRATCHPAD))
 
-  #copy the contents of a into c.
-  shift::UInt16 = a_ctx - b_ctx
+      #set up the carry bit.
+      carry::UInt64 = (1 - a_dev) + ((shift == 0) ? (1 - b_dev) : 0)
 
-  copy_frac!(a.fraction, c, Val{side})
+      carry = __carried_add_frac!(carry, a.fraction, c, Val{side})
 
-  __rightshift_frac_with_underflow_check!(c, shift, Val{side})
+      #set the new exponent
+      n_exp::Int = a_exp
+    else
+      #move a to the scratchpad.
+      put_unum!(a, b, SCRATCHPAD)
+      #calculate shift as the difference between b a nd a
+      shift = b_ctx - a_ctx
 
-  (shift != 0) && (b_dev == 0) && (set_frac_bit!(c, shift, Val{side}))
+      #rightshift the scratchpad.
+      __rightshift_frac_with_underflow_check!(b, shift, SCRATCHPAD)
+      (shift != 0) && (a_dev == 0) && (set_frac_bit!(b, shift, SCRATCHPAD))
 
-  #perform a carried add.  Start it off with a's phantom bit (1- a_dev), and
-  #b's phantom bit if they are overlapping.
-  carry::UInt64 = (1 - a_dev) + ((shift == 0) ? (1 - b_dev) : 0)
+      #set up the carry bit.
+      carry = (1 - b_dev) + ((shift == 0) ? (1 - a_dev) : 0)
 
-  carry = __carried_add_frac!(carry, a.fraction, c, Val{side})
+      carry = __carried_add_frac!(carry, a.fraction, c, Val{side})
 
-  #set the new exponent
-  n_exp::Int = a_exp
+      #set the new exponent
+      n_exp::Int = b_exp
+    end
 
-  if (carry > 1)
-    n_exp += 1
-    __rightshift_frac_with_underflow_check!(c, 0x0001, Val{side})
-    (carry == 3) && set_frac_top!(c, Val{side})
+    if (carry > 1)
+      n_exp += 1
+      __rightshift_frac_with_underflow_check!(c, 0x0001, Val{side})
+      (carry == 3) && set_frac_top!(c, Val{side})
+    end
+
+    #set the fsize.
+    c.$fs = $mfsize - min(((c.$fs & UNUM_UBIT_MASK != 0) ? 0 : ctz(c.$frc)), $mfsize)
+
+    #set exponent stuff.
+    #handle the carry bit (which may be up to three? or more).
+    if (carry == 0)
+      #don't use encode_exp because that might do strange things to subnormals.
+      #just pass through esize, exponent from the a value.
+      c.$es = a.esize
+      c.$exp = a.exponent
+    else
+      #check for overflow, and return mmr if that happens.
+      (n_exp > max_exponent(ESS)) && (mmr!(c, c.$fl, Val{side}); return)
+      #we know it can't be subnormal, because we've added one to the exponent.
+      (c.$es, c.$exp) = encode_exp(n_exp)
+    end
+
+    #another way to get overflow is: by adding just enough bits to exactly
+    #make the binary value for infinity.  This should, instead, yield mmr.
   end
 
-  #set the fsize.
-  c.$fs = $mfsize - min(((c.$fs & UNUM_UBIT_MASK != 0) ? 0 : ctz(c.$frc)), $mfsize)
-
-  #set exponent stuff.
-  #handle the carry bit (which may be up to three? or more).
-  if (carry == 0)
-    #don't use encode_exp because that might do strange things to subnormals.
-    #just pass through esize, exponent from the a value.
-    c.$es = a.esize
-    c.$exp = a.exponent
+  if (FSS < 7)
+    @code quote
+      (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (c.$fs == $mfrac) && (mmr!(c, c.$fl, Val{side}))
+    end
   else
-    #check for overflow, and return mmr if that happens.
-    (n_exp > max_exponent(ESS)) && (mmr!(c, c.$fl, Val{side}); return)
-    #we know it can't be subnormal, because we've added one to the exponent.
-    (c.$es, c.$exp) = encode_exp(n_exp)
-  end
-
-  #another way to get overflow is: by adding just enough bits to exactly
-  #make the binary value for infinity.  This should, instead, yield mmr.
-end
-
-if (FSS < 7)
-  @code quote
-    (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (c.$fs == $mfrac) && (mmr!(c, c.$fl, Val{side}))
-  end
-else
-  @code quote
-    (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (is_all_ones(c.$fs)) && (mmr!(c, c.$fl, Val{side}))
+    @code quote
+      (c.$es == $mesize) && (c.$fs == $mfsize) && (c.$exp == $mexp) && (is_all_ones(c.$fs)) && (mmr!(c, c.$fl, Val{side}))
+    end
   end
 end
 

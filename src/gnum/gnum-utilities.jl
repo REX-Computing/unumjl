@@ -1,99 +1,83 @@
-#testing the sbit state of the Gnum.
-set_onesided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.lower_flags |= GNUM_SBIT_MASK; x)
-set_twosided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.lower_flags &= ~GNUM_SBIT_MASK; x)
-is_onesided{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.lower_flags & (GNUM_SBIT_MASK | GNUM_NAN_MASK) != 0)
-is_twosided{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.lower_flags & (GNUM_SBIT_MASK | GNUM_NAN_MASK) == 0)
+#scratches an operation.
+macro scratch_this_operation!(s)
+  esc(quote
+    nan!(s)
+    ignore_both_sides!(s)
+    return
+  end)
+end
 
-@generated function set_ignore_side!{ESS,FSS,side}(x::Gnum{ESS,FSS}, ::Type{Val{side}})
+#testing the sbit state of the Gnum.
+set_onesided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags |= GNUM_SINGLE_MASK; x)
+set_twosided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags &= ~GNUM_SINGLE_MASK; x)
+is_onesided{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags & (GNUM_SINGLE_MASK | GNUM_NAN_MASK) != 0)
+is_twosided{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags & (GNUM_SINGLE_MASK | GNUM_NAN_MASK) == 0)
+
+@generated function ignore_side!{ESS,FSS,side}(x::Gnum{ESS,FSS}, ::Type{Val{side}})
   @gnum_interpolate
-  :(x.$fl |= GNUM_IGNORE_SIDE_MASK; nothing)
+  :(x.$side.flags |= GNUM_IGNORE_SIDE_MASK; nothing)
 end
 function ignore_both_sides!{ESS,FSS}(x::Gnum{ESS,FSS})
-  x.lower_flags |= GNUM_IGNORE_SIDE_MASK
-  x.upper_flags |= GNUM_IGNORE_SIDE_MASK
+  x.lower.flags |= GNUM_IGNORE_SIDE_MASK
+  x.upper.flags |= GNUM_IGNORE_SIDE_MASK
   nothing
 end
 function clear_ignore_sides!{ESS,FSS}(x::Gnum{ESS,FSS})
-  x.lower_flags &= ~GNUM_IGNORE_SIDE_MASK
-  x.upper_flags &= ~GNUM_IGNORE_SIDE_MASK
+  x.lower.flags &= ~GNUM_IGNORE_SIDE_MASK
+  x.upper.flags &= ~GNUM_IGNORE_SIDE_MASK
   nothing
 end
 @generated function should_calculate{ESS,FSS,side}(x::Gnum{ESS,FSS}, ::Type{Val{side}})
   if (side == :lower)
-    :((x.lower_flag & GNUM_IGNORE_SIDE_MASK) == 0)
+    :((x.lower.flag & GNUM_IGNORE_SIDE_MASK) == 0)
   else
-    :(((x.lower_flag & GNUM_SBIT_MASK) == 0) && ((x.upper_flag & GNUM_IGNORE_SIDE_MASK) == 0))
+    :(((x.scratchpad.flag & GNUM_SINGLE_MASK) == 0) && ((x.upper.flag & GNUM_IGNORE_SIDE_MASK) == 0))
   end
 end
 
-@gen_code function put_unum!{ESS,FSS, side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-
-  @gnum_interpolate
-
-  @code quote
-    #copy all data from the unum to the gnum.
-    b.$fs = a.fsize
-    b.$es = a.esize
-    b.$fl = a.flags | GNUM_SBIT_MASK
-    b.$exp = a.exponent
-  end
-  if (FSS < 7)
-    @code :(b.$frc = a.fraction)
-  else
-    for idx=1:__cell_length(FSS)
-      @code :(b.$frc.a[$idx] = a.fraction.a[$idx])
-    end
-  end
-  @code :(nothing)
+function put_unum!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Gnum{ESS,FSS})
+  copy_unum!(src, dest.lower)
+  set_flags!(dest)
+  dest.scratchpad.flag |= GNUM_SINGLE_MASK
+  nothing
+end
+function get_unum!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Unum{ESS,FSS})
+  (is_twosided(src) || !is_nan(src)) && throw(ArgumentError("Error: Gnum represents a Ubound"))
+  is_nan(src) && return nan(Unum{ESS,FSS})
+  nothing
 end
 
-@gen_code function get_unum!{ESS,FSS,side}(src::Gnum{ESS,FSS}, dest::Unum{ESS,FSS}, ::Type{Val{side}})
-  @gnum_interpolate
-
-  @code quote
-    dest.fsize = src.$fs
-    dest.esize = src.$es
-    dest.flags = src.$fl & (~GNUM_SBIT_MASK)
-    dest.exponent = src.$exp
+@generated function put_unum!{ESS,FSS,side}(src::Unum{ESS,FSS}, dest::Gnum{ESS,FSS}, ::Type{Val{side}})
+  quote
+    copy_unum!(src, dest.$side)
+    set_flags!(src, Val{$side})
+    nothing
   end
-  if (FSS < 7)
-    @code :(dest.fraction = src.$frc)
-  else
-    @code :(copy_data!(src.$frc, dest.fraction))
-  end
-  @code :(nothing)
 end
 
-#DEFINE A QUICK MACRO THAT MAKES TRANSFERRING DATA in the next function painless.
-macro srcdest(fields::Array{Symbol,1})
-  q = :()
-  for s in fields
-    ls = symbol(:lower_, s)
-    us = symbol(:upper_, s)
-    quote
-      $q
-      dest.lower.$s = src.$ls
-      dest.upper.$s = src.$us
-    end
+@generated function get_unum!{ESS,FSS,side}(src::Gnum{ESS,FSS}, dest::Unum{ESS,FSS}, ::Type{Val{side}})
+  quote
+    force_from_flags!(src, dest, Val{$side}) || copy_unum!(src.$side, dest);
+    nothing
   end
-  esc(q)
 end
 
-@gen_code function get_ubound!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Ubound{ESS,FSS})
-  #transfer most of the fields
-  @code :(@srcdest [:fsize, :esize, :flags, :exponent])
-  if (FSS < 7)
-    #we only have an int64 so a raw transfer is fine.
-    @code :(@srcdest [:fraction])
-  else
-    #unroll and reach into the array.
-    for idx = 1:__cell_length(FSS)
-      @code quote
-        dest.lower.fraction[$idx] = src.lower_fraction[$idx]
-        dest.upper.fraction[$idx] = src.upper_fraction[$idx]
-      end
-    end
-  end
+function put_ubound!{ESS,FSS}(src::Ubound{ESS,FSS}, dest::Unum{ESS,FSS})
+  #fills the Gnum data from a source Ubound.
+  copy_unum!(src.lower, dest.lower)
+  copy_unum!(src.upper, dest.upper)
+  set_flags!(src)
+  nothing
+end
+
+function get_ubound!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Ubound{ESS,FSS})
+  #fills the Ubound data from a source Gnum.
+  (is_nan(src) || is_onesided(src)) && throw(ArgumentError("Error:  Gnum represents a Unum"))
+  #be sure to check if one of the flags is thrown before copying, otherwise
+  #undefined results may occur.
+  force_from_flags!(src, dest, LOWER_UNUM) || copy_unum!(src.lower, dest.lower)
+  force_from_flags!(src, dest, UPPER_UNUM) || copy_unum!(src.upper, dest.upper)
+  nothing
 end
 
 doc"""
@@ -101,15 +85,23 @@ doc"""
   represents a solo unum or a ubound.  It then allocates the appropriate type and
   emits that as a result.
 """
-function emit_data{ESS,FSS}(src::Gnum{ESS,FSS})
-  if (src.lower_flags & GNUM_SBIT_MASK != 0)
-    #then we are a single unum result.
-    ures::Unum{ESS,FSS} = zero(Unum{ESS,FSS})
-    get_unum!(src, ures, Val{:lower})
-    return ures
+function emit_data!{ESS,FSS}(src::Gnum{ESS,FSS})
+  #be ready to release a utype as a result.
+  res::Utype
+  #check to see if we're a NaN
+  (src.scratchpad.flags & GNUM_NAN_MASK != 0) && return nan(Unum{ESS,FSS})
+  #check to see if we're a single unum
+  if (src.scratchpad.flags & GNUM_SINGLE_MASK != 0)
+    #prepare the result by allocating.
+    res = zero(Unum{ESS,FSS})
+    #put the value in the allocated space.
+    get_unum!(src, res)
   else
-    bres::Ubound{ESS,FSS} = zero(Ubound{ESS,FSS})
-    get_ubound!(src, bres)
-    return bres
+    #this time, we know it's a ubound.
+    #prepare the result by allocating.
+    res = zero(Ubound{ESS,FSS})
+    #put the value in the allocated space.
+    get_ubound!(src, res)
   end
+  res
 end

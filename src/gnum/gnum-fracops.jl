@@ -49,9 +49,9 @@ end
       x.$frc &= $_top_mask
     end
   elseif (FSS == 6)
-    :((x.$frc, x.$fl) = __rightshift_with_underflow_check(x.$frc, s, $fl))
+    :((x.$frc, x.$fl) = __rightshift_with_underflow_check(x.$frc, s, x.$fl))
   else
-    :(x.$fl = __rightshift_with_underflow_check!(x.$frc, s, $fl))
+    :(x.$fl = __rightshift_with_underflow_check!(x.$frc, s, x.$fl))
   end
 end
 

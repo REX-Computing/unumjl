@@ -4,48 +4,39 @@ doc"""
   the global scope.  It represents the g-layer from the "End of Error".  Some
   of the status flags are stored in the flags parameter of the 'lower' term.
 
-  Fast calculations will get sent to the Gnum Type.
+  this will be mostly used by the internal `@unum` directive which will take
+  an expression and convert it to a series of functions, which, at compile-time,
+  will allocate a set of 'global' gnum registers, then pass them through a chain
+  of mutator functions which will keep the gnum value in the registers, then
+  output the whole thing as a single UType value as needed (Unum or Ubound)
+
+  the Gnum value keeps a 'scratchpad' variable to store intermediate calculations
+  for any expressions.  The array value for this is pre-allocated and global.
+  Although this scratchpad shouldn't be considered to be tied to each register,
+  it is convenient to include it with the Gnum so that it is strongly typed.
 """
-abstract Gnum{ESS,FSS} <: Utype
+immutable Gnum{ESS,FSS}
+  lower::Unum{ESS,FSS}
+  upper::Unum{ESS,FSS}
 
-type GnumSmall{ESS,FSS} <: Gnum{ESS,FSS}
-  lower_fsize::UInt16
-  lower_esize::UInt16
-  lower_flags::UInt16
-  lower_fraction::UInt64
-  lower_exponent::UInt64
-  ######################
-  upper_fsize::UInt16
-  upper_esize::UInt16
-  upper_flags::UInt16
-  upper_fraction::UInt64
-  upper_exponent::UInt64
+  #although there only ever needs to one scratchpad, the difficulty is that it
+  #is nearly impossible to type this correctly.  We'll create the scratchpad
+  #object to be tied to the Gnum calculation layer.
+
+  scratchpad::Unum{ESS,FSS}
 end
-
-type GnumLarge{ESS,FSS} <: Gnum{ESS,FSS}
-  lower_fsize::UInt16
-  lower_esize::UInt16
-  lower_flags::UInt16
-  lower_fraction::ArrayNum{FSS}
-  lower_exponent::UInt64
-  ######################
-  upper_fsize::UInt16
-  upper_esize::UInt16
-  upper_flags::UInt16
-  upper_fraction::ArrayNum{FSS}
-  upper_exponent::UInt64
-end
-
-Base.zero{ESS,FSS}(t::Type{GnumSmall{ESS,FSS}}) = GnumSmall{ESS,FSS}(z16, z16, z16, z64, z64, z16, z16, z16, z64, z64)
-Base.zero{ESS,FSS}(t::Type{GnumLarge{ESS,FSS}}) = GnumLarge{ESS,FSS}(z16, z16, z16, zero(ArrayNum{FSS}), z64, z16, z16, z16, zero(ArrayNum{FSS}), z64)
 
 @generated function Base.zero{ESS,FSS}(t::Type{Gnum{ESS,FSS}})
-  (FSS < 7) ? :(zero(GnumSmall{ESS,FSS})) : :(zero(GnumLarge{ESS,FSS}))
+  if (FSS < 7)
+    :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS), zero(Unum{ESS,FSS}, zero(Unum{ESS,FSS}))
+  else
+    :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}),
+      Unum{ESS,FSS}(z16, z16, z16, ArrayNum{FSS}(GNUM_SCRATCHPAD), z64)))
+  end
 end
 
-#two g-layer flags that only apply to the "lower" slots.
-#throws a bit saying that this gnum only contains one unum.
-GNUM_SBIT_MASK = 0x8000
+#these g-layer values go into the scratchpad to indicate properties of the gnum.
+GNUM_SINGLE_MASK = 0x8000
 #throws a bit saying this number is NaN.
 GNUM_NAN_MASK  = 0x4000
 
@@ -66,26 +57,10 @@ GNUM_SSS_MASK  = 0x0200
 GNUM_ZERO_MASK = 0x0100
 
 #make lower and upper side designations more elegant.
-const LOWER_SIDE = Val{:lower}
-const UPPER_SIDE = Val{:upper}
+const LOWER_UNUM = Val{:lower}
+const UPPER_UNUM = Val{:upper}
+const SCRATCHPAD = Val{:scratchpad}
 
-#takes a "side" symbol and appends appropriate suffixes to it to create the
-#corresponding members of the gnum type.
-macro gnum_interpolate()
-  esc(quote
-    fs = symbol(side, :_fsize)
-    es = symbol(side, :_esize)
-    fl = symbol(side, :_flags)
-    exp = symbol(side, :_exponent)
-    frc = symbol(side, :_fraction)
-  end)
-end
-
-#scratches an operation.
-macro scratch_this_operation!(s)
-  esc(quote
-    nan!(s)
-    ignore_both_sides!(s)
-    return
-  end)
-end
+#create a global scratchpad array.
+const GLOBAL_SCRATCHPAD_SIZE = __cell_length(11) + (__cell_length(11) >> 1)
+const GLOBAL_SCRATCHPAD = zeros(UInt64, GLOBAL_SCRATCHPAD_SIZE)
