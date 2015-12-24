@@ -18,7 +18,11 @@ doc"""
 is one-indexed with the bit 1 being the most significant.  A value of zero has
 undefined effects.  Useful for setting bits after shifting a non-subnormal value.
 """
+<<<<<<< HEAD
 function set_bit!{FSS}(a::ArrayNum{FSS}, b::Int64)
+=======
+function set_bit!{FSS}(a::ArrayNum{FSS}, b::UInt16)
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   a_index = ((b - o16) >> 6) + o16
   b_index = ((b - o16) % 64)
   @inbounds a[a_index] = a[a_index] | (0x8000_0000_0000_0000 >> b_index)
@@ -30,7 +34,11 @@ doc"""
 being the the most significant.  A value of zero has undefined effects.  Useful
 for setting bits after shifting a non-subnormal value.
 """
+<<<<<<< HEAD
 function set_bit(a::UInt64, b::Int64)
+=======
+function set_bit(a::UInt64, b::UInt16)
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   0x8000_0000_0000_0000 >> (b - o16)
 end
 

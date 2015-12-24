@@ -1,20 +1,18 @@
 #unum-test-addition.jl
 
+#testing addition
+
+import Unums.z64
+import Unums.o64
+import Unums.t64
+import Unums.f64
+import Unums.z16
+import Unums.o16
+
 ################################################################################
 ## TESTING HELPER functions
 
 #__carried_add
-#=
-#single cell, double zero.
-@test (0, z64) == Unums.__carried_add(z64, z64, z64)
-@test (1, z64) == Unums.__carried_add(o64, z64, z64) #with a passthru carry
-#single cell, add to carry.
-@test (1, z64) == Unums.__carried_add(z64, f64, o64)
-@test (2, z64) == Unums.__carried_add(o64, f64, o64) #with a passthru carry
-#single cell, double ff..ff
-@test (1, ~o64) == Unums.__carried_add(z64, f64, f64)
-@test (2, ~o64) == Unums.__carried_add(o64, f64, f64) #with a passthru carry
-=#
 #double cell, double zero
 test_array = Unums.ArrayNum{7}([z64, z64])
 @test z64 == Unums.__carried_add!(z64, test_array, test_array)
@@ -69,6 +67,43 @@ wthr = convert(Unum{4,6}, 3)
 @test wtwo + wone == wthr
 
 #=
+=======
+#double cell, double zero
+@test (0, [0,0]) == Unums.__carried_add(z64, [z64, z64], [z64, z64])
+@test (1, [0,0]) == Unums.__carried_add(o64, [z64, z64], [z64, z64]) #with a passthru carry
+#double cell, lower add to carry
+@test (0, [z64,1]) == Unums.__carried_add(z64, [f64, z64], [o64, z64])
+@test (1, [z64,1]) == Unums.__carried_add(o64, [f64, z64], [o64, z64]) #with a passthru carry
+#double cell, double lower ff..ff
+@test (0, [~o64,1]) == Unums.__carried_add(z64, [f64, z64], [f64, z64])
+@test (1, [~o64,1]) == Unums.__carried_add(o64, [f64, z64], [f64, z64]) #with a passthru carry
+#double cell, double upper ff..ff
+@test (1, [0,~o64]) == Unums.__carried_add(z64, [z64, f64], [z64, f64])
+@test (2, [0,~o64]) == Unums.__carried_add(o64, [z64, f64], [z64, f64]) #with a passthru carry
+#double cell, double full ff..ff
+@test (1, [~o64,f64]) == Unums.__carried_add(z64, [f64, f64], [f64, f64])
+@test (2, [~o64,f64]) == Unums.__carried_add(o64, [f64, f64], [f64, f64]) #with a passthru carry
+#quad cell, double full ff.ff
+@test (1, [~o64,f64,f64,f64]) == Unums.__carried_add(z64, [f64, f64, f64, f64], [f64, f64, f64, f64])
+@test (2, [~o64,f64,f64,f64]) == Unums.__carried_add(o64, [f64, f64, f64, f64], [f64, f64, f64, f64]) #with a passthru carry
+
+#__shift_after_add(carry, value) - resolves the result of a carry operation, and reports shift amt, and falloff.
+@test Unums.__shift_after_add(UInt64(2), t64, z16) == (0x4000_0000_0000_0000, 1, z16)
+@test Unums.__shift_after_add(UInt64(3), t64, z16) == (0xC000_0000_0000_0000, 1, z16)
+@test Unums.__shift_after_add(UInt64(2), o64, z16) == (0x0000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
+@test Unums.__shift_after_add(UInt64(3), o64, z16) == (0x8000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
+@test Unums.__shift_after_add(UInt64(2), [z64,t64], z16) == ([z64, 0x4000_0000_0000_0000], 1, z16)
+@test Unums.__shift_after_add(UInt64(3), [z64,t64], z16) == ([z64, 0xC000_0000_0000_0000], 1, z16)
+@test Unums.__shift_after_add(UInt64(2), [o64,z64], z16) == ([z64, z64], 1, Unums.UNUM_UBIT_MASK)
+@test Unums.__shift_after_add(UInt64(3), [o64,z64], z16) == ([z64, t64], 1, Unums.UNUM_UBIT_MASK)
+
+#test __sum_exact, which adds two exact sums, with magnitude(a) > magnitude(b)
+wone = Unum{4,6}(z16,z16,z16,z64,o64)
+wtwo = Unum{4,6}(z16,UInt16(1),z16,z64,UInt64(3))
+wthr = Unum{4,6}(z16,UInt16(1),z16,t64,UInt64(3))
+@test Unums.__sum_exact(wone, wone, 0, 0) == wtwo   #one plus one is two
+@test Unums.__sum_exact(wtwo, wone, 1, 0) == wthr   #one plus two is three
+
 wbig =  Unum{4,6}(z16,    0x0007, z16,                  z64, UInt64(0xd0))
 wbigu = Unum{4,6}(0x003f, 0x0007, Unums.UNUM_UBIT_MASK, z64, UInt64(0xd0))
 wmed =  Unum{4,6}(z16,    0x0007, z16,                  z64, UInt64(0xc0))

@@ -63,7 +63,10 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
   (destination_exp > max_exp) && return mmr(Unum{DEST_ESS,DEST_FSS}, x.flags & UNUM_SIGN_MASK)
   (destination_exp < min_exp_subnormal) && return sss(Unum{DEST_ESS,DEST_FSS}, x.flags & UNUM_SIGN_MASK)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   if (zeroish)
     #check to see if ubit is thrown.
     if (flags & UNUM_UBIT_MASK != 0)
@@ -77,11 +80,19 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
     #set the exponent and esize to be the smallest possible exponent
     esize = max_esize(DEST_ESS)
     exponent = z64
+<<<<<<< HEAD
     shft = min_exp_normal - destination_exp
     #change fsize.  If fraction starts out as zero, we're just shifting the virtual
     #one over.
     if (src_frac == 0)
       fsize = UInt16(shft) - o16
+=======
+    shft = UInt16(min_exp_normal - destination_exp)
+    #change fsize.  If fraction starts out as zero, we're just shifting the virtual
+    #one over.
+    if (src_frac == 0)
+      fsize = shft - o16
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
       src_frac = t64 >> (shft - 0x0001)
     else
       #recalculate fsize

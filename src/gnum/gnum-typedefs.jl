@@ -36,9 +36,15 @@ end
 end
 
 #these g-layer values go into the scratchpad to indicate properties of the gnum.
+<<<<<<< HEAD
 GNUM_ONESIDED_MASK = 0x8000
 #throws a bit saying this number is NaN.
 GNUM_ONESIDED_MASK  = 0x4000
+=======
+GNUM_SINGLE_MASK = 0x8000
+#throws a bit saying this number is NaN.
+GNUM_NAN_MASK  = 0x4000
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
 
 #g-layer flags that apply to both "lower" and "higher" slots.
 #temporary flag saying to ignore calculations on this side of the gnum.

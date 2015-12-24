@@ -1,8 +1,15 @@
 #testing the sbit state of the Gnum.
+<<<<<<< HEAD
 set_onesided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.lower.flags |= GNUM_ONESIDED_MASK; x)
 set_twosided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.lower.flags &= ~GNUM_ONESIDED_MASK; x)
 is_onesided{ESS,FSS}(x::Gnum{ESS,FSS}) = ((x.lower.flags & GNUM_ONESIDED_MASK != 0) || (is_nan(x)))
 is_twosided{ESS,FSS}(x::Gnum{ESS,FSS}) = ((x.lower.flags & GNUM_ONESIDED_MASK == 0) && (!is_nan(x)))
+=======
+set_onesided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags |= GNUM_SINGLE_MASK; x)
+set_twosided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags &= ~GNUM_SINGLE_MASK; x)
+is_onesided{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags & (GNUM_SINGLE_MASK | GNUM_NAN_MASK) != 0)
+is_twosided{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags & (GNUM_SINGLE_MASK | GNUM_NAN_MASK) == 0)
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
 
 #the ignore_side utility is used for operations that do identity checks before
 #proceeding with calculations, and flags that a side has already been checked
@@ -25,7 +32,11 @@ end
   if (side == :lower)
     :((x.lower.flags & GNUM_IGNORE_SIDE_MASK) == 0)
   else
+<<<<<<< HEAD
     :(is_twosided(x) && ((x.upper.flags & GNUM_IGNORE_SIDE_MASK) == 0))
+=======
+    :(((x.scratchpad.flags & GNUM_SINGLE_MASK) == 0) && ((x.upper.flags & GNUM_IGNORE_SIDE_MASK) == 0))
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   end
 end
 
@@ -33,13 +44,21 @@ function put_unum!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Gnum{ESS,FSS})
   #puts a unum into the gnum, assuming it is going to be a single-sided unum.
   copy_unum!(src, dest.lower)
   set_flags!(dest, LOWER_UNUM)
+<<<<<<< HEAD
   set_onesided!(dest)
+=======
+  dest.scratchpad.flags |= GNUM_SINGLE_MASK
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   nothing
 end
 
 function get_unum!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Unum{ESS,FSS})
   #puts a unum into the gnum, assuming it already is a single-sided unum.
+<<<<<<< HEAD
   (is_twosided(src) && !is_nan(src)) && throw(ArgumentError("Error: Gnum represents a Ubound"))
+=======
+  (is_twosided(src) || !is_nan(src)) && throw(ArgumentError("Error: Gnum represents a Ubound"))
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   is_nan(src) && return nan(Unum{ESS,FSS})
   force_from_flags!(src, dest, LOWER_UNUM) || copy_unum!(src.lower, dest)
   nothing
@@ -85,6 +104,10 @@ doc"""
   gnum by examining the value.
 """
 @generated function set_flags!{ESS,FSS,side}(v::Gnum{ESS,FSS}, ::Type{Val{side}})
+<<<<<<< HEAD
+=======
+  println("what is up here $side")
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   quote
     is_nan(v.$side) && (v.scratchpad.flags |= GNUM_NAN_MASK; return)
     is_inf(v.$side) && (v.$side.flags |= GNUM_INF_MASK; return)
@@ -100,6 +123,7 @@ doc"""
   represents a solo unum or a ubound.  It then allocates the appropriate type and
   emits that as a result.
 """
+<<<<<<< HEAD
 function emit_data{ESS,FSS}(src::Gnum{ESS,FSS})
   #be ready to release a utype as a result.
   res::Utype
@@ -107,6 +131,15 @@ function emit_data{ESS,FSS}(src::Gnum{ESS,FSS})
   (src.scratchpad.flags & GNUM_ONESIDED_MASK != 0) && return nan(Unum{ESS,FSS})
   #check to see if we're a single unum
   if (is_onesided(src))
+=======
+function emit_data!{ESS,FSS}(src::Gnum{ESS,FSS})
+  #be ready to release a utype as a result.
+  res::Utype
+  #check to see if we're a NaN
+  (src.scratchpad.flags & GNUM_NAN_MASK != 0) && return nan(Unum{ESS,FSS})
+  #check to see if we're a single unum
+  if (src.scratchpad.flags & GNUM_SINGLE_MASK != 0)
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
     #prepare the result by allocating.
     res = zero(Unum{ESS,FSS})
     #put the value in the allocated space.

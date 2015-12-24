@@ -99,7 +99,6 @@ end
 
 
 
-
 ###############################################################################
 ## multistage carried difference engine for uint64s.
 
@@ -315,6 +314,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   fsize = (is_ubit != 0) ? max_fsize(FSS) : __minimum_data_width(fraction)
   Unum{ESS,FSS}(fsize, esize, a.flags | is_ubit, fraction, exponent)
 end
+<<<<<<< HEAD
 
 import Base.-
 function -{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
@@ -323,3 +323,5 @@ function -{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
   #return the result as the appropriate data type.
   emit_data(temp)
 end
+=======
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8

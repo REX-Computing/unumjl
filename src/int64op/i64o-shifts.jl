@@ -3,11 +3,17 @@
 #bitshifting operations on superints
 #iterative leftshift and rightshift operations on Array SuperInts
 
+<<<<<<< HEAD
 lsh(a::UInt64, b::Int64) = a << b
 lsh(a::UInt64, b::UInt16) = a << b
 lsh!{FSS}(a::ArrayNum{FSS}, b::UInt16) = lsh!(a, Int64(b))
 #destructive version which clobbers the existing verion
 @gen_code function lsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
+=======
+lsh(a::UInt64, b::UInt16) = a << b
+#destructive version which clobbers the existing verion
+@gen_code function lsh!{FSS}(a::ArrayNum{FSS}, b::UInt16)
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   l = __cell_length(FSS)
   @code quote
     #kick it back to right shift if it's negative
@@ -41,10 +47,15 @@ lsh!{FSS}(a::ArrayNum{FSS}, b::UInt16) = lsh!(a, Int64(b))
   end
 end
 
+<<<<<<< HEAD
 rsh(a::UInt64, b::Int64) = a >> b
 rsh(a::UInt64, b::UInt16) = a >> b
 rsh!(a::UInt64, b::UInt16) = rsh!(a, Int64(b))
 @gen_code function rsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
+=======
+rsh(a::UInt64, b::UInt16) = a >> b
+@gen_code function rsh!{FSS}(a::ArrayNum{FSS}, b::UInt16)
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   l = __cell_length(FSS)
   @code quote
     #kick it back to right shift if it's negative
@@ -83,20 +94,35 @@ end
 ## doesn't check at the FSS boundaries, and only checks for underflows at the
 ## ends of integers or integer arrays.
 
+<<<<<<< HEAD
 function __rightshift_with_underflow_check(f::UInt64, s::Int64, flags::UInt16)
   #first generate the mask.
   mask::UInt64 = (o64 << s) - o64
   ((f & mask) != z64) && (flags |= UNUM_UBIT_MASK)
+=======
+function __rightshift_with_underflow_check(f::UInt64, s::UInt16, flags::UInt16)
+  #first generate the mask.
+  mask = (1 << s) - 1
+  ((f & mask) != 0) && (flags |= UNUM_UBIT_MASK)
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   f >>= s
   (f,  flags)
 end
 
+<<<<<<< HEAD
 function __rightshift_with_underflow_check!{FSS}(f::ArrayNum{FSS}, s::Int64, flags::UInt16)
   #generate the mask holder.
   mask = zero(ArrayNum{FSS})
   #actually generate the mask.
   (s > max_fsize(FSS)) && (s == max_fsize(FSS))
   mask_bot!(mask, UInt16(max_fsize(FSS) - s))  #double check that this is correct.
+=======
+function __rightshift_with_underflow_check!{FSS}(f::ArrayNum{FSS}, s::UInt16, flags::UInt16)
+  #generate the mask holder.
+  mask = zero(ArrayNum{FSS})
+  #actually generate the mask.
+  mask_bot!(mask, max_fsize(FSS) - s)  #double check that this is correct.
+>>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
   #compare the mask with the target.
   fill_mask!(mask, f)
   is_not_zero(mask) && (flags |= UNUM_UBIT_MASK)
