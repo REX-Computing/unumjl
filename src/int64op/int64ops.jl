@@ -9,3 +9,4 @@ include("./i64o-masks.jl")          #mask generating operators
 include("./i64o-shifts.jl")         #left and right shift operators
 include("./i64o-comparison.jl")     #chaining comparison operators
 include("./i64o-utilities.jl")      #other int64 utilities that help unums.
+include("./i64o-math.jl")

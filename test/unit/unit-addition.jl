@@ -4,6 +4,7 @@
 ## TESTING HELPER functions
 
 #__carried_add
+#=
 #single cell, double zero.
 @test (0, z64) == Unums.__carried_add(z64, z64, z64)
 @test (1, z64) == Unums.__carried_add(o64, z64, z64) #with a passthru carry
@@ -13,42 +14,61 @@
 #single cell, double ff..ff
 @test (1, ~o64) == Unums.__carried_add(z64, f64, f64)
 @test (2, ~o64) == Unums.__carried_add(o64, f64, f64) #with a passthru carry
+=#
 #double cell, double zero
-@test (0, [0,0]) == Unums.__carried_add(z64, [z64, z64], [z64, z64])
-@test (1, [0,0]) == Unums.__carried_add(o64, [z64, z64], [z64, z64]) #with a passthru carry
-#double cell, lower add to carry
-@test (0, [z64,1]) == Unums.__carried_add(z64, [f64, z64], [o64, z64])
-@test (1, [z64,1]) == Unums.__carried_add(o64, [f64, z64], [o64, z64]) #with a passthru carry
-#double cell, double lower ff..ff
-@test (0, [~o64,1]) == Unums.__carried_add(z64, [f64, z64], [f64, z64])
-@test (1, [~o64,1]) == Unums.__carried_add(o64, [f64, z64], [f64, z64]) #with a passthru carry
-#double cell, double upper ff..ff
-@test (1, [0,~o64]) == Unums.__carried_add(z64, [z64, f64], [z64, f64])
-@test (2, [0,~o64]) == Unums.__carried_add(o64, [z64, f64], [z64, f64]) #with a passthru carry
-#double cell, double full ff..ff
-@test (1, [~o64,f64]) == Unums.__carried_add(z64, [f64, f64], [f64, f64])
-@test (2, [~o64,f64]) == Unums.__carried_add(o64, [f64, f64], [f64, f64]) #with a passthru carry
-#quad cell, double full ff.ff
-@test (1, [~o64,f64,f64,f64]) == Unums.__carried_add(z64, [f64, f64, f64, f64], [f64, f64, f64, f64])
-@test (2, [~o64,f64,f64,f64]) == Unums.__carried_add(o64, [f64, f64, f64, f64], [f64, f64, f64, f64]) #with a passthru carry
+test_array = Unums.ArrayNum{7}([z64, z64])
+@test z64 == Unums.__carried_add!(z64, test_array, test_array)
+@test test_array.a == [z64, z64]
 
-#__shift_after_add(carry, value) - resolves the result of a carry operation, and reports shift amt, and falloff.
-@test Unums.__shift_after_add(UInt64(2), t64, z16) == (0x4000_0000_0000_0000, 1, z16)
-@test Unums.__shift_after_add(UInt64(3), t64, z16) == (0xC000_0000_0000_0000, 1, z16)
-@test Unums.__shift_after_add(UInt64(2), o64, z16) == (0x0000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
-@test Unums.__shift_after_add(UInt64(3), o64, z16) == (0x8000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
-@test Unums.__shift_after_add(UInt64(2), [z64,t64], z16) == ([z64, 0x4000_0000_0000_0000], 1, z16)
-@test Unums.__shift_after_add(UInt64(3), [z64,t64], z16) == ([z64, 0xC000_0000_0000_0000], 1, z16)
-@test Unums.__shift_after_add(UInt64(2), [o64,z64], z16) == ([z64, z64], 1, Unums.UNUM_UBIT_MASK)
-@test Unums.__shift_after_add(UInt64(3), [o64,z64], z16) == ([z64, t64], 1, Unums.UNUM_UBIT_MASK)
+@test o64 == Unums.__carried_add!(o64, test_array, test_array) #with a passthru carry
+@test test_array.a == [z64, z64]
+
+#double cell, less significant number adds in to carry
+add_array = Unums.ArrayNum{7}([z64, f64])
+test_array.a = [z64, o64]
+@test z64 == Unums.__carried_add!(z64, add_array, test_array)
+@test test_array.a == [o64, z64]
+
+#double cell, double less significant number ff..ff
+add_array.a = [z64, f64]
+test_array.a = [z64, f64]
+@test z64 == Unums.__carried_add!(z64, add_array, test_array)
+@test test_array.a == [o64, ~o64]
+
+#double cell, double upper ff..ff
+add_array.a = [f64, z64]
+test_array.a = [f64, z64]
+@test o64 == Unums.__carried_add!(z64, add_array, test_array)
+@test test_array.a == [~o64, z64]
+
+#with a passthru carry
+test_array.a = [f64, z64]
+@test 2 == Unums.__carried_add!(o64, add_array, test_array)
+@test test_array.a == [~o64, z64]
+
+#create f's from whole cloth and pass it through
+add_array.a = [0x9999_9999_9999_9999, f64]
+test_array.a = [0x6666_6666_6666_6666, o64]
+#@test 1 == Unums.__carried_add!(z64, add_array, test_array)
+Unums.__carried_add!(z64, add_array, test_array)
+println(test_array)
+@test test_array.a == [z64, z64]
+
+#just let's make sure this works with even bigger arrays
+test_array = Unums.ArrayNum{8}([f64, f64, f64, f64])
+add_array = Unums.ArrayNum{8}([f64, f64, f64, f64])
+@test 1 == Unums.__carried_add!(z64, add_array, test_array)
+@test test_array.a == [f64, f64, f64, ~o64]
 
 #test __sum_exact, which adds two exact sums, with magnitude(a) > magnitude(b)
-wone = Unum{4,6}(z16,z16,z16,z64,o64)
-wtwo = Unum{4,6}(z16,UInt16(1),z16,z64,UInt64(3))
-wthr = Unum{4,6}(z16,UInt16(1),z16,t64,UInt64(3))
-@test Unums.__sum_exact(wone, wone, 0, 0) == wtwo   #one plus one is two
-@test Unums.__sum_exact(wtwo, wone, 1, 0) == wthr   #one plus two is three
+wone = convert(Unum{4,6}, 1)
+wtwo = convert(Unum{4,6}, 2)
+wthr = convert(Unum{4,6}, 3)
 
+@test wone + wone == wtwo
+@test wtwo + wone == wthr
+
+#=
 wbig =  Unum{4,6}(z16,    0x0007, z16,                  z64, UInt64(0xd0))
 wbigu = Unum{4,6}(0x003f, 0x0007, Unums.UNUM_UBIT_MASK, z64, UInt64(0xd0))
 wmed =  Unum{4,6}(z16,    0x0007, z16,                  z64, UInt64(0xc0))
@@ -114,7 +134,7 @@ ctu6 = Unum{4,6}(0x0032,0x0007,0x0002,0x4410e89562546000,0x00000000000000f2)
 @test ctu5 + ctu6 == Ubound{4,6}(Unum{4,6}(0x003f,0x0007,0x0003,0x4a68f94a46718c11,0x00000000000000f1),Unum{4,6}(0x003f,0x0007,0x0003,0x94d1f2948ce31818,0x00000000000000f0))
 #problem occurs due to an incorrect handling of trailing bits after shift in
 #__diff_exact.
-
+=#
 
 #corner cases on unusual values.
 #zero should return an identical value

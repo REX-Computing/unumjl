@@ -3,6 +3,103 @@
 #opposing directions.  This is organized into a separate file for convenience
 #purposes (these primitives can be very large.)
 
+doc"""
+  `sub!(::Unum{ESS,FSS}, ::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and
+  subtracts them, storing the result in the third, g-layer
+
+  `sub!(::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and subtracts them, storing
+  the result and overwriting the second, g-layer
+
+  In both cases, a reference to the result gnum is returned.
+"""
+function sub!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  put_unum!(b, c)
+  sub!(a, c)
+end
+
+function sub!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
+  #override
+  __subtraction_override_check!(a, b)
+
+  if should_calculate(b, LOWER_UNUM)
+    if ((a.flags & UNUM_SIGN_MASK) == (b.lower.flags & UNUM_SIGN_MASK))
+      __arithmetic_subtraction!(a, b, LOWER_UNUM)
+    else
+      __arithmetic_addition!(a, b, LOWER_UNUM)
+    end
+  end
+
+  if should_calculate(b, UPPER_UNUM)
+    if ((a.flags & UNUM_SIGN_MASK) == (b.upper.flags & UNUM_SIGN_MASK))
+      __arithmetic_subtraction!(a, b, UPPER_UNUM)
+    else
+      __arithmetic_addition!(a, b, UPPER_UNUM)
+    end
+  end
+
+  clear_ignore_sides!(b)
+  b
+end
+
+#a function which checks for special values that will override actually performing
+#calculations.
+function __subtraction_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
+  ############################################
+  # deal with NaNs.
+  #if our addend is nan, then set the addend to nan.
+  is_nan(a) && (@scratch_this_operation!(b))
+  is_nan(b) && (ignore_both_sides!(b); return)
+  ############################################
+  # deal with zeros.
+  #if our addend is zero, then we just invert both sides alone.
+  if is_zero(a)
+    additive_inverse!(b.lower)
+    additive_inverse!(b.upper)
+    ignore_both_sides!(b)
+  end
+  #if either side is zero, then copy the addend in to the Gnum.
+  is_zero(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (put_unum!(a, b, LOWER_UNUM); set_ignore_side!(b, LOWER_UNUM))
+  is_zero(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (put_unum!(a, b, UPPER_UNUM); set_ignore_side!(b, UPPER_UNUM))
+  ############################################
+  # deal with infinities.
+  if (is_inf(a))
+    #check to see if lower infinity is the same infinity.
+    is_inf(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && ((a.flags & UNUM_SIGN_MASK) == (b.lower.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
+    is_inf(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && ((a.flags & UNUM_SIGN_MASK) == (b.upper.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
+    #since we know it's a finite, real value, we can set one or both sides of our gnum to infinity as needed.
+    should_calculate(b, LOWER_UNUM) && (inf!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM); set_ignore_side!(b, LOWER_UNUM))
+    should_calculate(b, UPPER_UNUM) && (inf!(b, a.flags & UNUM_SIGN_MASK, UPPER_UNUM); set_ignore_side!(b, UPPER_UNUM))
+  end
+
+  #since a is known to be finite real, we don't need a complicated check.
+  is_inf(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (set_ignore_side!(b, LOWER_UNUM))
+  is_inf(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (set_ignore_side!(b, UPPER_UNUM))
+
+  ############################################
+  #deal with mmr collapsing.
+  if (is_mmr(a))
+    if (should_calculate(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK != b.lower_flags & UNUM_SIGN_MASK))
+      mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
+      set_ignore_side!(b, LOWER_UNUM)
+    end
+    if (should_calculate(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK != b.upper_flags & UNUM_SIGN_MASK))
+      mmr!(b, a.flags & UNUM_SIGN_MASK, UPPER_UNUM)
+      set_ignore_side!(b, UPPER_UNUM)
+    end
+  end
+  if (should_calculate(b, LOWER_UNUM) && is_mmr(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK != b.lower_flags & UNUM_SIGN_MASK))
+    set_ignore_side!(b, LOWER_UNUM)
+  end
+  if (should_calculate(b, UPPER_UNUM) && is_mmr(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK != b.upper_flags & UNUM_SIGN_MASK))
+    set_ignore_side!(b, UPPER_UNUM)
+  end
+end
+
+
+
+
+
+
 ###############################################################################
 ## multistage carried difference engine for uint64s.
 
@@ -217,4 +314,12 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   #recalculate fsize.
   fsize = (is_ubit != 0) ? max_fsize(FSS) : __minimum_data_width(fraction)
   Unum{ESS,FSS}(fsize, esize, a.flags | is_ubit, fraction, exponent)
+end
+
+import Base.-
+function -{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
+  temp = zero(Gnum{ESS,FSS})
+  sub!(x, y, temp)
+  #return the result as the appropriate data type.
+  emit_data(temp)
 end

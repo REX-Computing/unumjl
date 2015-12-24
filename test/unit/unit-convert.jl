@@ -101,15 +101,6 @@ tinyfloat = reinterpret(Float64, o64)
 
 #unum to float
 
-#test random numbers by bootstropping off of the float to unum conversion.
-seed = randn(100)
-f16a = [Float16(seed[i]) for i = 1:100]
-f32a = [Float32(seed[i]) for i = 1:100]
-f64a = [Float64(seed[i]) for i = 1:100]
-@test f16a == map((x) -> convert(Float16, convert(Unum{4,6}, x)), f16a)
-@test f32a == map((x) -> convert(Float32, convert(Unum{4,6}, x)), f32a)
-@test f64a == map((x) -> convert(Float64, convert(Unum{4,6}, x)), f64a)
-
 #test that NaNs convert in more than one Unum environment
 @test NaN16 === convert(Float16, nan(Unum{0,0}))
 @test NaN32 === convert(Float32, nan(Unum{0,0}))
