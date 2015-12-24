@@ -2,13 +2,6 @@
 
 #testing addition
 
-import Unums.z64
-import Unums.o64
-import Unums.t64
-import Unums.f64
-import Unums.z16
-import Unums.o16
-
 ################################################################################
 ## TESTING HELPER functions
 
@@ -49,7 +42,6 @@ add_array.a = [0x9999_9999_9999_9999, f64]
 test_array.a = [0x6666_6666_6666_6666, o64]
 #@test 1 == Unums.__carried_add!(z64, add_array, test_array)
 Unums.__carried_add!(z64, add_array, test_array)
-println(test_array)
 @test test_array.a == [z64, z64]
 
 #just let's make sure this works with even bigger arrays

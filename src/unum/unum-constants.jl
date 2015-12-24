@@ -72,14 +72,14 @@ export pos_one, neg_one
   end
 end
 
-function Base.nan{ESS,FSS}(::Type{Unum{ESS,FSS}})
+function Base.nan{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16)
   x = zero(Unum{ESS,FSS})
-  __infnanset!(x, UNUM_UBIT_MASK)
+  __infnanset!(x, UNUM_UBIT_MASK | signmask)
 end
 doc"""
   the `nan!` function forcibly turns a unum variable into nan.
 """
-nan!{ESS,FSS}(x::Unum{ESS,FSS}) = __infnanset!(x, UNUM_UBIT_MASK)
+nan!{ESS,FSS}(x::Unum{ESS,FSS}, signmask::UInt16 = z16) = __infnanset!(x, UNUM_UBIT_MASK | signmask)
 
 #looks kind of like nan.
 function Base.inf{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16)

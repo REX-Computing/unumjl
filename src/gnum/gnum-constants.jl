@@ -2,11 +2,7 @@
 #setting gnum values to unum constants.
 
 function nan!{ESS,FSS}(x::Gnum{ESS,FSS})
-<<<<<<< HEAD
-  x.scratchpad.flags |= GNUM_ONESIDED_MASK
-=======
   x.scratchpad.flags |= GNUM_NAN_MASK
->>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
 end
 
 @generated function inf!{ESS,FSS,side}(x::Gnum{ESS,FSS}, flags::UInt16, ::Type{Val{side}})
@@ -24,11 +20,7 @@ end
 
 #testing gnum values for unum constants
 function is_nan{ESS,FSS}(x::Gnum{ESS,FSS})
-<<<<<<< HEAD
-  x.scratchpad.flags & GNUM_ONESIDED_MASK != 0
-=======
   x.scratchpad.flags & GNUM_NAN_MASK != 0
->>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
 end
 @generated function is_inf{ESS,FSS,side}(x::Gnum{ESS,FSS}, ::Type{Val{side}})
   :(x.$side.flags & GNUM_INF_MASK != 0)

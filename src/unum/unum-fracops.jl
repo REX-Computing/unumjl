@@ -6,7 +6,7 @@
 
 #encapsulation of set_bit/set_bit!
 @generated function set_frac_bit!{ESS,FSS}(x::Unum{ESS,FSS}, s::Int64)
-  if (FSS < 6)
+  if (FSS < 7)
     :(x.fraction = set_bit(x.fraction, s); nothing)
   else
     :(set_bit!(x.fraction, s); nothing)

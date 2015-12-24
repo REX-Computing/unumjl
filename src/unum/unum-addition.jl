@@ -15,10 +15,7 @@ function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
   put_unum!(b, c)
   add!(a, c)
 end
-<<<<<<< HEAD
 
-=======
->>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
 function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   #override
   __addition_override_check!(a, b)
@@ -38,31 +35,11 @@ function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
       __arithmetic_subtraction!(a, b, UPPER_UNUM)
     end
   end
-<<<<<<< HEAD
 
   clear_ignore_sides!(b)
   b
 end
 
-
-=======
-end
-
-#trampoline for using the arithmetic addition algorithm on numbers which are
-#guaranteed to have identical parity.  Otherwise subtraction is necessary.
-function __arithmetic_addition!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-  #check to see if one or both Unums is indefinite.
-  if ((a.flags & UNUM_UBIT_MASK) != 0)
-    inexact_add!(a, b, Val{side})
-  else
-    exact_add!(a, b, Val{side})
-    c.lower_flags |= GNUM_SBIT_MASK
-  end
-  clear_ignore_sides!(b)
-  nothing
-end
-
->>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
 #a function which checks for special values that will override actually performing
 #calculations.
 function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
@@ -113,13 +90,9 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   end
 end
 
-<<<<<<< HEAD
 #trampoline for using the arithmetic addition algorithm on numbers which are
 #guaranteed to have identical parity.  Otherwise subtraction is necessary.
 @generated function __arithmetic_addition!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-=======
-@generated function exact_add!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
->>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
 
   mesize::UInt16 = max_esize(ESS)
   mfsize::UInt16 = max_fsize(FSS)
@@ -171,11 +144,7 @@ end
     (shift != 0) && (b_dev == 0) && (set_frac_bit!(b.scratchpad, shift))
 
     #perform the carried add.
-<<<<<<< HEAD
     carry = __carried_add_frac!(carry, addend, b.scratchpad)
-=======
-    carry = __carried_add_frac!(carry, addend.fraction, b.scratchpad)
->>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
 
     if (carry > 1)
       scratchpad_exp += 1
@@ -209,7 +178,6 @@ end
   end
 end
 
-<<<<<<< HEAD
 import Base.+
 function +{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
   temp = zero(Gnum{ESS,FSS})
@@ -217,17 +185,8 @@ function +{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
   #return the result as the appropriate data type.
   emit_data(temp)
 end
-=======
-
-import Base.+
-function +{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
-  temp = zero(Gnum{ESS,FSS})
-  res = zero(Unum{ESS,FSS})
-
-  add!(x, y, temp)
-
-  #return the result as the appropriate data type.
-  emit_data(temp)
+function +{ESS,FSS}(x::Unum{ESS,FSS})
+  Unum{ESS,FSS}(x)
 end
 
 #=
@@ -373,4 +332,3 @@ function __sum_exact{ESS, FSS}(a::Unum{ESS,FSS}, b::Unum{ESS, FSS}, _aexp::Int64
   Unum{ESS,FSS}(fsize, esize, flags, fraction, exponent)
 end
 =#
->>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8

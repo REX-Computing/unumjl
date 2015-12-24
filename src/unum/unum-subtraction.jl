@@ -314,14 +314,16 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   fsize = (is_ubit != 0) ? max_fsize(FSS) : __minimum_data_width(fraction)
   Unum{ESS,FSS}(fsize, esize, a.flags | is_ubit, fraction, exponent)
 end
-<<<<<<< HEAD
 
 import Base.-
+#binary subtraction creates a temoporary g-layer number to be destroyed immediately.
 function -{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
   temp = zero(Gnum{ESS,FSS})
   sub!(x, y, temp)
   #return the result as the appropriate data type.
   emit_data(temp)
 end
-=======
->>>>>>> 8c38c19ff2565364afda9fd9b858e63545e3add8
+#unary subtraction creates a new unum and flips it.
+function -{ESS,FSS}(x::Unum{ESS,FSS})
+  additiveinverse!(Unum{ESS,FSS}(x))
+end
