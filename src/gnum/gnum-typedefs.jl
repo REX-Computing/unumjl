@@ -68,8 +68,8 @@ const GLOBAL_SCRATCHPAD = zeros(UInt64, GLOBAL_SCRATCHPAD_SIZE)
 #scratches an operation.
 macro scratch_this_operation!(s)
   esc(quote
-    nan!(s)
-    ignore_both_sides!(s)
+    nan!($s)
+    ignore_both_sides!($s)
     return
   end)
 end

@@ -1,8 +1,8 @@
 #testing the sbit state of the Gnum.
-set_onesided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.lower.flags |= GNUM_ONESIDED_MASK; x)
-set_twosided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.lower.flags &= ~GNUM_ONESIDED_MASK; x)
-is_onesided{ESS,FSS}(x::Gnum{ESS,FSS}) = ((x.lower.flags & GNUM_ONESIDED_MASK != 0) || (is_nan(x)))
-is_twosided{ESS,FSS}(x::Gnum{ESS,FSS}) = ((x.lower.flags & GNUM_ONESIDED_MASK == 0) && (!is_nan(x)))
+set_onesided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags |= GNUM_ONESIDED_MASK; x)
+set_twosided!{ESS,FSS}(x::Gnum{ESS,FSS}) = (x.scratchpad.flags &= ~GNUM_ONESIDED_MASK; x)
+is_onesided{ESS,FSS}(x::Gnum{ESS,FSS}) = ((x.scratchpad.flags & GNUM_ONESIDED_MASK != 0) || (is_nan(x)))
+is_twosided{ESS,FSS}(x::Gnum{ESS,FSS}) = ((x.scratchpad.flags & GNUM_ONESIDED_MASK == 0) && (!is_nan(x)))
 
 #the ignore_side utility is used for operations that do identity checks before
 #proceeding with calculations, and flags that a side has already been checked
@@ -104,7 +104,7 @@ function emit_data{ESS,FSS}(src::Gnum{ESS,FSS})
   #be ready to release a utype as a result.
   res::Utype
   #check to see if we're a NaN
-  (src.scratchpad.flags & GNUM_ONESIDED_MASK != 0) && return nan(Unum{ESS,FSS})
+  (is_nan(src)) && return nan(Unum{ESS,FSS})
   #check to see if we're a single unum
   if (is_onesided(src))
     #prepare the result by allocating.

@@ -7,13 +7,18 @@
 #types.
 @gen_code function Base.show{ESS,FSS}(io::IO, x::Unum{ESS,FSS})
   @code quote
-    is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS})"); return)
-    is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS})"); return)
-    is_pos_sss(x) && (print(io, "sss(Unum{$ESS,$FSS})"); return)
-    is_neg_inf(x) && (print(io, "-inf(Unum{$ESS,$FSS})"); return)
-    is_neg_mmr(x) && (print(io, "-mmr(Unum{$ESS,$FSS})"); return)
-    is_neg_sss(x) && (print(io, "-sss(Unum{$ESS,$FSS})"); return)
-    isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS})");return)
+    #we want to be able to represent having g-layer flags as part of this.
+    gflags = (x.flags & (~UNUM_FLAG_MASK))
+    #for nan, let's also show the noisy nan bit.
+    isnan(x) && (gflags |= (x.flags & UNUM_SIGN_BIT))
+    gflagstring = (gflags == 0) ? "" : @sprintf ", 0x%04X" gflags
+    is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS}$gflagstring)"); return)
+    is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
+    is_pos_sss(x) && (print(io, "sss(Unum{$ESS,$FSS}$gflagstring)"); return)
+    is_neg_inf(x) && (print(io, "-inf(Unum{$ESS,$FSS}$gflagstring)"); return)
+    is_neg_mmr(x) && (print(io, "-mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
+    is_neg_sss(x) && (print(io, "-sss(Unum{$ESS,$FSS}$gflagstring)"); return)
+    isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS}$gflagstring)");return)
 
     fsize_string = @sprintf "0x%04X" x.fsize
     esize_string = @sprintf "0x%04X" x.esize

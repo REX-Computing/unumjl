@@ -144,7 +144,7 @@ function mmr{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16)
   __mmr_bigexact_set!(x, signmask | UNUM_UBIT_MASK)
 end
 
-mmr!{ESS,FSS}(x::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16) = __mmr_bigexact_set!(x, signmask | UNUM_UBIT_MASK)
+mmr!{ESS,FSS}(x::Unum{ESS,FSS}, signmask::UInt16 = z16) = __mmr_bigexact_set!(x, signmask | UNUM_UBIT_MASK)
 pos_mmr{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = mmr(T)
 neg_mmr{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = mmr(T, UNUM_SIGN_MASK)
 pos_mmr!{ESS,FSS}(x::Unum{ESS,FSS}, signmask::UInt16 = z16) = __mmr_bigexact_set!(x, UNUM_UBIT_MASK)

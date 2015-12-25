@@ -67,26 +67,26 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   end
 
   #since a is known to be finite real, we don't need a complicated check.
-  is_inf(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (set_ignore_side!(b, LOWER_UNUM))
-  is_inf(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (set_ignore_side!(b, UPPER_UNUM))
+  is_inf(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (ignore_side!(b, LOWER_UNUM))
+  is_inf(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (ignore_side!(b, UPPER_UNUM))
 
   ############################################
   #deal with mmr collapsing.
   if (is_mmr(a))
-    if (should_calculate(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower_flags & UNUM_SIGN_MASK))
+    if (should_calculate(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK))
       mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
-      set_ignore_side!(b, LOWER_UNUM)
+      ignore_side!(b, LOWER_UNUM)
     end
-    if (should_calculate(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper_flags & UNUM_SIGN_MASK))
+    if (should_calculate(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper.flags & UNUM_SIGN_MASK))
       mmr!(b, a.flags & UNUM_SIGN_MASK, UPPER_UNUM)
-      set_ignore_side!(b, UPPER_UNUM)
+      ignore_side!(b, UPPER_UNUM)
     end
   end
-  if (should_calculate(b, LOWER_UNUM) && is_mmr(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower_flags & UNUM_SIGN_MASK))
-    set_ignore_side!(b, LOWER_UNUM)
+  if (should_calculate(b, LOWER_UNUM) && is_mmr(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK))
+    ignore_side!(b, LOWER_UNUM)
   end
-  if (should_calculate(b, UPPER_UNUM) && is_mmr(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper_flags & UNUM_SIGN_MASK))
-    set_ignore_side!(b, UPPER_UNUM)
+  if (should_calculate(b, UPPER_UNUM) && is_mmr(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper.flags & UNUM_SIGN_MASK))
+    ignore_side!(b, UPPER_UNUM)
   end
 end
 
