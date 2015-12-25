@@ -67,51 +67,41 @@ end
 #the corresponding isequal function.
 Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
 
-#=
-function __frac_ulp{ESS,FSS}(a::Unum{ESS,FSS})
-  is_exact(a) && return superzero(length(a.fraction))
-  __bit_from_top(a.fsize, length(a.fraction))
-end
+@gen_code function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  @code quote
+    (is_nan(a) || is_nan(b)) && return false
+    _b_pos::Bool = (is_positive(b))
+    _a_pos::Bool = (is_positive(a))
 
-function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  (isnan(a) || isnan(b)) && return false
-  _b_pos = (is_positive(b))
-  _a_pos = (is_positive(a))
-  (_b_pos) && (!_a_pos) && return false
-  (!_b_pos) && (_a_pos) && return (!(is_zero(a) && is_zero(b)))
-  #resolve exponents for strange subnormals.
+    (_b_pos) && (!_a_pos) && return false
+    (!_b_pos) && (_a_pos) && return (!(is_zero(a) && is_zero(b)))
+    #resolve exponents for strange subnormals.
 
-  is_strange_subnormal(a) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
-  is_strange_subnormal(b) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
+    is_strange_subnormal(a) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
+    is_strange_subnormal(b) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
 
-  #so now we know that these two have the same sign.
-  (decode_exp(b) > decode_exp(a)) && return (!_a_pos)
-  (decode_exp(b) < decode_exp(a)) && return _a_pos
-  #check fractions.
+    #so now we know that these two have the same sign.
+    (decode_exp(b) > decode_exp(a)) && return (!_a_pos)
+    (decode_exp(b) < decode_exp(a)) && return _a_pos
+    #check fractions.
 
-  #if the fractions are equal, then the condition is satisfied only if a is
-  #an ulp and b is exact.
-  (b.fraction == a.fraction) && return (is_exact(b) && is_ulp(a) && _a_pos)
-  #check the condition that b.fraction is less than a.fraction.  This should
-  #be xor'd to the _a_pos to give an instant failure condition.  Eg. if we are
-  #positive, then b > a means failure.
-  ((b.fraction < a.fraction) != _a_pos) && return false
-
-  if (_a_pos) #then we aexpect b to be less than a.
-    (_, cmp) = __carried_add(z64, __frac_ulp(b), b.fraction)
-    (cmp <= a.fraction) && return true
-  else
-    (_, cmp) = __carried_add(z64, __frac_ulp(a), a.fraction)
-    (cmp <= b.fraction) && return true
+    #if the fractions are equal, then the condition is satisfied only if a is
+    #an ulp and b is exact.
+    (b.fraction == a.fraction) && return (is_exact(b) && is_ulp(a) && _a_pos)
+    #check the condition that b.fraction is less than a.fraction.  This should
+    #be xor'd to the _a_pos to give an instant failure condition.  Eg. if we are
+    #positive, then b > a means failure.
+    ((b.fraction < a.fraction) != _a_pos) && return false
+    #####################################################
+    (_a_pos) ? cmpplusubit(a.fraction, b.fraction, b.fsize) : cmpplusbit(b.fraction, a.fraction, b.fsize)
   end
-  return false
 end
 
 #hopefully the julia compiler knows what to do here.
 function <{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   return b > a
 end
-
+#=
 import Base.min
 import Base.max
 function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
