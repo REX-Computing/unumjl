@@ -81,7 +81,7 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
 end
 =#
 
-function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
+function __resolve_subnormal!{ESS,FSS}(a::Unum{ESS,FSS})
   #resolves a unum with an "unusual exponent", i.e. when esize is not
   #max_esize.  This is an "unsafe" operation, in that it does not check
   #if the passed value is actually subnormal, or that esize isn't pushed to the brim.
@@ -90,24 +90,32 @@ function __resolve_subnormal{ESS,FSS}(a::Unum{ESS,FSS})
   #first one PAST the left end of the fraction value.
   _ashl::UInt16 = clz(a.fraction) + 1
 
-  is_zero(a) && return zero(Unum{ESS,FSS})
+  is_zero(a) && return
 
   if (_aexp - _ashl) >= min_exponent(ESS)
-    (esize, exponent) = encode_exp(_aexp - _ashl + 1) #don't forget the +1 because decode_exp on a subnormal is
+    (a.esize, a.exponent) = encode_exp(_aexp - _ashl + 1) #don't forget the +1 because decode_exp on a subnormal is
     #one off of the actual exponent.
     #constrain the fsize to zero.
-    fsize::UInt16 = (_ashl > a.fsize) ? 0 : a.fsize - _ashl
-    Unum{ESS,FSS}(fsize, esize, a.flags, lsh(a.fraction, _ashl), exponent)
+    a.fsize = (_ashl > a.fsize) ? 0 : a.fsize - _ashl
+
+    __leftshift_frac!(a, _ashl)
   else  #then all we have to do is encode it as the deeper exponent.
     #reassign _ashl to be the most we can shift it over.
     _ashl = _aexp - min_exponent(ESS) + 1
     #take care of the corner case where thete's a single one that we're disappearing
     if (a.fsize + 1 == _ashl)
-      Unum{ESS,FSS}(z16, UInt16(1 << ESS - 1), a.flags, z64, z64)
+      a.fsize = z16
+      a.esize = max_esize(ESS)
+      a.exponent = z64
+      __zero_frac!(a)
     else
-      Unum{ESS,FSS}(UInt16(a.fsize - _ashl), UInt16(1 << ESS - 1), a.flags, a.fraction << _ashl, z64)
+      a.fsize = (a.fsize - _ashl)
+      a.esize = max_esize(ESS)
+      __leftshift_frac!(a, _ashl)
+      a.exponent = z64
     end
   end
+  a
 end
 
 #=

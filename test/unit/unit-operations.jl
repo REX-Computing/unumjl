@@ -11,8 +11,8 @@
 #first demonstrate that the two representations (the subnormal and the normal) are
 #equivalent.
 x = Unum{4,6}(z16, z16, z16, t64, z64)
-u = Unums.__resolve_subnormal(x)
-@test calculate(x) == calculate(u)
+Unums.__resolve_subnormal!(x)
+@test calculate(x) == calculate(Unum{4,6}(z16, z16, z16, t64, z64))
 @test u.fsize == z16
 @test u.esize == o16
 @test u.flags == z16
@@ -23,28 +23,27 @@ u = Unums.__resolve_subnormal(x)
 
 #repeat the exercise in a VarInt unum.
 x = Unum{4,8}(z16, z16, z16, [z64, z64, z64, t64], z64)
-u = Unums.__resolve_subnormal(x)
+Unums.__resolve_subnormal!(x)
 #@test calculate(x) == calculate(u)  #NB "calculate" doesn't currently work on superint unums.
-@test u.fsize == z16
-@test u.esize == o16
-@test u.flags == z16
-@test u.fraction == [z64, z64, z64, z64]
-@test u.exponent == o64
+@test x.fsize == z16
+@test x.esize == o16
+@test x.flags == z16
+@test x.fraction == [z64, z64, z64, z64]
+@test x.exponent == o64
 
 #repeat the exercise in a very small unum.
 x = Unum{2,2}(z16, z16, z16, t64, z64)
-u = Unums.__resolve_subnormal(x)
-@test calculate(x) == calculate(u)
-@test u.fsize == z16
-@test u.esize == o16
-@test u.flags == z16
-@test u.fraction == z64
-@test u.exponent == o64
+Unums.__resolve_subnormal!(x)
+@test calculate(x) == calculate(Unum{2,2}(z16, z16, z16, t64, z64))
+@test x.fsize == z16
+@test x.esize == o16
+@test x.flags == z16
+@test x.fraction == z64
+@test x.exponent == o64
 
 #second example:  Take a unum at the edge of smallness and show that we can
 #resolve this into the apropriate even smaller subnormal number.
 x = Unum{2,4}(UInt16(15), z16, z16, 0x0001_0000_0000_0000, z64)
-u = Unums.__resolve_subnormal(x)
-@test calculate(x) == calculate(u)
-@test u.esize == 1 << esizesize(u) - 1
-@test u.exponent == 0
+Unums.__resolve_subnormal!(x)
+@test calculate(x) == calculate(UInt16(15), z16, z16, 0x0001_0000_0000_0000, z64)
+@test x.exponent == 0

@@ -1,7 +1,8 @@
 #unum-comparison.jl
 
 #test equality on unums.
-import Base.==
+import Base:  ==, <, >
+
 function =={ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #first compare the ubits.... These must be the same or else they aren't equal.
   ((a.flags & UNUM_UBIT_MASK) != (b.flags & UNUM_UBIT_MASK)) && return false
@@ -12,8 +13,8 @@ function =={ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (isnan(a) || isnan(b)) && return false
 
   #resolve strange subnormals.
-  is_strange_subnormal(a) && (a = __resolve_subnormal(a))
-  is_strange_subnormal(b) && (b = __resolve_subnormal(b))
+  is_strange_subnormal(a) && (__resolve_subnormal!(a))
+  is_strange_subnormal(b) && (__resolve_subnormal!(b))
 
   #first calculate the exponents.
   _aexp::Int64 = decode_exp(a)
@@ -41,7 +42,7 @@ end
     is_zero(a) && (b.flags = a.flags & (~UNUM_SIGN_MASK))
 
     #convert strange subnormals.
-    is_strange_subnormal(a) && (b = __resolve_subnormal(b))
+    is_strange_subnormal(a) && (b = __resolve_subnormal!(b))
     if (!is_subnormal(a))
       (esize, exponent) = encode_exp(decode_exp(a))
       b.esize = esize
@@ -67,23 +68,32 @@ end
 #the corresponding isequal function.
 Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
 
-@gen_code function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  @code quote
+@generated function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  maxfsize = max_fsize(FSS)
+  quote
     (is_nan(a) || is_nan(b)) && return false
     _b_pos::Bool = (is_positive(b))
     _a_pos::Bool = (is_positive(a))
+
+    println("1")
 
     (_b_pos) && (!_a_pos) && return false
     (!_b_pos) && (_a_pos) && return (!(is_zero(a) && is_zero(b)))
     #resolve exponents for strange subnormals.
 
-    is_strange_subnormal(a) && (a = __resolve_subnormal(a); _aexp = decode_exp(a))
-    is_strange_subnormal(b) && (b = __resolve_subnormal(b); _bexp = decode_exp(b))
+    println("2")
+
+    is_strange_subnormal(a) && (__resolve_subnormal!(a); _aexp = decode_exp(a))
+    is_strange_subnormal(b) && (__resolve_subnormal!(b); _bexp = decode_exp(b))
+
+    println("3")
 
     #so now we know that these two have the same sign.
     (decode_exp(b) > decode_exp(a)) && return (!_a_pos)
     (decode_exp(b) < decode_exp(a)) && return _a_pos
     #check fractions.
+
+    println("4")
 
     #if the fractions are equal, then the condition is satisfied only if a is
     #an ulp and b is exact.
@@ -91,9 +101,15 @@ Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
     #check the condition that b.fraction is less than a.fraction.  This should
     #be xor'd to the _a_pos to give an instant failure condition.  Eg. if we are
     #positive, then b > a means failure.
+
+    println("5")
+
     ((b.fraction < a.fraction) != _a_pos) && return false
+
+    println("6")
     #####################################################
-    (_a_pos) ? cmpplusubit(a.fraction, b.fraction, b.fsize) : cmpplusbit(b.fraction, a.fraction, b.fsize)
+    (_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : maxfsize) :
+               cmpplusbit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : maxfsize)
   end
 end
 

@@ -39,6 +39,12 @@ end
   @code :(res)
 end
 
+function cmpplusubit(a::UInt64, b::UInt64, fsize)
+  mask = mask_top(fsize)
+  (a > b) && ((a & mask) != (b & mask))
+end
+
+
 #compares two arraynums, up to a certain number of bits (fsize), returns true if
 #a is bigger than (b with its lowest bit set).
 @gen_code function cmpplusubit{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, fsize::UInt16)

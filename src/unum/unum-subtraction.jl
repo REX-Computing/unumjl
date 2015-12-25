@@ -207,8 +207,8 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   (is_zero(a)) && return -b
 
   #reassign a to a resolved subnormal value.
-  is_strange_subnormal(a) && (a = __resolve_subnormal(a))
-  is_strange_subnormal(b) && (b = __resolve_subnormal(b))
+  is_strange_subnormal(a) && (resolve_subnormal!(a))
+  is_strange_subnormal(b) && (resolve_subnormal!(b))
 
   #check for deviations due to subnormality.
   a_dev::Int16, carry::UInt64 = is_exp_zero(a) ? (o16, z64) : (z16, o64)

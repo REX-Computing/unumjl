@@ -35,6 +35,23 @@ end
   :(x.fraction = a; nothing)
 end
 
+@generated function __zero_frac!{ESS,FSS}(x::Unum{ESS,FSS})
+  if (FSS < 6)
+    :(x.fraction = z64)
+  else
+    :(x.fraction = zero(ArrayNum{FSS}))
+  end
+end
+
+__leftshift_frac!{ESS,FSS}(x::Unum{ESS,FSS}, s::UInt16) = __leftshift_frac!(x, Int64(s))
+@generated function __leftshift_frac!{ESS,FSS}(x::Unum{ESS,FSS}, s::Int64)
+  if (FSS < 7)
+    :(x.fraction <<= s)
+  else
+    :(lsh!(x.fraction))
+  end
+end
+
 @generated function __rightshift_frac_with_underflow_check!{ESS,FSS}(x::Unum{ESS,FSS}, s::Int64)
   if (FSS < 6)
     _bot_mask = mask_bot(FSS)
