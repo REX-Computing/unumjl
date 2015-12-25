@@ -30,9 +30,12 @@ end
 
 function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
   #resolve the ubound then check against the unum value.
+  return false
+  #=
   resd = ubound_resolve(a)
   isa(resd, Unum) || return false
   return resd == b
+  =#
 end
 
 #just flip the previous function to make things easier.

@@ -91,6 +91,8 @@ doc"""
     is_mmr(v.$side) && (v.$side.flags |= GNUM_MMR_MASK; return)
     is_sss(v.$side) && (v.$side.flags |= GNUM_SSS_MASK; return)
     is_zero(v.$side) && (v.$side.flags |= GNUM_ZERO_MASK; return)
+    #clear the mask.
+    v.$side.flags &= UNUM_FLAG_MASK
   end
 end
 
