@@ -173,7 +173,7 @@ function testop(op, expected)
   println("$op $fails / 225 = $(100 * fails/225)% failure!")
 end
 
-include("test-warlpiri-addition.jl")
+include("./warlpiri/test-warlpiri-addition.jl")
 #=
 include("test-warlpiri-multiplication.jl")
 include("test-warlpiri-division.jl")

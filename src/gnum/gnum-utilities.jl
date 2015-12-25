@@ -75,8 +75,8 @@ function get_ubound!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Ubound{ESS,FSS})
   (is_nan(src) || is_onesided(src)) && throw(ArgumentError("Error:  Gnum represents a Unum"))
   #be sure to check if one of the flags is thrown before copying, otherwise
   #undefined results may occur.
-  force_from_flags!(src, dest, LOWER_UNUM) || copy_unum!(src.lower, dest.lower)
-  force_from_flags!(src, dest, UPPER_UNUM) || copy_unum!(src.upper, dest.upper)
+  force_from_flags!(src, dest.lower, LOWER_UNUM) || copy_unum!(src.lower, dest.lower)
+  force_from_flags!(src, dest.upper, UPPER_UNUM) || copy_unum!(src.upper, dest.upper)
   nothing
 end
 
@@ -114,7 +114,7 @@ function emit_data{ESS,FSS}(src::Gnum{ESS,FSS})
   else
     #this time, we know it's a ubound.
     #prepare the result by allocating.
-    res = zero(Ubound{ESS,FSS})
+    res = Ubound{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}))
     #put the value in the allocated space.
     get_ubound!(src, res)
   end

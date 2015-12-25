@@ -75,25 +75,21 @@ Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
     _b_pos::Bool = (is_positive(b))
     _a_pos::Bool = (is_positive(a))
 
-    println("1")
-
     (_b_pos) && (!_a_pos) && return false
     (!_b_pos) && (_a_pos) && return (!(is_zero(a) && is_zero(b)))
+
+    #zero can cause problems down the line.
+    is_zero(a) && return !(_b_pos || is_zero(b))
+    is_zero(b) && return _a_pos
+
     #resolve exponents for strange subnormals.
-
-    println("2")
-
     is_strange_subnormal(a) && (__resolve_subnormal!(a); _aexp = decode_exp(a))
     is_strange_subnormal(b) && (__resolve_subnormal!(b); _bexp = decode_exp(b))
-
-    println("3")
 
     #so now we know that these two have the same sign.
     (decode_exp(b) > decode_exp(a)) && return (!_a_pos)
     (decode_exp(b) < decode_exp(a)) && return _a_pos
     #check fractions.
-
-    println("4")
 
     #if the fractions are equal, then the condition is satisfied only if a is
     #an ulp and b is exact.
@@ -102,11 +98,8 @@ Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
     #be xor'd to the _a_pos to give an instant failure condition.  Eg. if we are
     #positive, then b > a means failure.
 
-    println("5")
-
     ((b.fraction < a.fraction) != _a_pos) && return false
 
-    println("6")
     #####################################################
     (_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : maxfsize) :
                cmpplusbit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : maxfsize)
@@ -117,6 +110,7 @@ end
 function <{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   return b > a
 end
+
 #=
 import Base.min
 import Base.max

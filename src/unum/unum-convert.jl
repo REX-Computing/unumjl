@@ -186,7 +186,7 @@ immutable FProp
 end
 
 #store floating point properties in a dict
-__fp_props = Dict{Type{AbstractFloat},FProp}(
+__fp_props = Dict{Type,FProp}(
   Float16 => FProp(UInt16, 3, 4, UInt16(4),  UInt16(9)),
   Float32 => FProp(UInt32, 4, 5, UInt16(7),  UInt16(22)),
   Float64 => FProp(UInt64, 4, 6, UInt16(10), UInt16(51)))
