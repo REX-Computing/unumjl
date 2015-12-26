@@ -10,7 +10,7 @@
     #we want to be able to represent having g-layer flags as part of this.
     gflags = (x.flags & (~UNUM_FLAG_MASK))
     #for nan, let's also show the noisy nan bit.
-    isnan(x) && (gflags |= (x.flags & UNUM_SIGN_BIT))
+    isnan(x) && (gflags |= (x.flags & UNUM_SIGN_MASK))
     gflagstring = (gflags == 0) ? "" : @sprintf ", 0x%04X" gflags
     is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS}$gflagstring)"); return)
     is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS}$gflagstring)"); return)

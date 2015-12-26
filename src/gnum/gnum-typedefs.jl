@@ -39,6 +39,7 @@ end
 GNUM_ONESIDED_MASK = 0x8000
 #throws a bit saying this number is NaN.
 GNUM_NAN_MASK  = 0x4000
+GNUM_SFLAGS_MASK = 0xC000
 
 #g-layer flags that apply to both "lower" and "higher" slots.
 #temporary flag saying to ignore calculations on this side of the gnum.
@@ -51,6 +52,7 @@ GNUM_IGNORE_SIDE_MASK = 0x2000
 # An SBIT automatically ignores the second value, even if ignore isn't thrown.
 
 #informational flags that report on the identity of the number.
+GNUM_FLAG_MASK = 0x0F00
 GNUM_INF_MASK  = 0x0800
 GNUM_MMR_MASK  = 0x0400
 GNUM_SSS_MASK  = 0x0200
@@ -71,5 +73,17 @@ macro scratch_this_operation!(s)
     nan!($s)
     ignore_both_sides!($s)
     return
+  end)
+end
+
+macro init_sflags()
+  esc(:(sflags::UInt16))
+end
+
+macro preserve_sflags(s, expr)
+  esc(quote
+    sflags = $s.scratchpad.flags & GNUM_SFLAGS_MASK
+    $expr
+    $s.scratchpad.flags |= sflags
   end)
 end

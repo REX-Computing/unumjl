@@ -96,9 +96,11 @@ function __subtraction_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FS
 end
 
 
+function __arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  nan!(b)
+end
 
-
-
+#=
 ###############################################################################
 ## multistage carried difference engine for uint64s.
 
@@ -314,6 +316,7 @@ function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64,
   fsize = (is_ubit != 0) ? max_fsize(FSS) : __minimum_data_width(fraction)
   Unum{ESS,FSS}(fsize, esize, a.flags | is_ubit, fraction, exponent)
 end
+=#
 
 import Base.-
 #binary subtraction creates a temoporary g-layer number to be destroyed immediately.

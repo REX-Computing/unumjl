@@ -17,3 +17,4 @@ include("./unum-hlayer.jl")
 #mathematical stuff
 
 include("./unum-addition.jl")
+include("./unum-subtraction.jl")

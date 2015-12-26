@@ -44,19 +44,11 @@ end
 #calculations.
 function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   ############################################
-  # deal with zeros.
-  #if our addend is zero, then we just leave both sides alone.
-  is_zero(a) && (ignore_both_sides!(b); return)
-
-  #if either side is zero, then copy the addend in to the Gnum.
-  is_zero(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (put_unum!(a, b, LOWER_UNUM); ignore_side!(b, LOWER_UNUM))
-  is_zero(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (put_unum!(a, b, UPPER_UNUM); ignore_side!(b, UPPER_UNUM))
-
-  ############################################
   # deal with NaNs.
   #if our addend is nan, then set the addend to nan.
   is_nan(a) && (@scratch_this_operation!(b))
   is_nan(b) && (ignore_both_sides!(b); return)
+
   ############################################
   # deal with infinities.
   if (is_inf(a))
@@ -90,12 +82,30 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   if (should_calculate(b, UPPER_UNUM) && is_mmr(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper.flags & UNUM_SIGN_MASK))
     ignore_side!(b, UPPER_UNUM)
   end
+
+  ############################################
+  # deal with zeros.
+  #if our addend is zero, then we just leave both sides alone.
+  is_zero(a) && (ignore_both_sides!(b); return)
+
+  #if either side is zero, then copy the addend in to the Gnum.
+  is_zero(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (put_unum!(a, b, LOWER_UNUM); ignore_side!(b, LOWER_UNUM))
+  is_zero(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (put_unum!(a, b, UPPER_UNUM); ignore_side!(b, UPPER_UNUM))
 end
 
 #trampoline for using the arithmetic addition algorithm on numbers which are
 #guaranteed to have identical parity.  Otherwise subtraction is necessary.
 @generated function __arithmetic_addition!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  quote
+    if is_ulp(a)
+      nan!(b)
+    else
+      __exact_arithmetic_addition!(a, b, Val{side})
+    end
+  end
+end
 
+@generated function __exact_arithmetic_addition!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
   mesize::UInt16 = max_esize(ESS)
   mfsize::UInt16 = max_fsize(FSS)
   (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
@@ -118,27 +128,30 @@ end
     shift::Int64
     carry::UInt64
     scratchpad_exp::Int64
+    scratchpad_dev::UInt64
+    @init_sflags()
     #check to see which context is bigger.
-    if (a_ctx > b_ctx)
+    if (a_ctx > b_ctx) || ((a_ctx == b_ctx) && (b_dev != z64))
       #set the placeholder to the value a.
       addend = a
-      #then move b to the scratchpad.
-      copy_unum!(b.$side, b.scratchpad)
+      @preserve_sflags b copy_unum!(b.$side, b.scratchpad)
       #calculate shift as the difference between a and b
       shift = a_ctx - b_ctx
       #set up the carry bit.
       carry = (o64 - a_dev) + ((shift == z64) ? (o64 - b_dev) : z64)
       scratchpad_exp = a_exp
+      scratchpad_dev = a_dev
     else
       #set the placeholder to the value b.
       addend = b.$side
       #move the unum value to the scratchpad.
-      put_unum!(a, b, SCRATCHPAD)
+      @preserve_sflags b put_unum!(a, b, SCRATCHPAD)
       #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
       #set up the carry bit.
       carry = (o64 - b_dev) + ((shift == z64) ? (o64 - a_dev) : z64)
       scratchpad_exp = b_exp
+      scratchpad_dev = b_dev
     end
 
     #rightshift the scratchpad, then set the invisible bit that may have moved.
@@ -148,35 +161,42 @@ end
     #perform the carried add.
     carry = __carried_add_frac!(carry, addend, b.scratchpad)
 
-    if (carry > 1)
-      scratchpad_exp += 1
-      __rightshift_frac_with_underflow_check!(b.scratchpad, 1)
-      (carry == 3) && set_frac_top!(b.scratchpad)
+    #set esize and exponent parts.
+    b.scratchpad.esize = addend.esize
+    b.scratchpad.exponent = addend.exponent
+
+    if (scratchpad_dev == z64)
+      #for non-subnormal things do the following:
+      if (carry > 1)
+        scratchpad_exp += 1
+        if scratchpad_exp > max_exponent(ESS)
+          @preserve_sflags b mmr!(b, b.scratchpad.flags & UNUM_SIGN_MASK, SCRATCHPAD)
+        else
+          #shift things over by one since we went up in size.
+          __rightshift_frac_with_underflow_check!(b.scratchpad, 1)
+          #carry from the carry over into the fraction.
+          (carry == 3) && set_frac_top!(b.scratchpad)
+          #re-encode the exponent.
+          (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
+        end
+      end
+    else
+      #for subnormal values, we have to augment the exponent slightly differently.
+      if (carry > 0)
+        b.scratchpad.exponent = o64
+      end
     end
 
     #set the fsize.
     b.scratchpad.fsize = $mfsize - min(((b.scratchpad.fsize & UNUM_UBIT_MASK != 0) ? 0 : ctz(b.scratchpad.fraction)), $mfsize)
 
-    #set exponent stuff.
-    #handle the carry bit (which may be up to three? or more). If carry is zero,
-    #no need to touch the exponent already loaded into the scratchpad.
-    if (carry != 0)
-      #check for overflow, and return mmr if that happens.
-      if (scratchpad_exp > max_exponent(ESS))
-        mmr!(b, SCRATCHPAD)
-      else
-        #we know it can't be subnormal, because we've added one to the exponent.
-        (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
-      end
-    end
-
     #another way to get overflow is: by adding just enough bits to exactly
-    #make the binary value for infinity.  This should, instead, yield mmr.
-    #nb:  the is_inf call is the UNUM is_inf, which checks bitwise, not the
-    #gnum is_inf, which only looks at the flag in the flags holder.
-    is_inf(b.scratchpad) && mmr!(b, SCRATCHPAD)
+    #make the binary value for inf or nan.  This should, instead, yield mmr.
+    #nb:  the is_inf call here is the UNUM is_inf, which checks across all the
+    #bits, not the gnum is_inf, which only looks at the flag in the flags holder.
+    __is_nan_or_inf(b.scratchpad) && @preserve_sflags b mmr!(b, b.scratchpad.flags & UNUM_SIGN_MASK, SCRATCHPAD)
 
-    copy_unum!(b.scratchpad, b.$side)
+    copy_unum_with_gflags!(b.scratchpad, b.$side)
   end
 end
 

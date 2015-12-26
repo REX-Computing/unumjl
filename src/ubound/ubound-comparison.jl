@@ -2,6 +2,8 @@
 
 #runs comparisons on the ubound type
 
+import Base: ==, <, >
+
 #==============================================================================#
 #equality comparison
 function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
@@ -41,16 +43,12 @@ end
 #just flip the previous function to make things easier.
 =={ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = (b == a)
 
-import Base.isequal
 #repeat the process, except for isequal.
-function isequal{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  resd = ubound_resolve(a)
-  isa(resd, Unum) || return false
-  return isequal(resd, b)
+function Base.isequal{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
+  return false
 end
 
-isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = isequal(b, a)
-export isequal
+Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = isequal(b, a)
 
 #==============================================================================#
 

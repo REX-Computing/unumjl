@@ -35,11 +35,10 @@ end
 export additiveinverse!
 
 @gen_code function copy_unum!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
-
   @code quote
     dest.fsize = src.fsize
     dest.esize = src.esize
-    dest.flags = (dest.flags & (~UNUM_FLAG_MASK)) | (src.flags & UNUM_FLAG_MASK)
+    dest.flags = src.flags & UNUM_FLAG_MASK
     dest.exponent = src.exponent
   end
 

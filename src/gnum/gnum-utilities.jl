@@ -91,11 +91,16 @@ doc"""
     is_mmr(v.$side) && (v.$side.flags |= GNUM_MMR_MASK; return)
     is_sss(v.$side) && (v.$side.flags |= GNUM_SSS_MASK; return)
     is_zero(v.$side) && (v.$side.flags |= GNUM_ZERO_MASK; return)
-    #clear the mask.
-    v.$side.flags &= UNUM_FLAG_MASK
+    #clear the mask, keeping only flags and scratchpad values.
+    v.$side.flags &= GNUM_SFLAGS_MASK | UNUM_FLAG_MASK
   end
 end
 
+function copy_unum_with_gflags!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
+  gflags = src.flags & GNUM_FLAG_MASK
+  copy_unum!(src, dest)
+  dest.flags |= gflags
+end
 
 doc"""
   `emit_data(::Gnum{ESS,FSS})` takes the contents of a gnum and decides if it's
