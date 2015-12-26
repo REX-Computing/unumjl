@@ -2,13 +2,6 @@
 
 #testing subtraction
 
-import Unums.z64
-import Unums.o64
-import Unums.t64
-import Unums.f64
-import Unums.z16
-import Unums.o16
-
 ################################################################################
 ## TESTING HELPER FUNCTIONS
 

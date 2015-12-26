@@ -96,35 +96,20 @@ function __subtraction_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FS
 end
 
 
-function __arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-  nan!(b)
+@generated function __arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  quote
+    if is_ulp(a)
+      nan!(b)
+    else
+      __exact_arithmetic_subtraction!(a, b, Val{side})
+    end
+  end
 end
 
 #=
 ###############################################################################
 ## multistage carried difference engine for uint64s.
 
-function __carried_diff(carry::UInt64, v1::VarInt, v2::VarInt, trail::UInt64 = z64)
-  #run a difference engine across an array of 64-bit integers
-  l = length(v1)
-  #"carry" will usually be one, but there are other possibilities (e.g. zero)
-  if (l == 1)
-    fraction = v1 - v2 - ((trail != 0) ? 1 : 0)
-    #decrement the carry bit if it looks like we've pulled from it.
-    (fraction >= v1) && (v2 != 0) && (carry -= 1)
-  else
-    fraction = __copy_superint(v1)
-    fraction[1] -= trail
-    for (idx = 1:(l - 1))
-      fraction[idx] -= v2[idx]
-      ((fraction[idx] >= v1[idx]) && (v2[idx] != 0)) && (fraction[idx + 1] -= 1)
-    end
-    #for the last fraction, we pull from carry.
-    fraction[l] -= v2[l]
-    ((fraction[l] >= v1[l]) && (v2[l] != 0)) && (carry -= 1)
-  end
-  (carry, fraction)
-end
 
 ################################################################################
 ## DIFFERENCE ALGORITHM
