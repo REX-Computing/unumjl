@@ -115,8 +115,8 @@ end
     a_exp::Int64 = decode_exp(a)
     b_exp::Int64 = decode_exp(b.$side)
 
-    a_dev::UInt64 = is_exp_zero(a) ? o64 : z64
-    b_dev::UInt64 = is_exp_zero(b.$side) ? o64 : z64
+    a_dev::UInt64 = is_exp_zero(a) * o64
+    b_dev::UInt64 = is_exp_zero(b.$side) * o64
 
     #derive the "contexts" for each, which is a combination of the exponent and
     #deviation.
@@ -138,7 +138,7 @@ end
       #calculate shift as the difference between a and b
       shift = a_ctx - b_ctx
       #set up the carry bit.
-      carry = (o64 - a_dev) + ((shift == z64) ? (o64 - b_dev) : z64)
+      carry = (o64 - a_dev) + ((shift == z64) * (o64 - b_dev))
       scratchpad_exp = a_exp
       scratchpad_dev = a_dev
     else
@@ -149,7 +149,7 @@ end
       #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
       #set up the carry bit.
-      carry = (o64 - b_dev) + ((shift == z64) ? (o64 - a_dev) : z64)
+      carry = (o64 - b_dev) + ((shift == z64) * (o64 - a_dev))
       scratchpad_exp = b_exp
       scratchpad_dev = b_dev
     end

@@ -52,26 +52,48 @@ end
 
 #performs an exact arithmetic subtraction algorithm.  The assumption here is
 #that a and b have opposite signs and are to be summed.  The sign on b is ignored.
-@generated function __exact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+@gen_code function __exact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
   mesize::UInt16 = max_esize(ESS)
   mfsize::UInt16 = max_fsize(FSS)
   (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
   mexp::UInt64 = max_exponent(ESS)
 
-  quote
+  @code quote
     #for subtraction, resolving strange subnormal numbers as a first step is critical.
     is_strange_subnormal(a) && (resolve_subnormal!(a))
     is_strange_subnormal(b.$side) && (resolve_subnormal!(b.$side))
 
+    b_exp::Int64 = decode_exp(b.$side)
+    b_dev::UInt64 = is_exp_zero(b.$side) * o64
+    b_ctx::Int64 = b_exp + b_dev
+    promoted::Bool = false
+  end
+
+  #next we have to puff up the function if it's a ubit.
+  if (FSS < 7)
+    @code quote
+      if is_ulp(b.$side)
+        (promoted, b.$side.fraction) = __add_ubit(b.$side.fraction, b.$side.fsize)
+      end
+    end
+  else
+    @code quote
+      if is_ulp(b.$side)
+        promoted = __add_ubit!(b.$side.fraction, b.$side.fsize)
+      end
+    end
+  end
+
+  @code quote
+    b_exp += promoted * 1
+    b_dev = b_dev & (o64 - (promoted * o64))
+
     #set the exp and dev values.
     a_exp::Int64 = decode_exp(a)
-    b_exp::Int64 = decode_exp(b.$side)
     #set the deviations due to subnormality.
-    a_dev::UInt64 = is_exp_zero(a) ? z64 : o64
-    b_dev::UInt64 = is_exp_zero(b.$side) ? z64 : o64
+    a_dev::UInt64 = is_exp_zero(a) * o64
     #set the exponential contexts for both variables.
     a_ctx::Int64 = a_exp + a_dev
-    b_ctx::Int64 = b_exp + b_dev
 
     #set up a placeholder for the minuend.
     shift::Int64
@@ -85,7 +107,7 @@ end
     a_bigger = (a_exp > b_exp)
     if (a_exp == b_exp)
       a_bigger = a_bigger || ((a_dev == 0) && (b_dev != 0))
-      a_bigger = a_bigger || (a_dev == b_dev) && (a.fraction > b.$side.fraction)
+      a_bigger = a_bigger || (a_dev == b_dev) && ((a.fraction > b.$side.fraction) || is_ulp(b.$side))
     end
 
     if a_bigger
@@ -96,7 +118,7 @@ end
       #calculate shift as the difference between a and b
       shift = a_ctx - b_ctx
       #set up the virtual bit.
-      vbit = (o64 - a_dev) + ((shift == z64) ? (o64 - b_dev) : z64)
+      vbit = (o64 - a_dev) - ((shift == z64) * (o64 - b_dev))
       scratchpad_exp = a_exp
       scratchpad_dev = a_dev
     else
@@ -108,19 +130,13 @@ end
       #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
       #set up the carry bit.
-      vbit = (o64 - b_dev) + ((shift == z64) ? (o64 - a_dev) : z64)
+      vbit = (o64 - b_dev) - ((shift == z64) * (o64 - a_dev))
       scratchpad_exp = b_exp
       scratchpad_dev = b_dev
-      println("b bigger")
     end
 
-    if (shift == 0)
-      #b is greater than a.  So, if a is normal, bash the value of vbit.
-      vbit &= ~a_dev
-    else
-      #rightshift the scratchpad.
-      __rightshift_frac_with_underflow_check!(b.scratchpad, shift)
-    end
+    #rightshift the scratchpad.
+    (shift != 0) && __rightshift_frac_with_underflow_check!(b.scratchpad, shift)
 
     #do the actual subtraction.
     vbit = __carried_diff_frac!(vbit, minuend, b.scratchpad)
@@ -239,5 +255,8 @@ function -{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
 end
 #unary subtraction creates a new unum and flips it.
 function -{ESS,FSS}(x::Unum{ESS,FSS})
+  additiveinverse!(Unum{ESS,FSS}(x))
+end
+function -{ESS,FSS}(x::Gnum{ESS,FSS})
   additiveinverse!(Unum{ESS,FSS}(x))
 end

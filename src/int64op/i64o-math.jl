@@ -47,3 +47,30 @@ end
   end
   @code :(vdigit - borrow)
 end
+
+function __add_ubit(a::UInt64, fsize::UInt16)
+  a += (t64 >> fsize)
+  promoted = (a == 0)
+  (promoted, a)
+end
+
+@gen_code function __add_ubit!{FSS}(a::ArrayNum{FSS}, fsize::UInt16)
+  #basically the same as the addition alogrithm, except not adding in an array.
+  l = __cell_length(FSS)
+  #initialize the carry variable.
+  @code quote
+    middle_cell::UInt16 = (fsize >> 6) + 1
+    cellcarry::UInt64 = z64
+    ubitform::UInt64 = mask_top(fsize & 0x003F)
+  end
+  for (idx = l:-1:1)
+    @code quote
+      #figure out what cellcarry should be.
+      cellcarry += (idx == middle_cell) * ubitform
+      @inbounds (a.a[$idx] += cellcarry)     #perform the addition
+      @inbounds (cellcarry != 0) && (a.a[$idx] == 0) && (cellcarry = o64)
+    end
+  end
+  #add in the carry from the most significant segment to the entire carry.
+  @code :(cellcarry != 0)
+end
