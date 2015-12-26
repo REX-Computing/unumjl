@@ -65,28 +65,7 @@ end
 
     b_exp::Int64 = decode_exp(b.$side)
     b_dev::UInt64 = is_exp_zero(b.$side) * o64
-    b_ctx::Int64 = b_exp + b_dev
-    promoted::Bool = false
-  end
-
-  #next we have to puff up the function if it's a ubit.
-  if (FSS < 7)
-    @code quote
-      if is_ulp(b.$side)
-        (promoted, b.$side.fraction) = __add_ubit(b.$side.fraction, b.$side.fsize)
-      end
-    end
-  else
-    @code quote
-      if is_ulp(b.$side)
-        promoted = __add_ubit!(b.$side.fraction, b.$side.fsize)
-      end
-    end
-  end
-
-  @code quote
-    b_exp += promoted * 1
-    b_dev = b_dev & (o64 - (promoted * o64))
+    b_ctx::Int64
 
     #set the exp and dev values.
     a_exp::Int64 = decode_exp(a)
@@ -107,11 +86,17 @@ end
     a_bigger = (a_exp > b_exp)
     if (a_exp == b_exp)
       a_bigger = a_bigger || ((a_dev == 0) && (b_dev != 0))
-      a_bigger = a_bigger || (a_dev == b_dev) && ((a.fraction > b.$side.fraction) || is_ulp(b.$side))
+      a_bigger = a_bigger || (a_dev == b_dev) && ((a.fraction > b.$side.fraction))
     end
 
     if a_bigger
       #set the placeholder to the value a.
+      #since we're not going to cross zero, we have to "puff up" b if it's an ulp.
+      promoted::Bool = __add_ubit_frac!(b.$side)
+      b_exp += promoted * 1
+      b_dev = b_dev & (o64 - (promoted * o64))
+      b_ctx = b_exp + b_dev
+
       minuend = a
       @preserve_sflags b copy_unum!(b.$side, b.scratchpad)
       b.scratchpad.flags = (b.scratchpad.flags & ~UNUM_SIGN_MASK) | (a.flags & UNUM_SIGN_MASK)
@@ -122,14 +107,21 @@ end
       scratchpad_exp = a_exp
       scratchpad_dev = a_dev
     else
+      b_ctx = b_exp + b_dev
       #set the placeholder to the value b.
       minuend = b.$side
       #move the unum value to the scratchpad.
       @preserve_sflags b put_unum!(a, b, SCRATCHPAD)
-      b.scratchpad.flags = (b.scratchpad.flags & ~UNUM_SIGN_MASK) | (~a.flags & UNUM_SIGN_MASK)
+      b.scratchpad.flags = (b.scratchpad.flags & ~UNUM_SIGN_MASK) | (~a.flags & UNUM_SIGN_MASK) | (b.$side.flags & UNUM_UBIT_MASK)
       #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
       #set up the carry bit.
+      #=
+      println("hi mom")
+      println(shift == z64)
+      println(((shift == z64) * (o64 - a_dev)))
+      println((o64 - b_dev) - ((shift == z64) * (o64 - a_dev)))
+      println("aaa")=#
       vbit = (o64 - b_dev) - ((shift == z64) * (o64 - a_dev))
       scratchpad_exp = b_exp
       scratchpad_dev = b_dev
@@ -141,7 +133,16 @@ end
     #do the actual subtraction.
     vbit = __carried_diff_frac!(vbit, minuend, b.scratchpad)
 
-    if vbit == 0
+    #=
+    println("3----")
+    println(bits(b.scratchpad.fraction))
+    println("s_exp:", scratchpad_exp)
+    println("s_dev:", scratchpad_dev)
+    println("bits:", bits(b.scratchpad))
+    println("vbit:", vbit)
+    println("====")=#
+
+    if (vbit == 0) && (b.scratchpad.exponent != 0)
       if (scratchpad_exp >= min_exponent(ESS))
         #shift
         __leftshift_frac!(b.scratchpad, 1)
@@ -156,9 +157,6 @@ end
         b.scratchpad.esize = $mesize
         b.scratchpad.exponent = z64
       end
-    else
-      b.scratchpad.esize = minuend.esize
-      b.scratchpad.exponent = minuend.exponent
     end
 
     copy_unum_with_gflags!(b.scratchpad, b.$side)

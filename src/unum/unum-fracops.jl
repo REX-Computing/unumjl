@@ -90,3 +90,12 @@ end
     :(__carried_diff!(carry, a.fraction, b.fraction))
   end
 end
+
+@generated function __add_ubit_frac!{ESS,FSS}(a::Unum{ESS,FSS})
+  #NB at some point this is going to need to do something about the ULP.
+  if (FSS < 7)
+    :(is_ulp(a) && ((promoted::Bool, a.fraction) = __add_ubit(a.fraction, a.fsize); promoted))
+  else
+    :(is_ulp(a) && __add_ubit!(a.fraction, a.fsize))
+  end
+end
