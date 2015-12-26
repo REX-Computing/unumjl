@@ -18,83 +18,27 @@ function sub!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
 end
 
 function sub!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
-  #override
-  __subtraction_override_check!(a, b)
+  additive_inverse!(b)
 
-  if should_calculate(b, LOWER_UNUM)
-    if ((a.flags & UNUM_SIGN_MASK) == (b.lower.flags & UNUM_SIGN_MASK))
-      __arithmetic_subtraction!(a, b, LOWER_UNUM)
-    else
-      __arithmetic_addition!(a, b, LOWER_UNUM)
-    end
-  end
-
-  if should_calculate(b, UPPER_UNUM)
-    if ((a.flags & UNUM_SIGN_MASK) == (b.upper.flags & UNUM_SIGN_MASK))
-      __arithmetic_subtraction!(a, b, UPPER_UNUM)
-    else
-      __arithmetic_addition!(a, b, UPPER_UNUM)
-    end
-  end
+  add!{ESS,FSS}(a, b)
 
   clear_ignore_sides!(b)
   b
 end
 
-#a function which checks for special values that will override actually performing
-#calculations.
-function __subtraction_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
-  ############################################
-  # deal with NaNs.
-  #if our addend is nan, then set the addend to nan.
-  is_nan(a) && (@scratch_this_operation!(b))
-  is_nan(b) && (ignore_both_sides!(b); return)
-  ############################################
-  # deal with zeros.
-  #if our addend is zero, then we just invert both sides alone.
-  if is_zero(a)
+function additive_inverse!(b)
+  is_nan(b) && return #lazy eval
+  if is_twosided(b)
+    #additive inverse them and then switch lower and upper.
     additive_inverse!(b.lower)
     additive_inverse!(b.upper)
-    ignore_both_sides!(b)
-  end
-  #if either side is zero, then copy the addend in to the Gnum.
-  is_zero(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (put_unum!(a, b, LOWER_UNUM); set_ignore_side!(b, LOWER_UNUM))
-  is_zero(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (put_unum!(a, b, UPPER_UNUM); set_ignore_side!(b, UPPER_UNUM))
-  ############################################
-  # deal with infinities.
-  if (is_inf(a))
-    #check to see if lower infinity is the same infinity.
-    is_inf(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && ((a.flags & UNUM_SIGN_MASK) == (b.lower.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
-    is_inf(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && ((a.flags & UNUM_SIGN_MASK) == (b.upper.flags & UNUM_SIGN_MASK)) && @scratch_this_operation!(b)
-    #since we know it's a finite, real value, we can set one or both sides of our gnum to infinity as needed.
-    should_calculate(b, LOWER_UNUM) && (inf!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM); set_ignore_side!(b, LOWER_UNUM))
-    should_calculate(b, UPPER_UNUM) && (inf!(b, a.flags & UNUM_SIGN_MASK, UPPER_UNUM); set_ignore_side!(b, UPPER_UNUM))
-  end
-
-  #since a is known to be finite real, we don't need a complicated check.
-  is_inf(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (set_ignore_side!(b, LOWER_UNUM))
-  is_inf(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (set_ignore_side!(b, UPPER_UNUM))
-
-  ############################################
-  #deal with mmr collapsing.
-  if (is_mmr(a))
-    if (should_calculate(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK != b.lower_flags & UNUM_SIGN_MASK))
-      mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
-      set_ignore_side!(b, LOWER_UNUM)
-    end
-    if (should_calculate(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK != b.upper_flags & UNUM_SIGN_MASK))
-      mmr!(b, a.flags & UNUM_SIGN_MASK, UPPER_UNUM)
-      set_ignore_side!(b, UPPER_UNUM)
-    end
-  end
-  if (should_calculate(b, LOWER_UNUM) && is_mmr(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK != b.lower_flags & UNUM_SIGN_MASK))
-    set_ignore_side!(b, LOWER_UNUM)
-  end
-  if (should_calculate(b, UPPER_UNUM) && is_mmr(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK != b.upper_flags & UNUM_SIGN_MASK))
-    set_ignore_side!(b, UPPER_UNUM)
+    copy_unum!(b.upper, b.scratchpad)
+    copy_unum!(b.lower, b.upper)
+    copy_unum!(b.scratchpad, b.lower)
+  else
+    additive_inverse!(b.lower)
   end
 end
-
 
 @generated function __arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
   quote
@@ -106,6 +50,8 @@ end
   end
 end
 
+#performs an exact arithmetic subtraction algorithm.  The assumption here is
+#that a and b have opposite signs and are to be summed.  The sign on b is ignored.
 @generated function __exact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
   mesize::UInt16 = max_esize(ESS)
   mfsize::UInt16 = max_fsize(FSS)
@@ -146,6 +92,7 @@ end
       #set the placeholder to the value a.
       minuend = a
       @preserve_sflags b copy_unum!(b.$side, b.scratchpad)
+      b.scratchpad.flags = (b.scratchpad.flags & ~UNUM_SIGN_MASK) | (a.flags & UNUM_SIGN_MASK)
       #calculate shift as the difference between a and b
       shift = a_ctx - b_ctx
       #set up the virtual bit.
@@ -157,12 +104,14 @@ end
       minuend = b.$side
       #move the unum value to the scratchpad.
       @preserve_sflags b put_unum!(a, b, SCRATCHPAD)
+      b.scratchpad.flags = (b.scratchpad.flags & ~UNUM_SIGN_MASK) | (~a.flags & UNUM_SIGN_MASK)
       #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
       #set up the carry bit.
       vbit = (o64 - b_dev) + ((shift == z64) ? (o64 - a_dev) : z64)
       scratchpad_exp = b_exp
       scratchpad_dev = b_dev
+      println("b bigger")
     end
 
     if (shift == 0)
