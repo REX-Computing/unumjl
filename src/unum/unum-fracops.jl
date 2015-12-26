@@ -78,3 +78,15 @@ end
     :(__carried_add!(carry, a.fraction, b.fraction))
   end
 end
+
+@generated function __carried_diff_frac!{ESS,FSS}(carry::UInt64, a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  #NB at some point this is going to need to do something about the ULP.
+  if (FSS < 7)
+    quote
+      b.fraction = a.fraction - b.fraction
+      carry - ((b.fraction > a.fraction) ? o16 : z16)
+    end
+  else
+    :(__carried_diff!(carry, a.fraction, b.fraction))
+  end
+end

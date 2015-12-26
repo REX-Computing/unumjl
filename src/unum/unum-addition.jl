@@ -169,7 +169,7 @@ end
       #for non-subnormal things do the following:
       if (carry > 1)
         scratchpad_exp += 1
-        if scratchpad_exp > max_exponent(ESS)
+        if scratchpad_exp > $mexp
           @preserve_sflags b mmr!(b, b.scratchpad.flags & UNUM_SIGN_MASK, SCRATCHPAD)
         else
           #shift things over by one since we went up in size.

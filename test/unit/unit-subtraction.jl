@@ -1,14 +1,7 @@
 #unit-subtraction.jl
 
 #testing subtraction
-
-################################################################################
-## TESTING HELPER FUNCTIONS
-
-#__carried_diff - a subtraction that takes into account carries
-@test Unums.__carried_diff(o64, 0xFFFF_0000_0000_0000, 0x000F_0000_0000_0000) == (1, 0xFFF0_0000_0000_0000)
-@test Unums.__carried_diff(o64, 0x0000_0000_0000_0000, 0x0010_0000_0000_0000) == (0, 0xFFF0_0000_0000_0000)
-
+#=
 #__diff_exact - an exact subtraction with the first entity having a higher exponent
 
 wone = Unum{4,6}(z16,z16,z16,z64,o64)
@@ -51,3 +44,4 @@ dx5 = decode_exp(x5)
 dx6 = decode_exp(x6)
 @test Unums.__diff_exact(x5,x6,dx5,dx6) == Unum{4,6}(0x003f, 0x0007, Unums.UNUM_UBIT_MASK | Unums.UNUM_SIGN_MASK, 0x4a68f94a46718c11, UInt64(0xf1))
 #resolved due to an incorrect offset in a fillbit call.
+=#

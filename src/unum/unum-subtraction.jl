@@ -106,6 +106,100 @@ end
   end
 end
 
+@generated function __exact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  mesize::UInt16 = max_esize(ESS)
+  mfsize::UInt16 = max_fsize(FSS)
+  (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
+  mexp::UInt64 = max_exponent(ESS)
+
+  quote
+    #for subtraction, resolving strange subnormal numbers as a first step is critical.
+    is_strange_subnormal(a) && (resolve_subnormal!(a))
+    is_strange_subnormal(b.$side) && (resolve_subnormal!(b.$side))
+
+    #set the exp and dev values.
+    a_exp::Int64 = decode_exp(a)
+    b_exp::Int64 = decode_exp(b.$side)
+    #set the deviations due to subnormality.
+    a_dev::UInt64 = is_exp_zero(a) ? z64 : o64
+    b_dev::UInt64 = is_exp_zero(b.$side) ? z64 : o64
+    #set the exponential contexts for both variables.
+    a_ctx::Int64 = a_exp + a_dev
+    b_ctx::Int64 = b_exp + b_dev
+
+    #set up a placeholder for the minuend.
+    shift::Int64
+    vbit::UInt64
+    minuend::Unum{ESS,FSS}
+    scratchpad_exp::Int64
+    scratchpad_dev::UInt64
+    @init_sflags()
+
+    #is a bigger?
+    a_bigger = (a_exp > b_exp)
+    if (a_exp == b_exp)
+      a_bigger = a_bigger || ((a_dev == 0) && (b_dev != 0))
+      a_bigger = a_bigger || (a_dev == b_dev) && (a.fraction > b.$side.fraction)
+    end
+
+    if a_bigger
+      #set the placeholder to the value a.
+      minuend = a
+      @preserve_sflags b copy_unum!(b.$side, b.scratchpad)
+      #calculate shift as the difference between a and b
+      shift = a_ctx - b_ctx
+      #set up the virtual bit.
+      vbit = (o64 - a_dev) + ((shift == z64) ? (o64 - b_dev) : z64)
+      scratchpad_exp = a_exp
+      scratchpad_dev = a_dev
+    else
+      #set the placeholder to the value b.
+      minuend = b.$side
+      #move the unum value to the scratchpad.
+      @preserve_sflags b put_unum!(a, b, SCRATCHPAD)
+      #calculate the shift as the difference between a and b.
+      shift = b_ctx - a_ctx
+      #set up the carry bit.
+      vbit = (o64 - b_dev) + ((shift == z64) ? (o64 - a_dev) : z64)
+      scratchpad_exp = b_exp
+      scratchpad_dev = b_dev
+    end
+
+    if (shift == 0)
+      #b is greater than a.  So, if a is normal, bash the value of vbit.
+      vbit &= ~a_dev
+    else
+      #rightshift the scratchpad.
+      __rightshift_frac_with_underflow_check!(b.scratchpad, shift)
+    end
+
+    #do the actual subtraction.
+    vbit = __carried_diff_frac!(vbit, minuend, b.scratchpad)
+
+    if vbit == 0
+      if (scratchpad_exp >= min_exponent(ESS))
+        #shift
+        __leftshift_frac!(b.scratchpad, 1)
+        #Put in the guard bit.
+
+        scratchpad_exp -= 1
+      end
+
+      if (scratchpad_exp >= min_exponent(ESS))
+        (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
+      else
+        b.scratchpad.esize = $mesize
+        b.scratchpad.exponent = z64
+      end
+    else
+      b.scratchpad.esize = minuend.esize
+      b.scratchpad.exponent = minuend.exponent
+    end
+
+    copy_unum_with_gflags!(b.scratchpad, b.$side)
+  end
+end
+
 #=
 ###############################################################################
 ## multistage carried difference engine for uint64s.
@@ -184,123 +278,6 @@ function __shift_many_zeros(fraction, _aexp, ESS, lastbit::UInt64 = z64)
 end
 
 #a subtraction operation where a and b are ordered such that mag(a) > mag(b)
-function __diff_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
-
-  l::UInt16 = length(a.fraction)
-  # a series of easy cases.
-  (a == -b) && return zero(Unum{ESS,FSS})
-
-  (is_zero(b)) && return unum_unsafe(a)
-  (is_zero(a)) && return -b
-
-  #reassign a to a resolved subnormal value.
-  is_strange_subnormal(a) && (resolve_subnormal!(a))
-  is_strange_subnormal(b) && (resolve_subnormal!(b))
-
-  #check for deviations due to subnormality.
-  a_dev::Int16, carry::UInt64 = is_exp_zero(a) ? (o16, z64) : (z16, o64)
-  #set the carry.
-  b_dev::Int16 = is_exp_zero(b) ? o16 : z16
-
-  #calculate the bit offset
-  bit_offset = UInt16((_aexp + a_dev) - (_bexp + b_dev))
-
-  if (bit_offset > max_fsize(FSS))
-    #return the previous unum, but with the ubit flag thrown up.
-    return unum_unsafe(__inward_exact(a), a.flags & UNUM_SIGN_MASK)
-  end
-
-  if (bit_offset == 0)
-    #this is the easy case where we don't have to do much.
-    #note three cases:
-    # a -normal, b -normal       - carry = 0
-    # a -normal, b -subnormal    - carry = 1 (keeps old value)
-    # a -subnormal, b -subnormal - carry = 0 (keeps old value)
-    is_exp_zero(b) || (carry = 0) #only bash the value if b is normal.
-    #do the direct subtraction.
-    #This could trigger a carry in the a-normal, b-subnormal case.
-
-    fraction = a.fraction - b.fraction
-    #check this.
-    (fraction > a.fraction) && (carry = 0)
-    #a special case is that we've got a ton of leading zeros.
-    if (carry == 0)
-      #count how much we have to shift by....  Limit this so that we don't cross
-      #over to subnormal-land.  Note that this result is never going to be a ulp.
-      (esize, exponent, fraction) = __shift_many_zeros(fraction, _aexp, ESS)
-      fsize = __minimum_data_width(fraction)
-      return Unum{ESS,FSS}(fsize, esize, a.flags, fraction, exponent)
-    end
-    scratchpad = fraction
-  else
-    #set up a scratchpad.  This will contain the 'correct' value of b in the frac
-    #framework of a.  First shift all of the bits from b.
-    scratchpad = rsh(b.fraction, bit_offset)
-
-    #then throw in virtual bit that corresponds to the leading digit, but only
-    #if b is normal.
-    is_exp_zero(b) || (scratchpad |= __bit_from_top(bit_offset, l))
-  end
-
-  #if we started with a subnormal a (which should be maximally subnormal), we are
-  #done. note that we don't have to throw a ubit flag on because a subtraction
-  #yielding smallsubnormal should have been impossible.
-  (is_exp_zero(a)) && return Unum{ESS,FSS}(__minimum_data_width(fraction), max_esize(ESS), a.flags & UNUM_SIGN_MASK, a.fraction - scratchpad, z64)
-
-
-  #set up some common variables as defaults.
-  esize::UInt16 = a.esize
-  exponent::UInt64 = a.exponent
-  #here the code bifurcates.  for FSS < 6, life is much simpler, we can just
-  #use the space within the 64-bit fraction.
-  #PART ONE.  CALCULATE (carry, fraction, trail)
-  frac_mask = __frac_mask(FSS)
-  if (FSS < 6)
-    #calculate chop-off...  Include an extra bit because that's our lagging bit.
-    #do the subtraction.
-    fraction = a.fraction - scratchpad
-    #check to see if we have to carry, don't forget to left shift.
-    (fraction > a.fraction) && (carry = 0; fraction << 1)
-    #set the ubit, for sure if we have material past the trailing bit.
-    is_ubit::UInt16 = ((~frac_mask & fraction) != 0) ? UNUM_UBIT_MASK : z16
-    #assign the trailing variable
-    trail::UInt64 = (is_ubit != 0) ? 1 : 0
-    #mask out all but the top of the fraction.
-    fraction = fraction & (frac_mask)
-  else
-    #check to see if we dropped digits off the end.
-    is_ubit = (bit_offset > 0 && allzeros(fillbits(bit_offset, l) & b.fraction)) ? 0 : UNUM_UBIT_MASK
-    #first figure out if there was a trailing bit.
-    trail = (is_ubit != 0) ? o64 : z64
-    (carry, fraction) = __carried_diff(carry, a.fraction, scratchpad, trail)
-  end
-
-  #PART TWO.  DEAL WITH THE CONSEQUENCES OF (carry, fraction, lag)
-  #check if we have to shift one unit to the right.
-  if (carry == 0) && (_aexp > min_exponent(ESS))
-    #shift.
-    if (bit_offset == 1)
-      (esize, exponent, fraction) = __shift_many_zeros(fraction, _aexp, ESS, trail)
-    else
-      fraction = lsh(fraction, 1)
-      #shift the exponent, too.
-      (esize, exponent) = encode_exp(_aexp - 1)
-      #fill in the last bit of the fraction.
-      (trail != 0) && (fraction = __set_lsb(fraction, FSS))
-    end
-    fraction = fraction & frac_mask
-  else
-    #no shift.  If we have a trailing bit, ignore it and set the result to have UBIT flag.
-    (trail != 0) && (is_ubit |= UNUM_UBIT_MASK)
-    fsize::UInt16 = (is_ubit != 0) ? max_fsize(FSS) : __minimum_data_width(fraction)
-    ((fraction & __bit_from_top(1 << FSS + 1, 1)) != 0) && return Unum{ESS,FSS}(fsize, a.esize, a.flags | is_ubit, fraction & frac_mask, a.exponent)
-    fraction = fraction & frac_mask
-  end
-
-  #recalculate fsize.
-  fsize = (is_ubit != 0) ? max_fsize(FSS) : __minimum_data_width(fraction)
-  Unum{ESS,FSS}(fsize, esize, a.flags | is_ubit, fraction, exponent)
-end
 =#
 
 import Base.-

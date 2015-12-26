@@ -27,7 +27,7 @@
 end
 
 #carried_sub subtracts the value in the second passed arraynum from the first arraynum.
-@gen_code function __carried_diff!{FSS}(vdigit::UInt64, v1::ArrayNum{FSS}, v2::ArrayNum{FSS}, guard::UInt64 = z64)
+@gen_code function __carried_diff!{FSS}(vdigit::UInt64, a::ArrayNum{FSS}, b::ArrayNum{FSS})
   #this algorithm follows exactly from the elementary school addition algorithm.
   #keep a "borrow" variable around and go from least significant to most significant
   #bits.  Keep a guard digit around to borrow from at the end.
@@ -35,7 +35,7 @@ end
   @code :(borrow::UInt64 = 0)
   for (idx = l:-1:1)
     @code quote
-      @inbounds (b.a[$idx] -= a.a[$idx])  #perform the subtraction
+      @inbounds (b.a[$idx] = a.a[$idx] - b.a[$idx])  #perform the subtraction
       @inbounds if (b.a[$idx] > a.a[$idx])  #check to see if we underflowed
                   @inbounds b.a[$idx] -= borrow  #go ahead and subtract the previous digit's carry.
                   borrow = o64#reset the current borrow to one
