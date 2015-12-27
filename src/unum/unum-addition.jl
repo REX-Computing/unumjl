@@ -67,8 +67,31 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   ############################################
   #deal with mmr collapsing.
   if (is_mmr(a))
-    if (should_calculate(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK))
-      mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
+    if should_calculate(b, LOWER_UNUM)
+      #check to see if we're onesided.
+      if is_onesided(b)
+        if (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK)
+          #just keep it as MMR because there is no change (a can't be infinite)
+          mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
+          ignore_side!(b, LOWER_UNUM)
+        elseif (a.flags & UNUM_SIGN_MASK == UNUM_SIGN_MASK)
+          #take the negative inf case.
+          mmr!(b, UNUM_SIGN_MASK, LOWER_UNUM)
+          #set the upper unum to be the exact sum of maxreal and the value.
+          mmr!(b, UNUM_SIGN_MASK, UPPER_UNUM)
+          
+          set_twosided!(b)
+          ignore_both_sides!(b)
+        else
+        end
+      end
+
+      if (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK)
+        #check to see if they're pointing in the same direction.
+        mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
+      else
+        #
+      end
       ignore_side!(b, LOWER_UNUM)
     end
     if (should_calculate(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper.flags & UNUM_SIGN_MASK))

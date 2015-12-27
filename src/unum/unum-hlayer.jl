@@ -18,6 +18,7 @@
     is_neg_inf(x) && (print(io, "-inf(Unum{$ESS,$FSS}$gflagstring)"); return)
     is_neg_mmr(x) && (print(io, "-mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
     is_neg_sss(x) && (print(io, "-sss(Unum{$ESS,$FSS}$gflagstring)"); return)
+    is_zero(x)    && (print(io, "zero(Unum{$ESS,$FSS})"); return)
     isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS}$gflagstring)");return)
 
     fsize_string = @sprintf "0x%04X" x.fsize

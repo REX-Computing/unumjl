@@ -33,6 +33,8 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
   # TODO:  TURN THIS INTO A GENERATED FUNCTION
   ############################################
 
+  println("why the hell am I here")
+
   #check for NaN, because that doesn't really follow the rules you expect
   is_nan(x) && return nan(Unum{DEST_ESS, DEST_FSS})
 
