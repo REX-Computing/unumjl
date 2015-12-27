@@ -101,8 +101,8 @@ Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
     ((b.fraction < a.fraction) != _a_pos) && return false
 
     #####################################################
-    (_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : maxfsize) :
-               cmpplusbit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : maxfsize)
+    (_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : $maxfsize) :
+               cmpplusubit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : $maxfsize)
   end
 end
 
