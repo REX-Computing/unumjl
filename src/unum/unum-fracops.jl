@@ -30,6 +30,7 @@ end
   end
   @code :(nothing)
 end
+
 @generated function copy_frac!{ESS,FSS}(a::UInt64, x::Gnum{ESS,FSS})
   FSS > 6 && throw(ArgumentError("FSS = $FSS > 6 must copy_frac! using an ArrayNum"))
   :(x.fraction = a; nothing)

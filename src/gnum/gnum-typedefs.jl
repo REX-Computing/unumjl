@@ -11,27 +11,38 @@ doc"""
   output the whole thing as a single UType value as needed (Unum or Ubound)
 
   the Gnum value keeps a 'scratchpad' variable to store intermediate calculations
-  for any expressions.  The array value for this is pre-allocated and global.
-  Although this scratchpad shouldn't be considered to be tied to each register,
+  for any expressions.  The array value for this is pre-allocated, global, and
+  extra-long to keep additional precision for fused operations.  In 'reality',
+  although this scratchpad shouldn't be considered to be tied to each register,
   it is convenient to include it with the Gnum so that it is strongly typed.
+
+  The Gnum value also keeps a 'buffer' variable to store calculated unums for
+  certain operations.  This variable is DISTINCT from the 'scratchpad' in that
+  it does NOT carry extra precision, and should only be used when operations
+  need to use an intermediate value before or after a calculation.  For example,
+  mmr - (val) requires calculating a lower bound starting with bigexact.  Or
+  multiplication of ubounds requires storing unum variables for comparison.
 """
 immutable Gnum{ESS,FSS}
   lower::Unum{ESS,FSS}
   upper::Unum{ESS,FSS}
 
-  #although there only ever needs to one scratchpad, the difficulty is that it
-  #is nearly impossible to type this correctly.  We'll create the scratchpad
-  #object to be tied to the Gnum calculation layer.
-
+  #the scratchpad is a place to store intermediate values in a calculation.  The
+  #scratchpad has access to an extra-long fraction array.
   scratchpad::Unum{ESS,FSS}
+
+  #the buffer is a second place to store values, but these values will not be
+  #changed across a calculation.  For example, when checking min/max bounds for
+  #multiplication, or queuing a value for a mmr calculation.
+  buffer::Unum{ESS,FSS}
 end
 
 @generated function Base.zero{ESS,FSS}(t::Type{Gnum{ESS,FSS}})
   if (FSS < 7)
-    :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS})))
+    :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS})))
   else
     :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}),
-      Unum{ESS,FSS}(z16, z16, z16, ArrayNum{FSS}(GNUM_SCRATCHPAD), z64)))
+      Unum{ESS,FSS}(z16, z16, z16, ArrayNum{FSS}(GNUM_SCRATCHPAD), z64), zero(Unum{ESS,FSS})))
   end
 end
 
@@ -62,6 +73,7 @@ GNUM_ZERO_MASK = 0x0100
 const LOWER_UNUM = Val{:lower}
 const UPPER_UNUM = Val{:upper}
 const SCRATCHPAD = Val{:scratchpad}
+const BUFFER = Val{:buffer}
 
 #create a global scratchpad array.
 const GLOBAL_SCRATCHPAD_SIZE = __cell_length(11) + (__cell_length(11) >> 1)

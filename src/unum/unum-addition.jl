@@ -43,8 +43,6 @@ end
 #a function which checks for special values that will override actually performing
 #calculations.
 function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
-
-
   ############################################
   # deal with NaNs.
   #if our addend is nan, then set the addend to nan.
@@ -76,29 +74,79 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
           #just keep it as MMR because there is no change (a can't be infinite)
           mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
           ignore_side!(b, LOWER_UNUM)
-        elseif (a.flags & UNUM_SIGN_MASK == UNUM_SIGN_MASK)
-          #take the negative inf case.
+        elseif (is_zero(b, LOWER_UNUM))
+          mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
+          ignore_side!(b, LOWER_UNUM)
+        elseif (is_mmr(b, LOWER_UNUM))
+          #mmr - mmr == (-mmr, mmr)
           mmr!(b, UNUM_SIGN_MASK, LOWER_UNUM)
-          #set the upper unum to be the exact sum of maxreal and the value.
-          mmr!(b, UNUM_SIGN_MASK, UPPER_UNUM)
-
+          mmr!(b, z16, UPPER_UNUM)
+          set_twosided!(b)
+          ignore_both_sides!(b)
+        elseif (is_negative(a))
+          #take the negative mmr case.
+          #set the buffer to be the big_exact value.
+          big_exact!(b.buffer, UNUM_SIGN_MASK)
+          #set the righthandside value of b to the lower value.
+          #NB:  Consider allowing "cross calculations" where this copying step
+          # doesn't have to happen
+          copy_unum!(b.lower, b.upper)
+          __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
+          make_ulp!(b.upper)
+          #reset the lower bound to be mmr.
+          mmr!(b, UNUM_SIGN_MASK, LOWER_UNUM)
           set_twosided!(b)
           ignore_both_sides!(b)
         else
+          #take the positive mmr case.
+          #set the buffer to be positive big_exact
+          big_exact!(b.buffer, z16)
+          __exact_arithmetic_subtraction!(b.buffer, b, LOWER_UNUM)
+          make_ulp!(b.lower)
+          #reset the upper bound to be mmr.
+          mmr!(b, z16, UPPER_UNUM)
+          set_twosided!(b)
+          ignore_both_sides!(b)
+        end
+      else
+        #we have a two-sided unum and we're looking at the lower unum...
+        #if a is neg_mmr, then this will be bashed and be turned into neg_mmr.
+        if is_negative(a)
+          mmr!(b, UNUM_SIGN_MASK, LOWER_UNUM)
+          ignore_side!(b, LOWER_UNUM)
+        elseif is_positive(b.lower) || is_zero(b, LOWER_UNUM)
+          #sweep the entire thing as positive_mmr.
+          mmr!(b, z16, LOWER_UNUM)
+          set_onesided!(b)
+          ignore_side!(b, LOWER_UNUM)
+        else
+          #set the buffer to be big_exact.
+          big_exact!(b.buffer, z16)
+          __exact_arithmetic_subtraction(b.buffer, b.lower)
+          make_ulp!(b.lower)
+          mmr!(b, z16, UPPER_UNUM)
+          ignore_both_sides!(b, LOWER_UNUM)
         end
       end
-
-      if (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK)
-        #check to see if they're pointing in the same direction.
-        mmr!(b, a.flags & UNUM_SIGN_MASK, LOWER_UNUM)
-      else
-        #
-      end
-      ignore_side!(b, LOWER_UNUM)
     end
-    if (should_calculate(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper.flags & UNUM_SIGN_MASK))
-      mmr!(b, a.flags & UNUM_SIGN_MASK, UPPER_UNUM)
-      ignore_side!(b, UPPER_UNUM)
+    if (should_calculate(b, UPPER_UNUM))
+      if is_positive(a)
+        #we're looking at a two-sided unum at the upper unum.
+        mmr!(b, UNUM_SIGN_MASK, UPPER_UNUM)
+        ignore_side!(b, UPPER_UNUM)
+      elseif is_negative(b.upper) || is_zero(b, UPPER_UNUM)
+        #sweep the whole thing as negative_mmr.
+        mmr!(b, UNUM_SIGN_MASK, LOWER_UNUM)
+        set_onesided!(b)
+        ignore_side!(b, LOWER_UNUM)
+      else
+        #set the buffer to be big_exact.
+        big_exact!(b.buffer, UNUM_SIGN_MASK)
+        __exact_arithmetic_subtraction(b.buffer, b.upper)
+        make_ulp!(b.upper)
+        mmr!(b, UNUM_SIGN_MASK, LOWER_UNUM)
+        ignore_both_sides!(b, LOWER_UNUM)
+      end
     end
   end
   if (should_calculate(b, LOWER_UNUM) && is_mmr(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK))

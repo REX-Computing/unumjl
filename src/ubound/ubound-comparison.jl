@@ -18,13 +18,17 @@ function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
   if low_exact
     (a.lower != b.lower) && return false
   else
+    println("testing lower bound")
     cmp_lower_bound(a.lower, a.upper) && return false
+    println("lower bound ok")
   end
 
   if high_exact
     (a.upper != b.upper) && return false
   else
+    println("testing upper bound")
     cmp_upper_bound(a.lower, a.upper) && return false
+    println("upper bound ok")
   end
 
   return true
