@@ -121,7 +121,7 @@ function emit_data{ESS,FSS}(src::Gnum{ESS,FSS})
   else
     #this time, we know it's a ubound.
     #prepare the result by allocating.
-    res = Ubound{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}))
+    res = Ubound{ESS,FSS}()
     #put the value in the allocated space.
     get_ubound!(src, res)
   end

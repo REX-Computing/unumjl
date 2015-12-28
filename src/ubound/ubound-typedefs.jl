@@ -16,6 +16,11 @@ function call{ESS,FSS}(::Type{Ubound{ESS,FSS}}, x::UnumSmall{ESS,FSS}, y::UnumSm
   UboundSmall{ESS,FSS}(x, y)
 end
 
+#an empty constructor defaults to the extended real line.
+function call{ESS,FSS}(::Type{Ubound{ESS,FSS}})
+  Ubound{ESS,FSS}(neg_inf(Unum{ESS,FSS}), pos_inf(Unum{ESS,FSS}))
+end
+
 function __check_UboundLarge{ESS,FSS}(lower::UnumLarge{ESS,FSS}, upper::UnumLarge{ESS,FSS})
   (lower < upper) || throw(ArgumentError("in a Ubound, lower must be smaller than upper"))
 end

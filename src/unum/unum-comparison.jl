@@ -91,24 +91,108 @@ Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
     (decode_exp(b) < decode_exp(a)) && return _a_pos
     #check fractions.
 
+
     #if the fractions are equal, then the condition is satisfied only if a is
     #an ulp and b is exact.
-    (b.fraction == a.fraction) && return (is_exact(b) && is_ulp(a) && _a_pos)
+    (b.fraction == a.fraction) && return ((is_exact(b) && is_ulp(a) && _a_pos) ||
+       (is_ulp(b) && is_exact(a) && !_a_pos))
     #check the condition that b.fraction is less than a.fraction.  This should
     #be xor'd to the _a_pos to give an instant failure condition.  Eg. if we are
     #positive, then b > a means failure.
 
-    ((b.fraction < a.fraction) != _a_pos) && return false
+    (b.fraction < a.fraction) && (!_a_pos) && return false
+    (a.fraction < b.fraction) && (_a_pos) && return false
 
+    true
     #####################################################
-    (_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : $maxfsize) :
-               cmpplusubit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : $maxfsize)
+    #=(_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : $maxfsize) :
+               cmpplusubit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : $maxfsize)=#
   end
 end
 
 #hopefully the julia compiler knows what to do here.
 function <{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   return b > a
+end
+
+###############################################################################3
+#specialized comparison functions
+
+#compare lower bounds without actually computing it.  Precondition:  a and b are
+#both ulps (and not exact), a and b have the same sign.
+function cmp_lower_bound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  if is_positive(a)
+    cmp_exact_value(a,b)
+  else
+    cmp_bounding_exact(a,b)
+  end
+end
+
+#similar to the previous function, Precondition:  A and b are both ulps, and
+#a and b have the same sign.
+function cmp_upper_bound{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  if is_negative(a)
+    cmp_exact_value(a, b)
+  else
+    cmp_bounding_exact(a,b)
+  end
+end
+
+#looks at the exact values of two thingies.
+function cmp_exact_value{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  #mercilessly destroy strange subnormals in a or b.
+  is_strange_subnormal(a) && resolve_subnormal!(a)
+  is_strange_subnormal(b) && resolve_subnormal!(b)
+  #now we have unique esize; exponent pairs, as well as fractions.
+  a.esize == b.esize || return false
+  a.exponent == b.exponent || return false
+  a.fraction == b.fraction || return false
+  return true #aka a == b
+end
+
+@gen_code function cmp_bounding_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+  @code quote
+    is_strange_subnormal(a) && resolve_subnormal!(b)
+    is_strange_subnormal(b) && resolve_subnormal!(b)
+    #we'll need to decode_exponent
+    a.esize == b.esize || return false
+    a.exponent == b.exponent || return false
+  end
+  if FSS < 7
+    @code :(__add_ubit(a.fraction, a.fsize) == __add_ubit(b.fraction, b.fsize))
+  else
+    #for longer fractions we can't do this.  Instead, we will use a clever
+    #heuristic.  1) from bits 0...lower_fsize, b != a disqualifies.
+    #2) from bits lower_fsize...higher_fsize, if b has a lower fsize, then a
+    #must be all ones.
+    @code quote
+      a_middle::UInt16 = (a.fsize >> 6) + 1
+      b_middle::UInt16 = (b.fsize >> 6) + 1
+      l_middle::UInt16 = min(b_middle, a_middle)
+      l_mask::UInt16 = top_mask(l_middle)
+      h_middle::UInt16 = max(b_middle, a_middle)
+      h_mask::UInt16 = top_mask(h_middle)
+      longfrac = (a_middle > b_middle) ? a : b
+    end
+    for idx = __cell_length(FSS):-1:1
+      @code quote
+        if ($idx < l_middle)
+          a.fraction.a[$idx] == b.fraction.a[$idx] || return false
+        elseif ($idx == l_middle)
+          (a.fraction.a[$idx] & l_mask) == (b.fraction.a[$idx] & l_mask) || return false
+          if ($idx == h_middle)
+            m_mask::UInt16 = ~l_mask & h_mask
+            longfrac.fraction.a[$idx] & m_mask == m_mask || return false
+          end
+        elseif ($idx < h_middle)
+          longfrac.fraction.a[$idx] == f64 || return false
+        elseif ($idx == h_middle)
+          longfrac.fraction.a[$idx] & m_mask == m_mask || return false
+        end
+      end
+    end
+    return true
+  end
 end
 
 #=

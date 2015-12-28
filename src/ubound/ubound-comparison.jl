@@ -9,22 +9,22 @@ import Base: ==, <, >
 function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
   #first, check to make sure that the left and right sides of the unum have the
   #same exact vs. inexact character.
-  low_exact = is_exact(a.lowbound)
-  high_exact = is_exact(a.highbound)
-  (low_exact != is_exact(b.lowbound)) && return false
-  (high_exact != is_exact(b.highbound)) && return false
+  low_exact = is_exact(a.lower)
+  high_exact = is_exact(a.upper)
+  (low_exact != is_exact(b.lower)) && return false
+  (high_exact != is_exact(b.upper)) && return false
 
   #in the case they're exact then checking the end bounds is straightforward equality.
   if low_exact
-    (a.lowbound != b.lowbound) && return false
+    (a.lower != b.lower) && return false
   else
-    (prev_exact(a.lowbound) != prev_exact(b.lowbound)) && return false
+    cmp_lower_bound(a.lower, a.upper) && return false
   end
 
   if high_exact
-    (a.highbound != b.highbound) && return false
+    (a.upper != b.upper) && return false
   else
-    (next_exact(a.highbound) != next_exact(a.highbound)) && return false
+    cmp_upper_bound(a.lower, a.upper) && return false
   end
 
   return true

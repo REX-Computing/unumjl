@@ -66,7 +66,7 @@ end
   for (idx = l:-1:1)
     @code quote
       #figure out what cellcarry should be.
-      cellcarry += (idx == middle_cell) * ubitform
+      cellcarry += ($idx == middle_cell) * ubitform
       @inbounds (a.a[$idx] += cellcarry)     #perform the addition
       @inbounds (cellcarry != 0) && (a.a[$idx] == 0) && (cellcarry = o64)
     end

@@ -43,6 +43,8 @@ end
 #a function which checks for special values that will override actually performing
 #calculations.
 function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
+
+
   ############################################
   # deal with NaNs.
   #if our addend is nan, then set the addend to nan.
@@ -79,7 +81,7 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
           mmr!(b, UNUM_SIGN_MASK, LOWER_UNUM)
           #set the upper unum to be the exact sum of maxreal and the value.
           mmr!(b, UNUM_SIGN_MASK, UPPER_UNUM)
-          
+
           set_twosided!(b)
           ignore_both_sides!(b)
         else
@@ -110,8 +112,6 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   # deal with zeros.
   #if our addend is zero, then we just leave both sides alone.
   is_zero(a) && (ignore_both_sides!(b); return)
-
-  #if either side is zero, then copy the addend in to the Gnum.
   is_zero(b, LOWER_UNUM) && should_calculate(b, LOWER_UNUM) && (put_unum!(a, b, LOWER_UNUM); ignore_side!(b, LOWER_UNUM))
   is_zero(b, UPPER_UNUM) && should_calculate(b, UPPER_UNUM) && (put_unum!(a, b, UPPER_UNUM); ignore_side!(b, UPPER_UNUM))
 end

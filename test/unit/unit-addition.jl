@@ -58,6 +58,13 @@ wthr = convert(Unum{4,6}, 3)
 @test wone + wone == wtwo
 @test wtwo + wone == wthr
 
+################################################################################
+#unit tests discovered through debugging.
+
+ten = convert(Unum{3,6}, 10)
+fifteen = convert(Unum{3,6}, 15)
+@test calculate(ten + fifteen) == 25
+
 #=
 =======
 #double cell, double zero

@@ -14,7 +14,7 @@
 end
 
 @generated function set_frac_top!{ESS,FSS}(x::Unum{ESS,FSS})
-  if (FSS < 6)
+  if (FSS < 7)
     :(x.fraction |= 0x8000_0000_0000_0000)
   else
     :(x.fraction[1] |= 0x8000_0000_0000_0000)
