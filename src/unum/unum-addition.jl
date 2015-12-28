@@ -149,10 +149,51 @@ function __addition_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
       end
     end
   end
-  if (should_calculate(b, LOWER_UNUM) && is_mmr(b, LOWER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK))
+
+  if (should_calculate(b, LOWER_UNUM) && is_mmr(b, LOWER_UNUM))
+    if is_onesided(b)
+      if (a.flags & UNUM_SIGN_MASK == b.lower.flags & UNUM_SIGN_MASK) || is_zero(a)
+        nothing
+      elseif (is_positive(a))  #a is positive and our mmr is negative.
+        big_exact!(b.buffer, UNUM_SIGN_MASK)
+        copy_unum!(a, b.upper)
+        __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
+        make_ulp!(b.upper)
+        mmr!(b, UNUM_SIGN_MASK, LOWER_UNUM)
+        set_twosided!(b)
+        ignore_both_sides!(b)
+      else
+        big_exact!(b.buffer)
+        copy_unum!(a, b.lower)
+        __exact_arithmetic_subtraction!(b.buffer, b, LOWER_UNUM)
+        make_ulp!(b.lower)
+        mmr!(b, z16, UPPER_UNUM)
+        set_twosided!(b)
+        ignore_both_sides!(b)
+      end
+    elseif is_positive(b, LOWER_UNUM)
+      #positive mmr on the lower side. (upper side must be inf.)
+      big_exact!(b.buffer, z16)
+      copy_unum!(a, b.lower)
+      __exact_arithmetic_subtraction!(b.buffer, b, LOWER_UNUM)
+      make_ulp!(b.lower)
+      set_twosided!(b)
+    end
+      #negative mmr on the lower side...  Ignore it.
     ignore_side!(b, LOWER_UNUM)
   end
-  if (should_calculate(b, UPPER_UNUM) && is_mmr(b, UPPER_UNUM) && (a.flags & UNUM_SIGN_MASK == b.upper.flags & UNUM_SIGN_MASK))
+
+  if (should_calculate(b, UPPER_UNUM) && is_mmr(b, UPPER_UNUM))
+    if (a.flags & UNUM_SIGN_MASK == b.upper.flags & UNUM_SIGN_MASK) || iszero(a)
+      nothing
+    elseif is_positive(a) #then negative_mmr on the upper side (lower side must be neg_inf.)
+      big_exact!(b.buffer, UNUM_SIGN_MASK)
+      copy_unum!(a, b.upper)
+      __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
+      make_ulp!(b.upper)
+      set_twosided!(b)
+    end
+    #positive_mmr on the upper side... ignore it.
     ignore_side!(b, UPPER_UNUM)
   end
 
