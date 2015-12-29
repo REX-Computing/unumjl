@@ -84,8 +84,13 @@ function __multiplication_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS
   end
 end
 
-function __signless_multiply!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-  nan!(b)
+@gen_code function __signless_multiply!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  if FSS < 6
+  elseif FSS == 6
+    @code quote
+    end
+  else
+  end
 end
 
 
@@ -110,70 +115,6 @@ function __lower_scan(a::Array{UInt32, 1}, b::Array{UInt32, 1}, l::UInt16)
   return z16
 end
 
-# chunk_mult handles simply the chunked multiply of two superints
-function __chunk_mult(a::VarInt, b::VarInt)
-  #note that frag_mult fails for absurdly high length integer arrays.
-  l::UInt16 = length(a) << 1
-
-  #take these two UInt64 arrays and reinterpret them as UInt32 arrays
-  a_32 = reinterpret(UInt32, (l == 2) ? [a] : a)
-  b_32 = reinterpret(UInt32, (l == 2) ? [b] : b)
-
-  #scan the lower bits to see if we are ulp.
-  ulp_flag::UInt16 = __lower_scan(a_32, b_32, l)
-
-  #the scratchpad must have an initial segment to determine carries.
-  scratchpad = zeros(UInt32, l + 1)
-  #create an array for carries.
-  carries    = zeros(UInt32, l)
-  #populate the column just before the left carry. first indexsum is length(a_32)
-  for (aidx = 1:(l - 1))
-    #skip this if either is a zero
-    (a_32[aidx] == 0) || (b_32[l-aidx] == 0) && continue
-
-    #do a mulitply of the two numbers into a 64-bit integer.
-    temp_res::UInt64 = a_32[aidx] * b_32[l - aidx]
-    #in this round we just care about the high 32-bit register
-    temp_res_high::UInt32 = (temp_res >> 32)
-
-    scratchpad[1] += temp_res_high
-    (scratchpad[1] < temp_res_high) && (carries[1] += 1)
-  end
-
-  #now proceed with the rest of the additions.
-  for aidx = 1:l
-    a_32[aidx] == 0 && continue
-    for bidx = (l + 1 - aidx):l
-      b_32[bidx] == 0 && continue
-
-      temp_res = a_32[aidx] * b_32[bidx]
-      temp_res_low::UInt32 = temp_res
-      temp_res_high = (temp_res >> 32)
-
-      scratchindex = aidx + bidx - l
-
-      scratchpad[scratchindex] += temp_res_low
-      (temp_res_low > scratchpad[scratchindex]) && (carries[scratchindex] += 1)
-
-      scratchpad[scratchindex + 1] += temp_res_high
-      (temp_res_high > scratchpad[scratchindex + 1]) && (carries[scratchindex + 1] += 1)
-    end
-  end
-
-  #go through and resolve the carries.
-  for idx = 1:length(carries)
-    scratchpad[idx + 1] += carries[idx]
-    #don't worry, this is mathematically forbidden from tripping on the last carry.
-    (scratchpad[idx + 1] < carries[idx]) && (carries[idx + 1] += 1)
-  end
-
-  #check to make sure the lowest register in the scratchpad is zero.
-  (scratchpad[1] != 0) && (ulp_flag |= UNUM_UBIT_MASK)
-
-  (l == 2) && return ((UInt64(scratchpad[3]) << 32) | scratchpad[2], ulp_flag)
-
-  (reinterpret(UInt64, scratchpad[2:end]), ulp_flag)
-end
 
 #amends a fraction to a subnormal number if necessary.
 function __amend_to_subnormal{ESS,FSS}(T::Type{Unum{ESS,FSS}}, fraction::UInt64, unbiased_exp::Int, flags::UInt16)

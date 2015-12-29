@@ -88,3 +88,49 @@ end
   end
   @code :(a)
 end
+
+doc"""
+`__chunk_mult_small(::UInt64, ::UInt64)` performs a left-aligned multiplication
+on two 64-bit integers, discarding the rightmost 32 bits of the starting value.
+this is useful for multiplication of unums with FSS < 6.  The result will be
+left-shifted, and all bits will be passed on and *not* masked out - the remaining
+bits at the bottom of the number should be used to analyze for whether or not
+the result is an ulp.
+"""
+function __chunk_mult_small(a::UInt64, b::UInt64)
+  (a >> 32) * (b >> 32)
+end
+
+doc"""
+`__chunk_mult(::UInt64, ::UInt64)` performs a left-aligned multiplication on two
+64-bit integers by breaking them down into 32-bit integers and doing standard
+'two-digit' multiplication on these.  The right-most digits of the result are
+discarded.  The ordered pair (result, trash) is returned, where trash contains
+trailing digits that might be useful for a fused-multiply-add.
+"""
+#                AH       AL
+#             *  BH       BL
+#             ---------------
+#                     (AL BL)
+#                  (AH BL)
+#                  (AL BH)
+#               (AH BH)
+#             ---------------
+#               RESULT TRASH
+#
+function __chunk_mult(a::UInt64, b::UInt64)
+  ah = a >> 32
+  bh = b >> 32
+  al = a & 0x0000_0000_FFFF_FFFF
+  bl = b & 0x0000_0000_FFFF_FFFF
+
+  #this formula recapitulates the diagram shown above
+  result = ((al * bl >> 32) + (ah * bl) + (al * bh)) >> 32 + (ah * bh)
+  trash = (al * bl) + ((ah * bl) << 32) + ((al * bh) << 32)
+
+  (result, trash)
+end
+
+# chunk_mult handles simply the chunked multiply of two superints
+@gen_code function __chunk_mult!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, c::ArrayNum{FSS})
+end
