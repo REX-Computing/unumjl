@@ -58,7 +58,36 @@ end
 end
 
 @generated function __inexact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-  :(nan!(b))
+  if (side == :lower)
+    quote
+      copy_unum!(a, b.buffer)
+      if (is_positive(a))
+        is_onesided(b) && copy_unum!(b.lower, b.upper)
+        #the upper_exact function mutates the buffer contents so we use the lower first.
+        __exact_arithmetic_subtraction!(b.buffer, b, LOWER_UNUM)
+        if (is_onesided(b))
+          upper_exact!(b.buffer)
+          __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
+
+          ignore_side!(b, UPPER_UNUM)
+          set_twosided!(b)
+        end
+      else
+        #the lower_exact function mutates the buffer contents so we do the upper first.
+        if (is_onesided(b))
+          copy_unum!(b.lower, b.upper)
+          __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
+
+          ignore_side!(b, UPPER_UNUM)
+          set_twosided!(b)
+        end
+        lower_exact!(b.buffer)
+        __exact_arithmetic_subtraction!(b.buffer, b, LOWER_UNUM)
+      end
+    end
+  else
+    :(nan!(b))
+  end
 end
 
 #performs an exact arithmetic subtraction algorithm.  The assumption here is

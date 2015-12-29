@@ -169,20 +169,20 @@ function lower_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
 end
 
 doc"""
-  upper_bound_exact! converts x into the unum which is the exact number that
+  upper_exact! converts x into the unum which is the exact number that
   upper bounds it.
 """
-function upper_bound_exact!{ESS,FSS}(x::Unum{ESS,FSS})
+function upper_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   __is_nan_or_inf(x) && (nan!(x); return)
   is_exact(x) && return x
   return is_negative(x) ? make_exact!(x) : __outward_exact!(x)
 end
 
 doc"""
-  lower_bound_exact! converts x into the unum which is the exact number that
+  lower_exact! converts x into the unum which is the exact number that
   upper bounds it.
 """
-function lower_bound_exact!{ESS,FSS}(x::Unum{ESS,FSS})
+function lower_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   __is_nan_or_inf(x) && (nan!(x); return)
   is_exact(x) && return x
   return is_negative(x) ? __outward_exact!(x) : make_exact!(x)
