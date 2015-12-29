@@ -51,6 +51,16 @@ export additiveinverse!
   end
 end
 
+doc"""
+  Unums.match_fsize!{ESS,FSS} takes the location of fsize and moves it over to dest.
+
+  The exponent on src should less than or equal to the exponent on dest.
+"""
+function match_fsize!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
+  src_exp::Int64 = decode_exp(src)
+  dest_exp::Int64 = decode_exp(dest)
+  dest.fsize = UInt16(min(src.fsize + dest_exp - src_exp, max_fsize(FSS)))
+end
 #=
 #note the difference between "more/less", and "next/prev" - next/prev refers
 #to position along the number line, "more/less" refers to magnitude along the

@@ -210,10 +210,70 @@ end
 @generated function __arithmetic_addition!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
   quote
     if is_ulp(a)
-      nan!(b)
+      if is_exact(b.$side)
+        #we're going to swap operation order.  Is there maybe a better way to do this?
+        copy_unum!(b.$side, b.buffer)
+        copy_unum!(a, b.$side)
+        __exact_arithmetic_addition!(b.buffer, b, Val{side})
+      else
+        __inexact_arithmetic_addition!(a, b, Val{side})
+      end
     else
       __exact_arithmetic_addition!(a, b, Val{side})
     end
+  end
+end
+
+@generated function __inexact_arithmetic_addition!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  if (side == :lower)
+    quote
+      promoted::Bool
+      if is_positive(a)
+        #the lower value is going to be
+        make_exact!(b.lower)
+        __exact_arithmetic_addition!(a, b, LOWER_UNUM)
+        make_ulp!(b.lower)
+        is_mmr(b.lower) && mmr!(b, b.lower.flags, LOWER_UNUM)
+        #a positive, b positive.
+        if is_onesided(b) & !(is_mmr(b, LOWER_UNUM))
+          copy_unum!(b.lower, b.upper)
+          is_strange_subnormal(b.upper) && __resolve_subnormal!(b.upper)
+          is_strange_subnormal(a) && __resolve_subnormal!(a)
+          promoted = !is_mmr(b, LOWER_UNUM) && __add_ubit_frac!(b.upper)
+          promoted && ((b.upper.esize, b.upper.exponent) = encode_exp(decode_exp(b.upper) + 1))
+          match_fsize!(a, b.upper)
+
+          (__is_nan_or_inf(b.upper) || is_mmr(b.upper)) && mmr!(b, b.upper.flags, UPPER_UNUM)
+
+          ignore_side!(b, UPPER_UNUM)
+          set_twosided!(b)
+        end
+      else
+        #the lower bound is created like the upper bound above.
+        make_exact!(b.lower)
+        __exact_arithmetic_addition!(a, b, LOWER_UNUM)
+        make_ulp!(b.lower)
+        is_mmr(b.lower) && mmr!(b, b.lower.flags, LOWER_UNUM)
+
+        #before we make any changes to lower, let's check to see if we also
+        #need to create an upper variable.
+        if (is_onesided(b) & !is_mmr(b, LOWER_UNUM))
+          copy_unum!(b.lower, b.upper)
+          ignore_side!(b, UPPER_UNUM)
+          set_twosided!(b)
+        end
+
+        is_strange_subnormal(b.lower) && __resolve_subnormal!(b.lower)
+        is_strange_subnormal(a) && __resolve_subnormal!(a)
+        promoted = !is_mmr(b, LOWER_UNUM) && __add_ubit_frac!(b.lower)
+        promoted && ((b.lower.esize, b.lower.exponent) = encode_exp(decode_exp(b.lower) + 1))
+        match_fsize!(a, b.lower)
+        (__is_nan_or_inf(b.lower) || is_mmr(b.lower)) && mmr!(b, b.lower.flags, LOWER_UNUM)
+        ignore_side!(b, UPPER_UNUM)
+      end
+    end
+  elseif (side == :upper)
+    :(nan!(b))
   end
 end
 
@@ -307,6 +367,7 @@ end
     #nb:  the is_inf call here is the UNUM is_inf, which checks across all the
     #bits, not the gnum is_inf, which only looks at the flag in the flags holder.
     __is_nan_or_inf(b.scratchpad) && @preserve_sflags b mmr!(b, b.scratchpad.flags & UNUM_SIGN_MASK, SCRATCHPAD)
+    is_mmr(b.scratchpad) && @preserve_sflags b mmr!(b, b.scratchpad.flags & UNUM_SIGN_MASK, SCRATCHPAD)
 
     copy_unum_with_gflags!(b.scratchpad, b.$side)
   end

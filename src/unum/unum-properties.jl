@@ -174,8 +174,9 @@ export is_subnormal, is_exp_zero
 export is_frac_zero, is_zero, is_sss, is_pos_sss, is_neg_sss
 export is_mmr, is_pos_mmr, is_neg_mmr
 
+make_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags &= ~UNUM_UBIT_MASK; x)
 make_ulp!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags |= UNUM_UBIT_MASK; x)
-export make_ulp!
+export make_exact!, make_ulp!
 #=
 function width{ESS,FSS}(x::Unum{ESS,FSS})
   is_exact(x) && return zero(Unum{ESS,FSS})
