@@ -44,6 +44,7 @@ end
   quote
     if is_ulp(a)
       if is_exact(b.$side)
+        #we're going to swap operation order.  Is there maybe a better way to do this?
         copy_unum!(b.$side, b.buffer)
         copy_unum!(a, b.$side)
         __exact_arithmetic_subtraction!(b.buffer, b, Val{side})
@@ -56,62 +57,25 @@ end
   end
 end
 
-#NB.  Because of the "switching" behavior of arithmetic subtraction, the lower operation
-#leaves the original value of "lower" in the buffer.
 @generated function __inexact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-  if (side == :lower)
-    quote
-      promoted::Bool = false
-      if is_positive(a)
-        #then a is positive and b is negative.  The lower value is going to be exact(a) - exact(b); the
-        #upper value is going to be ulp'd a - ulp'd b; if we are a twosided value, then the lower value
-        #will influence the upper value.
-        copy_unum!(b.lower, is_onesided(b) ? b.upper : b.buffer)
-        make_exact!(b.lower)
-        __exact_arithmetic_subtraction!(a, b, LOWER_UNUM)
-        make_ulp!(b.lower)
-        clear_gflags!(b.lower)
-        if is_onesided(b)
-          copy_unum!(a, b.buffer)
-          clear_gflags!(b.upper)
-          promoted = __add_ubit_frac!(b.buffer)
-          #println("promoted? ", promoted, " b: ", bits(b.buffer))
-          promoted && ((b.buffer.esize, b.buffer.exponent) = encode_exp(decode_exp(b.buffer) + 1))
-          __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
-          #before we make this an ulp, we have to figure out what the correct ubit
-          #will be.
-          #match_fsize!(a, b.buffer)
-          #make_ulp!(b.buffer)
-          #copy_unum!(b.buffer, b.upper)
-          ignore_side!(b, UPPER_UNUM)
-          set_twosided!(b)
-        end
-      else
-        nan!(b)
-        #then a is negative and b is positive
-      end
-    end
-  elseif (side == :upper)
-    :(nan!(b))
-  end
+  :(nan!(b))
 end
 
 #performs an exact arithmetic subtraction algorithm.  The assumption here is
-#that a and b have opposite signs and are to be summed.  The sign on b is ignored.
-@gen_code function __exact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+#that a and b have opposite signs and are to be summed as such.  The value in
+#b will be exact, but the value in a may or may not have an ulp.
+@gen_code function __exact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})#for subtraction, resolving strange subnormal numbers as a first step is critical.
   mesize::UInt16 = max_esize(ESS)
-  mfsize::UInt16 = max_fsize(FSS)
-  (FSS < 7) && (mfrac::UInt64 = mask_top(FSS))
-  mexp::UInt64 = max_exponent(ESS)
 
   @code quote
-    #for subtraction, resolving strange subnormal numbers as a first step is critical.
     is_strange_subnormal(a) && (resolve_subnormal!(a))
     is_strange_subnormal(b.$side) && (resolve_subnormal!(b.$side))
 
+    was_ubit::Bool = is_ulp(b.$side)
+
     b_exp::Int64 = decode_exp(b.$side)
     b_dev::UInt64 = is_exp_zero(b.$side) * o64
-    b_ctx::Int64
+    b_ctx::Int64 = b_exp + b_dev
 
     #set the exp and dev values.
     a_exp::Int64 = decode_exp(a)
@@ -125,10 +89,9 @@ end
     vbit::UInt64
     minuend::Unum{ESS,FSS}
     scratchpad_exp::Int64
-    scratchpad_dev::UInt64
     @init_sflags()
 
-    #is a bigger?
+    #is a bigger?  For subtraction, we must do more intricate testing.
     a_bigger = (a_exp > b_exp)
     if (a_exp == b_exp)
       a_bigger = a_bigger || ((a_dev == 0) && (b_dev != 0))
@@ -136,35 +99,34 @@ end
     end
 
     if a_bigger
-      #set the placeholder to the value a.
-      #since we're not going to cross zero, we have to "puff up" b if it's an ulp.
-      promoted::Bool = __add_ubit_frac!(b.$side)
-      b_exp += promoted * 1
-      b_dev = b_dev & (o64 - (promoted * o64))
-      b_ctx = b_exp + b_dev
-
       minuend = a
-      @preserve_sflags b copy_unum!(b.$side, b.scratchpad)
-      b.scratchpad.flags = (b.scratchpad.flags & ~UNUM_SIGN_MASK) | (a.flags & UNUM_SIGN_MASK)
+      @preserve_sflags b begin
+        copy_unum!(b.$side, b.scratchpad)
+        b.scratchpad.flags = a.flags & UNUM_SIGN_MASK
+      end
+      #set the scratchpad exponents to the a settings.
+      b.scratchpad.esize = a.esize
+      b.scratchpad.exponent = a.exponent
       #calculate shift as the difference between a and b
       shift = a_ctx - b_ctx
       #set up the virtual bit.
       vbit = (o64 - a_dev) - ((shift == z64) * (o64 - b_dev))
       scratchpad_exp = a_exp
-      scratchpad_dev = a_dev
     else
-      b_ctx = b_exp + b_dev
-      #set the placeholder to the value b.
       minuend = b.$side
       #move the unum value to the scratchpad.
-      @preserve_sflags b put_unum!(a, b, SCRATCHPAD)
-      b.scratchpad.flags = (b.scratchpad.flags & ~UNUM_SIGN_MASK) | (~a.flags & UNUM_SIGN_MASK) | (b.$side.flags & UNUM_UBIT_MASK)
+      @preserve_sflags b begin
+        put_unum!(a, b, SCRATCHPAD)
+        b.scratchpad.flags = b.$side.flags & UNUM_SIGN_MASK
+      end
+      #set the scratchpad exponents to the b settings.
+      b.scratchpad.esize = b.$side.esize
+      b.scratchpad.exponent = b.$side.exponent
       #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
       #set up the carry bit.
       vbit = (o64 - b_dev) - ((shift == z64) * (o64 - a_dev))
       scratchpad_exp = b_exp
-      scratchpad_dev = b_dev
     end
 
     #rightshift the scratchpad.
@@ -173,12 +135,12 @@ end
     #do the actual subtraction.
     vbit = __carried_diff_frac!(vbit, minuend, b.scratchpad)
 
-    if (vbit == 0) && (b.scratchpad.exponent != 0)
+    #we only need to adjust things if we're not subnormal.
+    if (vbit == 0) && (b.scratchpad.exponent > 0)
       if (scratchpad_exp >= min_exponent(ESS))
-        #shift
-        __leftshift_frac!(b.scratchpad, 1)
+        #shift, only if we're not transitioning into subnormal.
+        b.scratchpad.exponent > 1 && __leftshift_frac!(b.scratchpad, 1)
         #Put in the guard bit.
-
         scratchpad_exp -= 1
       end
 
@@ -190,7 +152,17 @@ end
       end
     end
 
-    copy_unum_with_gflags!(b.scratchpad, b.$side)
+    ############################################################################
+    #now, deal with ubits.
+    if (was_ubit)
+      if is_positive(b.scratchpad) == is_positive(b.$side)
+        b.scratchpad.flags |= UNUM_UBIT_MASK
+      else
+        __inward_ulp!(b.scratchpad)
+      end
+    end
+
+    copy_unum!(b.scratchpad, b.$side)
   end
 end
 

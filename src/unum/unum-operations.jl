@@ -154,6 +154,7 @@ end
 function __outward_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   promoted::Bool = __add_ubit_frac!(x)
   promoted && ((x.esize, x.exponent) = (encode_exp(decode_exp(x) + 1)))
+  x.flags &= ~UNUM_UBIT_MASK
   x
 end
 
@@ -172,7 +173,7 @@ doc"""
   upper bounds it.
 """
 function upper_bound_exact!{ESS,FSS}(x::Unum{ESS,FSS})
-  __is_inf_or_nan(x) && (nan!(x); return)
+  __is_nan_or_inf(x) && (nan!(x); return)
   is_exact(x) && return x
   return is_negative(x) ? make_exact!(x) : __outward_exact!(x)
 end
@@ -182,7 +183,7 @@ doc"""
   upper bounds it.
 """
 function lower_bound_exact!{ESS,FSS}(x::Unum{ESS,FSS})
-  __is_inf_or_nan(x) && (nan!(x); return)
+  __is_nan_or_inf(x) && (nan!(x); return)
   is_exact(x) && return x
   return is_negative(x) ? __outward_exact!(x) : make_exact!(x)
 end
