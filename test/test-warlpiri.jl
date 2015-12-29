@@ -175,7 +175,7 @@ end
 
 include("./warlpiri/test-warlpiri-ordering.jl")
 include("./warlpiri/test-warlpiri-addition.jl")
+include("./warlpiri/test-warlpiri-multiplication.jl")
 #=
-include("test-warlpiri-multiplication.jl")
 include("test-warlpiri-division.jl")
 =#

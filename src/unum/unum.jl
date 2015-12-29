@@ -18,3 +18,4 @@ include("./unum-hlayer.jl")
 
 include("./unum-addition.jl")
 include("./unum-subtraction.jl")
+include("./unum-multiplication.jl")

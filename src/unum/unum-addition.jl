@@ -18,6 +18,7 @@ end
 
 function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   #override
+  clear_ignore_sides!(b)
   __addition_override_check!(a, b)
 
   if should_calculate(b, LOWER_UNUM)
@@ -35,8 +36,6 @@ function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
       __arithmetic_subtraction!(a, b, UPPER_UNUM)
     end
   end
-
-  clear_ignore_sides!(b)
   b
 end
 

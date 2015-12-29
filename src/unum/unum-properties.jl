@@ -127,6 +127,14 @@ Base.issubnormal{ESS,FSS}(x::Unum{ESS,FSS}) = is_subnormal(x)                   
 is_frac_zero{ESS,FSS}(x::Unum{ESS,FSS}) = is_all_zero(x.fraction)
 is_zero{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && is_exact(x) && is_frac_zero(x)
 
+doc"""
+  `is_unit(x::Unum{ESS,FSS})` tests if the value in a unum is +/- 1.  Because of
+  asymmetric exponents, this is slightly more laborious than you might expect:
+  all unums ESS != 0, there are two canonical representations for the value
+  1, one being exponent 0; fraction 0 and the other being subnormal exponent,
+  fraction 0b1000...0000.  When ESS == 0 there is only access to the subnormal
+  form.
+"""
 function is_unit{ESS,FSS}(x::Unum{ESS,FSS})
   #asymmetric exponents make this slightly more laborious than might be expected
   #one is not an ulp, it is exact.

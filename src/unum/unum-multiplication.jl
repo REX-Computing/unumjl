@@ -1,40 +1,95 @@
 #unum-multiplication.jl
 #does multiplication for unums.
 
-function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  #count how many uints go into the unum.
-  #we can break this up into two cases, and maybe merge them later.
-  #remember, a and b must have the same environment.
+doc"""
+  `mul!(::Unum{ESS,FSS}, ::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and
+  multiplies them, storing the result in the third, g-layer
 
-  #some obviously simple checks.
-  #check for nans
-  (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
+  `mul!(::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes a unum and multiplies it into
+  a g-layer storing and overwriting the result.
+  the result and overwriting the second, g-layer
 
-  #evaluate the sign of the result.
-  mult_sign::UInt16 = ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK))
+  In both cases, a reference to the result gnum is returned.
+"""
+function mul!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  put_unum!(b, c)
+  mul!(a, c)
+end
 
-  #check for infinities
-  if (isinf(a))
-    return is_zero(b) ? nan(Unum{ESS,FSS}) : inf(Unum{ESS,FSS}, mult_sign)
+function mul!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
+  #override, based off of easy calculations, but also does
+  #all necessary parity swapping for the system b.
+  clear_ignore_sides!(b)
+  __multiplication_override_check!(a, b)
+
+  #all multiplications ignore the sign of the multiplicand.
+
+  if should_calculate(b, LOWER_UNUM)
+    __signless_multiply!(a, b, LOWER_UNUM)
   end
 
-  if (isinf(b))
-    return is_zero(a) ? nan(Unum{ESS,FSS}) : inf(Unum{ESS,FSS}, mult_sign)
+  if should_calculate(b, UPPER_UNUM)
+    __signless_multiply!(a, b, UPPER_UNUM)
+  end
+  b
+end
+
+function __multiplication_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
+  ############################################
+  # deal with NaNs.
+  #if our multiplicand is nan, then set the product to nan.
+  is_nan(a) && (@scratch_this_operation!(b))
+  is_nan(b) && (ignore_both_sides!(b); return)
+
+  #do the parity swap.
+  if is_negative(a)
+    parity_swap!(b)
   end
 
-  #zero checking
-  (is_zero(a) || is_zero(b)) && return zero(Unum{ESS,FSS})
-  #one checking
-  (is_unit(a)) && return (unum_unsafe(b, (b.flags & UNUM_UBIT_MASK) | mult_sign))
-  (is_unit(b)) && return (unum_unsafe(a, (a.flags & UNUM_UBIT_MASK) | mult_sign))
+  if (is_inf(a))
+    #infinity can't multiply across zero.
+    is_twosided(b) && ((b.lower.flags & UNUM_SIGN_MASK) != (b.upper.flags & UNUM_SIGN_MASK)) && (@scratch_this_operation!(b))
+    #infinity can't multiply times just zero, either
+    should_calculate(b, LOWER_UNUM) && is_zero(b, LOWER_UNUM) && (@scratch_this_operation!(b))
+    should_calculate(b, UPPER_UNUM) && is_zero(b, UPPER_UNUM) && (@scratch_this_operation!(b))
+    #just set it to mult_sign_lower, and make it one sided, and make it inf.
+    inf!(b, b.lower.flags & UNUM_SIGN_MASK, LOWER_UNUM); ignore_side!(b, LOWER_UNUM); set_onesided!(b)
+  end
+  #next, check infinities in the result.
+  if should_calculate(b, LOWER_UNUM) && is_inf(b, LOWER_UNUM)
+    is_zero(a) && (@scratch_this_operation!(b))
+    ignore_side!(b, LOWER_UNUM)
+  end
+  if should_calculate(b, UPPER_UNUM) && is_inf(b, UPPER_UNUM)
+    is_zero(a) && (@scratch_this_operation!(b))
+    ignore_side!(b, UPPER_UNUM)
+  end
 
-  #check to see if we're an ulp.
-  if (is_ulp(a) || is_ulp(b))
-    __mult_ulp(a, b, mult_sign)
-  else
-    __mult_exact(a, b, mult_sign)
+  #next, check zeros. - since they're for sure finite we have no problems.
+  (is_zero(a)) && (zero!(b, LOWER_UNUM); ignore_side!(b, LOWER_UNUM); set_onesided!(b))   #nuke the whole thing, it's the only way to be sure.
+  should_calculate(b, LOWER_UNUM) && is_zero(b, LOWER_UNUM) && ignore_side!(b, LOWER_UNUM)
+  should_calculate(b, UPPER_UNUM) && is_zero(b, UPPER_UNUM) && ignore_side!(b, UPPER_UNUM)
+
+  #finally, check ones.
+  (is_unit(a)) && ignore_both_sides!(b)
+  if should_calculate(b, LOWER_UNUM) && is_unit(b.lower)
+    copy_unum!(a, b.lower)
+    b.lower.flags = (b.lower.flags & ~UNUM_FLAG_MASK) | (a.flags & UNUM_FLAG_MASK) $ UNUM_FLAG_MASK
+    ignore_side!(b, LOWER_UNUM)
+  end
+  if should_calculate(b, UPPER_UNUM) && is_unit(b.upper)
+    copy_unum!(a, b.upper)
+    b.upper.flags = (b.upper.flags & ~UNUM_FLAG_MASK) | (a.flags & UNUM_FLAG_MASK) $ UNUM_FLAG_MASK
+    ignore_side!(b, UPPER_UNUM)
   end
 end
+
+function __signless_multiply!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  nan!(b)
+end
+
+
+#=
 
 # how to do multiplication?  Just chunk your 64-bit block into two 32-bit
 # segments and do multiplication on those.
@@ -267,4 +322,13 @@ function __sss_mult{ESS,FSS}(a::Unum{ESS,FSS}, sign::UInt16)
   else
     ubound_resolve(open_ubound(pos_sss(Unum{ESS,FSS}), val))
   end
+end
+=#
+
+import Base.*
+function *{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
+  temp = zero(Gnum{ESS,FSS})
+  mul!(x, y, temp)
+  #return the result as the appropriate data type.
+  emit_data(temp)
 end

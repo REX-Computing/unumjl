@@ -106,6 +106,18 @@ function copy_unum_with_gflags!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS}
   dest.flags |= gflags
 end
 
+function parity_swap!{ESS,FSS}(target::Gnum{ESS,FSS})
+  if is_twosided(target)
+    #swap the order of lower/upper via a buffer intermediate.
+    copy_unum_with_gflags!(target.lower, target.buffer)
+    copy_unum_with_gflags!(target.upper, target.lower)
+    copy_unum_with_gflags!(target.buffer, target.upper)
+    #next swap the parities on lower and upper
+    target.upper.flags $= UNUM_SIGN_MASK
+  end
+  target.lower.flags $= UNUM_SIGN_MASK
+end
+
 doc"""
   `emit_data(::Gnum{ESS,FSS})` takes the contents of a gnum and decides if it's
   represents a solo unum or a ubound.  It then allocates the appropriate type and
