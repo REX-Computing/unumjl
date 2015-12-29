@@ -233,6 +233,7 @@ end
         make_exact!(b.lower)
         __exact_arithmetic_addition!(a, b, LOWER_UNUM)
         make_ulp!(b.lower)
+        clear_gflags!(b.lower)
         is_mmr(b.lower) && mmr!(b, b.lower.flags, LOWER_UNUM)
         #a positive, b positive.
         if is_onesided(b) & !(is_mmr(b, LOWER_UNUM))
@@ -243,6 +244,7 @@ end
           promoted && ((b.upper.esize, b.upper.exponent) = encode_exp(decode_exp(b.upper) + 1))
           match_fsize!(a, b.upper)
 
+          clear_gflags!(b.upper)
           (__is_nan_or_inf(b.upper) || is_mmr(b.upper)) && mmr!(b, b.upper.flags, UPPER_UNUM)
 
           ignore_side!(b, UPPER_UNUM)
@@ -253,6 +255,7 @@ end
         make_exact!(b.lower)
         __exact_arithmetic_addition!(a, b, LOWER_UNUM)
         make_ulp!(b.lower)
+        clear_gflags!(b.lower)
         is_mmr(b.lower) && mmr!(b, b.lower.flags, LOWER_UNUM)
 
         #before we make any changes to lower, let's check to see if we also

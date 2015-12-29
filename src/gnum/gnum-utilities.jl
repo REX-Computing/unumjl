@@ -96,6 +96,10 @@ doc"""
   end
 end
 
+function clear_gflags!{ESS,FSS}(target::Unum{ESS,FSS})
+  target.flags &= ~(GNUM_FLAG_MASK)
+end
+
 function copy_unum_with_gflags!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
   gflags = src.flags & GNUM_FLAG_MASK
   copy_unum!(src, dest)

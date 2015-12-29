@@ -127,102 +127,64 @@ function __resolve_subnormal!{ESS,FSS}(a::Unum{ESS,FSS})
   a
 end
 
-#=
-function __inward_exact{ESS,FSS}(a::Unum{ESS,FSS})
-  #TODO:  throw in a zero check here.  Maybe?
-  l::UInt16 = length(a.fraction)
-  if (is_ulp(a))
-    #all we have to do is strip the ubit mask.
-    unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK)
-  else
-    #check if it's a subnormal number.  If so, try to move it to the right.
-    #resolve a from (possibly inoptimal subnormal) to optimal subnormal or normal
-    is_exp_zero(a) && (a = __resolve_subnormal(a))
-
-    #the next step is pretty trivial.  First, check if a is all zeros.
-    if is_frac_zero(a)
-      #in which case just make it a bunch of ones, decrement the exponent, and
-      #make sure we aren't subnormal, in which case, we just encode as subnormal.
-      _aexp::Int64 = decode_exp(a)
-      fraction::VarInt = fillbits(-(max_fsize(FSS) + 1), l)
-      fsize::UInt16 = max_fsize(FSS)
-      (esize, exponent) = (_aexp == min_exponent(ESS)) ? (max_esize(ESS), z64) : encode_exp(_aexp - 1)
-    else
-      #even easier.  Just do a direct subtraction.
-      fraction = a.fraction - __bit_from_top(max_fsize(FSS) + 1, l)
-      #don't forget to trim it down.
-      fraction &= __frac_mask(FSS)
-      fsize = __minimum_data_width(a.fraction)
-      esize = a.esize
-      exponent = a.exponent
+@gen_code function __inward_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
+  @code quote
+    is_strange_subnormal(x) && __resolve_subnormal!(x)
+    if is_frac_zero(x)
+      #deal with subnormal.
+      is_exp_zero(x) && (sss!(x, x.flags & UNUM_SIGN_MASK); return x)
+      current_exponent = decode_exp(x)
+      (x.esize, x.exponent) = ((current_exponent == min_exponent(ESS)) ? (z16, z64) : encode_exp(decode_exp(x) - 1))
     end
-    Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
+    x.flags |= UNUM_UBIT_MASK
+  end
+  if (FSS < 7)
+    @code :(x.fraction -= bottom_bit(max_fsize(FSS)); x)
+  else
+    @code :(prev_val!(x.fraction); x)
   end
 end
 
-#next_exact and last_exact operate on the number line as a well-ordered set, so
-#they function to run tests on the input and then, if appropriate, pass to the
-#repsecting more/less function.  Because these have input tests, they are exported
-#and don't have the doubleunderscore prefix.
-function next_exact{ESS,FSS}(x::Unum{ESS,FSS})
-  is_neg_inf(x) && return neg_maxreal(Unum{ESS,FSS})
-  is_zero(x) && return pos_sss(Unum{ESS,FSS})
-  is_pos_mmr(x) && return pos_inf(Unum{ESS,FSS})
-  is_pos_inf(x) && return nan(Unum{ESS,FSS})
-  return (x.flags & UNUM_SIGN_MASK != 0) ? __inward_exact(x) : __outward_exact(x)
+function make_min_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
+  x.fsize = max_fsize(FSS)
+  x.flags |= UNUM_UBIT_MASK
+  x
 end
 
-function prev_exact{ESS,FSS}(x::Unum{ESS,FSS})
-  is_neg_inf(x) && return nan(Unum{ESS,FSS})
-  is_neg_mmr(x) && return neg_inf(Unum{ESS,FSS})
-  is_zero(x) && return neg_sss(Unum{ESS,FSS})
-  is_pos_inf(x) && return maxreal(Unum{ESS,FSS})
-  return (x.flags & UNUM_SIGN_MASK != 0) ? __outward_exact(x) : __inward_exact(x)
+function __outward_exact!{ESS,FSS}(x::Unum{ESS,FSS})
+  promoted::Bool = __add_ubit_frac!(x)
+  promoted && ((x.esize, x.exponent) = (encode_exp(decode_exp(x) + 1)))
+  x
 end
 
-export next_exact, prev_exact
+function upper_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
+  is_zero(x) && return pos_sss!(x)
+  return is_positive(x) ? make_min_ulp!(x) : __inward_ulp!(x)
+end
 
-#upper_bound and lower_bound operate on the number line as a well-ordered set, so
-#they function to run tests on the input and then, if appropriate, pass to the
-#repsecting more/less function.
+function lower_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
+  is_zero(x) && return neg_sss!(x)
+  return is_positive(x) ? __inward_ulp!(x) : make_min_ulp!(x)
+end
 
-function upper_bound{ESS,FSS}(x::Unum{ESS,FSS})
+doc"""
+  upper_bound_exact! converts x into the unum which is the exact number that
+  upper bounds it.
+"""
+function upper_bound_exact!{ESS,FSS}(x::Unum{ESS,FSS})
+  __is_inf_or_nan(x) && (nan!(x); return)
   is_exact(x) && return x
-  return (x.flags & UNUM_SIGN_MASK != 0) ? unum_unsafe(x, x.flags & (~UNUM_UBIT_MASK)) : __outward_exact(x)
+  return is_negative(x) ? make_exact!(x) : __outward_exact!(x)
 end
 
-function lower_bound{ESS,FSS}(x::Unum{ESS,FSS})
+doc"""
+  lower_bound_exact! converts x into the unum which is the exact number that
+  upper bounds it.
+"""
+function lower_bound_exact!{ESS,FSS}(x::Unum{ESS,FSS})
+  __is_inf_or_nan(x) && (nan!(x); return)
   is_exact(x) && return x
-  return (x.flags & UNUM_SIGN_MASK != 0) ? __outward_exact(x) : unum_unsafe(x, x.flags & (~UNUM_UBIT_MASK))
+  return is_negative(x) ? __outward_exact!(x) : make_exact!(x)
 end
 
-export upper_bound, lower_bound
-
-function outward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
-  is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
-  #note that infinity will throw NAN, which is just fine.
-  is_neg_inf(x) && return nan(Unum{ESS,FSS})
-  Unum{ESS,FSS}(max_fsize(FSS), x.esize, x.flags | UNUM_UBIT_MASK, x.fraction, x.exponent)
-end
-
-function inward_ulp{ESS,FSS}(x::Unum{ESS,FSS})
-  is_ulp(x) && throw(ArgumentError("function only for exact numbers"))
-  is_zero(x) && return nan(Unum{ESS,FSS})
-  is_pos_inf(x) && return pos_mmr(Unum{ESS,FSS})
-  is_neg_inf(x) && return neg_mmr(Unum{ESS,FSS})
-  tx = __inward_exact(x)
-  Unum{ESS,FSS}(max_fsize(FSS), tx.esize, x.flags | UNUM_UBIT_MASK, tx.fraction, tx.exponent)
-end
-function next_ulp{ESS,FSS}(x::Unum{ESS,FSS})
-  is_zero(x) && return pos_sss(Unum{ESS,FSS})
-  is_negative(x) && return inward_ulp(x)
-  outward_ulp(x)
-end
-function prev_ulp{ESS,FSS}(x::Unum{ESS,FSS})
-  is_zero(x) && return neg_sss(Unum{ESS,FSS})
-  is_negative(x) && return outward_ulp(x)
-  inward_ulp(x)
-end
-
-export outward_ulp, inward_ulp, next_ulp, prev_ulp
-=#
+export upper_bound_exact!, lower_bound_exact!

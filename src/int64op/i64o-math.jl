@@ -74,3 +74,17 @@ end
   #add in the carry from the most significant segment to the entire carry.
   @code :(cellcarry != 0)
 end
+
+@gen_code function __prev_val!{FSS}(a::ArrayNum{FSS})
+  l = __cell_length(FSS)
+  @code quote
+    borrow::Bool = true
+  end
+  for (idx = l:-1:1)
+    @code quote
+      a.a[$l] -= borrow * o64
+      borrow &= (a.a[$l] == f64)
+    end
+  end
+  @code :(a)
+end

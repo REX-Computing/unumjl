@@ -43,10 +43,56 @@ end
 @generated function __arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
   quote
     if is_ulp(a)
-      nan!(b)
+      if is_exact(b.$side)
+        copy_unum!(b.$side, b.buffer)
+        copy_unum!(a, b.$side)
+        __exact_arithmetic_subtraction!(b.buffer, b, Val{side})
+      else
+        __inexact_arithmetic_subtraction!(a, b, Val{side})
+      end
     else
       __exact_arithmetic_subtraction!(a, b, Val{side})
     end
+  end
+end
+
+#NB.  Because of the "switching" behavior of arithmetic subtraction, the lower operation
+#leaves the original value of "lower" in the buffer.
+@generated function __inexact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  if (side == :lower)
+    quote
+      promoted::Bool = false
+      if is_positive(a)
+        #then a is positive and b is negative.  The lower value is going to be exact(a) - exact(b); the
+        #upper value is going to be ulp'd a - ulp'd b; if we are a twosided value, then the lower value
+        #will influence the upper value.
+        copy_unum!(b.lower, is_onesided(b) ? b.upper : b.buffer)
+        make_exact!(b.lower)
+        __exact_arithmetic_subtraction!(a, b, LOWER_UNUM)
+        make_ulp!(b.lower)
+        clear_gflags!(b.lower)
+        if is_onesided(b)
+          copy_unum!(a, b.buffer)
+          clear_gflags!(b.upper)
+          promoted = __add_ubit_frac!(b.buffer)
+          #println("promoted? ", promoted, " b: ", bits(b.buffer))
+          promoted && ((b.buffer.esize, b.buffer.exponent) = encode_exp(decode_exp(b.buffer) + 1))
+          __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
+          #before we make this an ulp, we have to figure out what the correct ubit
+          #will be.
+          #match_fsize!(a, b.buffer)
+          #make_ulp!(b.buffer)
+          #copy_unum!(b.buffer, b.upper)
+          ignore_side!(b, UPPER_UNUM)
+          set_twosided!(b)
+        end
+      else
+        nan!(b)
+        #then a is negative and b is positive
+      end
+    end
+  elseif (side == :upper)
+    :(nan!(b))
   end
 end
 
@@ -116,12 +162,6 @@ end
       #calculate the shift as the difference between a and b.
       shift = b_ctx - a_ctx
       #set up the carry bit.
-      #=
-      println("hi mom")
-      println(shift == z64)
-      println(((shift == z64) * (o64 - a_dev)))
-      println((o64 - b_dev) - ((shift == z64) * (o64 - a_dev)))
-      println("aaa")=#
       vbit = (o64 - b_dev) - ((shift == z64) * (o64 - a_dev))
       scratchpad_exp = b_exp
       scratchpad_dev = b_dev
@@ -132,15 +172,6 @@ end
 
     #do the actual subtraction.
     vbit = __carried_diff_frac!(vbit, minuend, b.scratchpad)
-
-    #=
-    println("3----")
-    println(bits(b.scratchpad.fraction))
-    println("s_exp:", scratchpad_exp)
-    println("s_dev:", scratchpad_dev)
-    println("bits:", bits(b.scratchpad))
-    println("vbit:", vbit)
-    println("====")=#
 
     if (vbit == 0) && (b.scratchpad.exponent != 0)
       if (scratchpad_exp >= min_exponent(ESS))
