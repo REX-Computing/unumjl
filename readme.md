@@ -45,25 +45,24 @@ implement.
 How to use the Julia Unum library (0.1):
 ========================================
 
-install julia.  instructions for download and files are available at: http://julialang.org/downloads/
-unzip the unum package and execute julia in the directory.
-at the prompt, type: 
+1. install julia.
+  1. instructions for download and files are available at: http://julialang.org/downloads/
+2. unzip the unum package and execute julia in the directory.
+3. at the prompt, type: 
+  ```
+  include(“unum.jl”)
+  using Unums 
+  ```
+  1.  alternatively, use these commands as the first lines of a script and execute the script by typing julia SCRIPT_FILENAME at your command line.
 
-```
-include(“unum.jl”)
-using Unums
-```
+You may now use unums.  To convert floating points or integers to unums, use the convert function.  Note that the conversion currently assumes that floating points represent exact values, even if the human-input value cannot be exact.
 
-alternatively, use these commands as the first lines of a script and execute the script by typing julia PATH_TO_SCRIPT at your command line.
-
-
-You may now use unums.  To convert floating points or integers to unums, use the convert function, e.g.:
 ```
 convert(Unum{4,6}, 4.3)
 > Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x0000000000000003)
 ```
 
-To retrieve the unum value, as a human-readable form, I recommend the calculate() function which converts the unum to BigFloat, which is then displayed by Julia, e.g.  Note that calculate doesn’t take into account the uncertainty bit:
+To retrieve the unum value, as a human-readable form, I recommend the calculate() function which converts the unum to BigFloat, which is then displayed by Julia.  Note that calculate doesn’t take into account the uncertainty bit:
 
 ```
 calculate(Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x0000000000000003))
