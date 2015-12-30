@@ -49,7 +49,7 @@ end
   #sets the unum value on either side of the Gnum (or possibly the scratchpad.)
   quote
     copy_unum!(src, dest.$side)
-    set_flags!(dest, Val{side})
+    set_g_flags!(dest.$side)
     nothing
   end
 end
@@ -80,6 +80,15 @@ function get_ubound!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Ubound{ESS,FSS})
   nothing
 end
 
+function set_g_flags!{ESS,FSS}(v::Unum{ESS,FSS})
+  #clear the mask, keeping only flags and scratchpad values.
+  is_inf(v) &&  (v.flags |= GNUM_INF_MASK; return)
+  is_mmr(v) &&  (v.flags |= GNUM_MMR_MASK; return)
+  is_sss(v) &&  (v.flags |= GNUM_SSS_MASK; return)
+  is_zero(v) && (v.flags |= GNUM_ZERO_MASK; return)
+  v.flags &= GNUM_SFLAGS_MASK | UNUM_FLAG_MASK
+end
+
 doc"""
   `set_flags(::Gnum{ESS,FSS}, ::Type{Val{side}})` sets flags on one side of the
   gnum by examining the value.
@@ -87,12 +96,9 @@ doc"""
 @generated function set_flags!{ESS,FSS,side}(v::Gnum{ESS,FSS}, ::Type{Val{side}})
   quote
     is_nan(v.$side) && (v.scratchpad.flags |= GNUM_NAN_MASK; return)
-    is_inf(v.$side) && (v.$side.flags |= GNUM_INF_MASK; return)
-    is_mmr(v.$side) && (v.$side.flags |= GNUM_MMR_MASK; return)
-    is_sss(v.$side) && (v.$side.flags |= GNUM_SSS_MASK; return)
-    is_zero(v.$side) && (v.$side.flags |= GNUM_ZERO_MASK; return)
     #clear the mask, keeping only flags and scratchpad values.
     v.$side.flags &= GNUM_SFLAGS_MASK | UNUM_FLAG_MASK
+    set_g_flags!(v.$side)
   end
 end
 
@@ -134,12 +140,13 @@ function emit_data{ESS,FSS}(src::Gnum{ESS,FSS})
     res = zero(Unum{ESS,FSS})
     #put the value in the allocated space.
     get_unum!(src, res)
+    res
   else
     #this time, we know it's a ubound.
     #prepare the result by allocating.
     res = Ubound{ESS,FSS}()
     #put the value in the allocated space.
     get_ubound!(src, res)
+    (res.lower == res.upper) ? res.lower : res
   end
-  res
 end

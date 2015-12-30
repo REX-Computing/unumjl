@@ -13,6 +13,7 @@ doc"""
 """
 function add!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
   put_unum!(b, c)
+  set_g_flags!(a)
   add!(a, c)
 end
 

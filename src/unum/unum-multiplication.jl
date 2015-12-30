@@ -13,27 +13,86 @@ doc"""
 """
 function mul!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
   put_unum!(b, c)
+  set_g_flags!(a)
   mul!(a, c)
 end
 
 function mul!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
-  #override, based off of easy calculations, but also does
-  #all necessary parity swapping for the system b.
   clear_ignore_sides!(b)
+  set_g_flags!(a)
   __multiplication_override_check!(a, b)
+  is_negative(a) && parity_swap!(b)
+  #do the parity swap.  From here on, all procedures assume that a is positive.
 
-  #all multiplications ignore the sign of the multiplicand.
+  should_calculate(b, LOWER_UNUM) && __multiplication_soft_calc(a, b, LOWER_UNUM)
+  should_calculate(b, UPPER_UNUM) && __multiplication_soft_calc(a, b, UPPER_UNUM)
 
-  if should_calculate(b, LOWER_UNUM)
-    __signless_multiply!(a, b, LOWER_UNUM)
+  if is_onesided(b)
+    if is_exact(a)
+      if is_exact(b.lower)
+        should_calculate(b, LOWER_UNUM) && __signless_exact_multiply!(a, b, LOWER_UNUM)
+      else
+        set_twosided!(b)
+        copy_unum!(b.lower, b.upper)
+        #do the upper side calculation.
+        onesided_mult(a, b, UPPER_UNUM)
+        #do the lower side calculation.
+        onesided_mult(a, b, LOWER_UNUM)
+      end
+    else
+      if is_exact(b.lower)
+        if should_calculate(b, LOWER_UNUM)
+          set_twosided!(b)
+          #move b to the buffer.
+          copy_unum!(b.lower, b.buffer)
+          #copy a to both sides of the unum.
+          put_unum!(a, b, LOWER_UNUM)
+          put_unum!(a, b, UPPER_UNUM)
+          b.lower.flags = (b.lower.flags & ~UNUM_SIGN_MASK) | (b.buffer.flags & UNUM_SIGN_MASK)
+          b.upper.flags = (b.upper.flags & ~UNUM_SIGN_MASK) | (b.buffer.flags & UNUM_SIGN_MASK)
+          onesided_mult(b.buffer, b, UPPER_UNUM)
+          onesided_mult(b.buffer, b, LOWER_UNUM)
+        end
+      else
+      end
+    end
+  else
+    nan!(b)
   end
-
-  if should_calculate(b, UPPER_UNUM)
-    __signless_multiply!(a, b, UPPER_UNUM)
-  end
-  b
 end
 
+#multiplies an exact number times one of the sides of the number.
+@generated function onesided_mult{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  paritycheck = symbol((side == :upper) ? "is_positive" : "is_negative" )
+  exactfn = symbol(side, "_exact!")
+  ulpfn = symbol((side == :upper) ? "lower_ulp!" : "upper_ulp!")
+  quote
+    $paritycheck(b.$side) ? $exactfn(b.$side) : make_exact!(b.$side)
+    __multiplication_soft_calc(a, b, Val{side})
+    should_calculate(b, Val{side}) &&  __signless_exact_multiply!(a, b, Val{side})
+    force_from_flags!(b, b.$side, Val{side})
+    is_exact(b.$side) && $ulpfn(b.$side)
+  end
+end
+
+#soft_calcs
+@generated function __multiplication_soft_calc{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  quote
+    (is_g_zero(b.$side) || is_zero(b.$side)) && (zero!(b, Val{side}); ignore_side!(b, Val{side}))
+    is_unit(a) && (ignore_side!(b, Val{side}))
+    if is_unit(b.$side)
+      temp_sign::UInt16 = b.$side.flags & UNUM_SIGN_MASK
+      copy_unum_with_gflags!(a, b.$side)
+      #we need to also copy over the sign flag.
+      b.$side.flags = (b.$side.flags & ~UNUM_SIGN_MASK) | temp_sign
+      ignore_side!(b,Val{side})
+    end
+  end
+end
+
+#multiplication override is split into a "hard check" and some "soft checks".  The
+#hard checks have to be done globally, while the "soft checks" are done on
+#individual streams.
 function __multiplication_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   ############################################
   # deal with NaNs.
@@ -41,55 +100,96 @@ function __multiplication_override_check!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS
   is_nan(a) && (@scratch_this_operation!(b))
   is_nan(b) && (ignore_both_sides!(b); return)
 
-  #do the parity swap.
-  if is_negative(a)
-    parity_swap!(b)
-  end
-
-  if (is_inf(a))
+  if (is_g_inf(a))
     #infinity can't multiply across zero.
     is_twosided(b) && ((b.lower.flags & UNUM_SIGN_MASK) != (b.upper.flags & UNUM_SIGN_MASK)) && (@scratch_this_operation!(b))
     #infinity can't multiply times just zero, either
     should_calculate(b, LOWER_UNUM) && is_zero(b, LOWER_UNUM) && (@scratch_this_operation!(b))
-    should_calculate(b, UPPER_UNUM) && is_zero(b, UPPER_UNUM) && (@scratch_this_operation!(b))
-    #just set it to mult_sign_lower, and make it one sided, and make it inf.
-    inf!(b, b.lower.flags & UNUM_SIGN_MASK, LOWER_UNUM); ignore_side!(b, LOWER_UNUM); set_onesided!(b)
+    should_calculate(b, UPPER_UNUM) && is_zero(b, LOWER_UNUM) && (@scratch_this_operation!(b))
+    #set to onesided.
+    inf!(b, (b.lower.flags & UNUM_SIGN_MASK), LOWER_UNUM); ignore_side!(b, LOWER_UNUM); set_onesided!(b)
   end
-  #next, check infinities in the result.
+  #next, check that infinities on either side don't mess things up.
   if should_calculate(b, LOWER_UNUM) && is_inf(b, LOWER_UNUM)
-    is_zero(a) && (@scratch_this_operation!(b))
+    is_g_zero(a) && (@scratch_this_operation!(b))
     ignore_side!(b, LOWER_UNUM)
   end
   if should_calculate(b, UPPER_UNUM) && is_inf(b, UPPER_UNUM)
-    is_zero(a) && (@scratch_this_operation!(b))
+    is_g_zero(a) && (@scratch_this_operation!(b))
     ignore_side!(b, UPPER_UNUM)
   end
-
-  #next, check zeros. - since they're for sure finite we have no problems.
-  (is_zero(a)) && (zero!(b, LOWER_UNUM); ignore_side!(b, LOWER_UNUM); set_onesided!(b))   #nuke the whole thing, it's the only way to be sure.
-  should_calculate(b, LOWER_UNUM) && is_zero(b, LOWER_UNUM) && ignore_side!(b, LOWER_UNUM)
-  should_calculate(b, UPPER_UNUM) && is_zero(b, UPPER_UNUM) && ignore_side!(b, UPPER_UNUM)
-
-  #finally, check ones.
-  (is_unit(a)) && ignore_both_sides!(b)
-  if should_calculate(b, LOWER_UNUM) && is_unit(b.lower)
-    copy_unum!(a, b.lower)
-    b.lower.flags = (b.lower.flags & ~UNUM_FLAG_MASK) | (a.flags & UNUM_FLAG_MASK) $ UNUM_FLAG_MASK
+  #finally, check if a is zero, in which case we can just nuke everything.
+  if is_g_zero(a)
+    zero!(b, LOWER_UNUM)
+    set_onesided!(b)
     ignore_side!(b, LOWER_UNUM)
   end
-  if should_calculate(b, UPPER_UNUM) && is_unit(b.upper)
-    copy_unum!(a, b.upper)
-    b.upper.flags = (b.upper.flags & ~UNUM_FLAG_MASK) | (a.flags & UNUM_FLAG_MASK) $ UNUM_FLAG_MASK
-    ignore_side!(b, UPPER_UNUM)
+  #finally check if a is one, in which case we just leave all alone.
+  if is_unit(a)
+    ignore_both_sides!(b)
   end
 end
 
-@gen_code function __signless_multiply!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+@gen_code function __signless_exact_multiply!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  max_exp = max_exponent(ESS)
+  sml_exp = min_exponent(ESS, FSS)
+  min_exp = min_exponent(ESS)
+
+  @code quote
+    a_exp::Int64 = decode_exp(a)
+    b_exp::Int64 = decode_exp(b.$side)
+    a_dev::UInt64 = is_exp_zero(a) * o64
+    b_dev::UInt64 = is_exp_zero(b.$side) * o64
+
+    b.scratchpad.flags |= b.$side.flags & UNUM_SIGN_MASK
+
+    scratchpad_exp::Int64 = a_exp + b_exp + a_dev + b_dev
+    #preliminary comparisons that will stop us from performing unnecessary
+    #steps.
+    (scratchpad_exp > $max_exp + 1) && (@preserve_sflags b mmr!(b, b.$side.flags & UNUM_SIGN_MASK, Val{$side}); return)
+    (scratchpad_exp < $sml_exp - 2) && (@preserve_sflags b sss!(b, b.$side.flags & UNUM_SIGN_MASK, Val{$side}); return)
+  end
+
   if FSS < 6
+    @code :(b.scratchpad.fraction = __chunk_mult_small(a.fraction, b.$side.fraction))
   elseif FSS == 6
-    @code quote
-    end
+    :(nan!(b))
   else
+    :(nan!(b))
+  end
+
+  @code quote
+    #fraction multiplication:  where va is "virtual bit" that is 1 for normals or 0 for subnormals.
+    #  va + a
+    #  vb + b
+    #  va*vb + vb * a + va * b + ab
+    #
+    carry::UInt64 = o64 - (a_dev | b_dev) #if either a or b is subnormal, the carry is zero.
+    #note that adding the fractions back in has a cross-multiplied effect.
+    (b_dev == 0) && (carry = __carried_add_frac!(carry, a, b.scratchpad))
+    (a_dev == 0) && (carry = __carried_add_frac!(carry, b.$side, b.scratchpad))
+    #next, do carry analysis. carry can be 0, 1, 2, or 3 at the most.
+
+    if (carry == 0)
+      #shift over the fraction as far as we need to.
+      shift::Int64 = leading_zeros(b.scratchpad.fraction) + 1
+    else
+      scratchpad_exp += 1
+      if scratchpad_exp > $max_exp
+        @preserve_sflags b mmr!(b, b.scratchpad.flags & UNUM_SIGN_MASK, SCRATCHPAD)
+      else
+        #shift things over by one since we went up in size.
+        __rightshift_frac_with_underflow_check!(b.scratchpad, 1)
+        #carry from the carry over into the fraction.
+        (carry == 3) && set_frac_top!(b.scratchpad)
+        #re-encode the exponent.
+        (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
+      end
+    end
+
+    copy_unum_with_gflags!(b.scratchpad, b.$side)
+    #(b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
+    #flip the ubit.
   end
 end
 
