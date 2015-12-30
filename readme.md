@@ -70,6 +70,7 @@ calculate(Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x00000000000000
 
 You can alternatively type in the specification directly into the Unum constructor.  
 The parts of a unum the unum constructor are as follows:  
+
 1. fsize (16-bit unsigned float)
 2. esize (16-bit unsigned float)
 3. flags (16-bit unsigned float, 2’s bit: sign, 1’s bit: ubit)
