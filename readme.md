@@ -50,8 +50,7 @@ How to use the Julia Unum library (0.1):
 2. unzip the unum package and execute julia in the directory.
 3. at the prompt, type: 
   ```
-  include(“unum.jl”)
-  using Unums 
+  include(“unum.jl”); using Unums 
   ```
   1.  alternatively, use these commands as the first lines of a script and execute the script by typing julia SCRIPT_FILENAME at your command line.
 
