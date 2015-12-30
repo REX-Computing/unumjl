@@ -77,7 +77,7 @@ calculate(Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x00000000000000
 > 4.3
 ```
 
-Julia generally has support for special functions which construct frequently used values, and the Unum library implements these.
+Julia generally has support for special functions which construct important values, and the Unum library implements these.
 
 ```
 zero(Unum{4,6})
@@ -85,9 +85,9 @@ zero(Unum{4,6})
 one(Unum{4,6})
 > Unum{4,6}(0x0000, 0x0001, 0x0000, 0x0000000000000000, 0x0000000000000001)
 inf(Unum{4,6})
-> Unum{4,6}(0x0000, 0x0001, 0x0000, 0x0000000000000000, 0x0000000000000001)
+> Unum{4,6}(0x003F, 0x000F, 0x0000, 0xFFFFFFFFFFFFFFFF, 0x000000000000FFFF)
 nan(Unum{4,6})
-> Unum{4,6}(0x0000, 0x0001, 0x0000, 0x0000000000000000, 0x0000000000000001)
+> Unum{4,6}(0x003F, 0x000F, 0x0001, 0xFFFFFFFFFFFFFFFF, 0x000000000000FFFF)
 ```
 
 The standard mathematical operators are overloaded to allow easy calculation with Unums.
