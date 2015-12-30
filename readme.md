@@ -63,19 +63,28 @@ convert(Unum{4,6}, 4.3)
 > Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x0000000000000003)
 ```
 
-You can alternatively type in the specification directly into the Unum constructor.  The parts of a unum the unum constructor are as follows:  fsize (16-bit unsigned float), esize (16-bit unsigned float), flags (16-bit unsigned float, 2’s bit: sign, 1’s bit: ubit), fraction (64-bit unsigned float or array of 64-bit unsigned floats), exponent (64-bit unsigned float).  e.g.:
-
-```
-Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x0000000000000003)
-> Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x0000000000000003)
-```
-
 To retrieve the unum value, as a human-readable form, I recommend the calculate() function which converts the unum to BigFloat, which is then displayed by Julia, e.g.  Note that calculate doesn’t take into account the uncertainty bit:
 
 ```
 calculate(Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x0000000000000003))
 > 4.3
 ```
+
+You can alternatively type in the specification directly into the Unum constructor.  
+The parts of a unum the unum constructor are as follows:  
+1. fsize (16-bit unsigned float)
+2. esize (16-bit unsigned float)
+3. flags (16-bit unsigned float, 2’s bit: sign, 1’s bit: ubit)
+4. fraction (64-bit unsigned float or array of 64-bit unsigned floats)
+5. exponent (64-bit unsigned float)
+
+```
+x = Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x0000000000000003)
+> Unum{4,6}(0x0033, 0x0001, 0x0000, 0x1333333333333000, 0x0000000000000003)
+calculate(x)
+> 4.3
+```
+
 
 Julia generally has support for special functions which construct important values, and the Unum library implements these.
 
