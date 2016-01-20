@@ -49,14 +49,14 @@ to function, and the contents of this space will be bashed.
 end
 
 doc"""
-  `@signof(x)` extracts the 16-bit unsigned "sign" component of the flag.
+  `Unums.@signof(x)` extracts the 16-bit unsigned "sign" component of the flag.
 """
 macro signof(x)
   :($x.flags & UNUM_SIGN_MASK)
 end
 
 doc"""
-  `@ubitof(x)` extracts the 16-bit unsigned "ubit" component of the flag.
+  `Unums.@ubitof(x)` extracts the 16-bit unsigned "ubit" component of the flag.
 """
 macro ubitof(x)
   :($x.flags & UNUM_UBIT_MASK)
@@ -169,7 +169,14 @@ is_neg_one{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_unit(x)
 end
 is_pos_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_sss(x)
 is_neg_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_sss(x)
-#checks if the value is more than maxreal
+
+################################################################################
+##  MMR CHECKS
+
+doc"""
+  `is_mmr(::Unum)` sign-agnostically checks to see if the passed unum is the positive
+  'more than maxreal' interval, or the open bound (maxreal, ∞)
+"""
 @gen_code function is_mmr{ESS,FSS}(x::Unum{ESS,FSS})
   xesize = max_esize(ESS)
   xfsize = max_fsize(FSS)
@@ -189,21 +196,28 @@ is_neg_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_sss(x)
   end
 end
 
+doc"""
+  `is_pos_mmr(::Unum)` checks to see if the passed unum is the positive
+  'more than maxreal' interval, or the open bound (maxreal, ∞)
+"""
 is_pos_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_mmr(x)
+
+doc"""
+  `is_neg_mmr(::Unum)` checks to see if the passed unum is the negative
+  'more than maxreal' interval, or the open bound (-∞, -maxreal)
+"""
 is_neg_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_mmr(x)
+
 export is_subnormal, is_exp_zero
 export is_frac_zero, is_zero, is_sss, is_pos_sss, is_neg_sss
 export is_mmr, is_pos_mmr, is_neg_mmr
 
-make_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags &= ~UNUM_UBIT_MASK; x)
-make_ulp!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags |= UNUM_UBIT_MASK; x)
-export make_exact!, make_ulp!
-
 doc"""
-  `is_magnitude_less_than_one(::Unum)` checks to see if the magnitude (absolute
+  `Unums.is_magnitude_less_than_one(::Unum)` checks to see if the magnitude (absolute
   value) is less than one.  This is important for multiplication, in particular
   checking for smaller than smallest subnormal and more than maxreal
-  calculations.
+  calculations.  As is evident by this awkward syntax, you're really not supposed
+  to use this outside of the Unums namespace.
 """
 function is_magnitude_less_than_one{ESS,FSS}(x::Unum{ESS,FSS})
   #checking subnormal status.

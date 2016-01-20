@@ -49,11 +49,17 @@ doc"""
 """
 function mul_onesided!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   #all procedures in onesided multiply presume that a is positive.
+  _sign_temp = z16
 
   if is_zero(b, LOWER_UNUM)
     ignore_side!(b, LOWER_UNUM)
+  elseif is_inf(b, LOWER_UNUM)
+    ignore_side!(b, LOWER_UNUM)
   elseif is_unit(b.lower)
+    _sign_temp = @signof(b.lower)
     copy_unum!(a, b.lower)
+    #overwrite the sign; this will be re-xored later.
+    @write_sign(b.lower, _sign_temp)
     ignore_side!(b, LOWER_UNUM)
   elseif is_mmr(a)
     mmr_onesided_mult!(b)
@@ -64,10 +70,14 @@ function mul_onesided!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   #check for the gnum value being mmr or sss.
   if should_calculate(b, LOWER_UNUM)
     if is_mmr(b, LOWER_UNUM)
+      _sign_temp = @signof(b.lower)
       copy_unum!(a, b.lower)
+      @write_sign(b.lower, _sign_temp)
       mmr_onesided_mult!(b)
     elseif is_sss(b, LOWER_UNUM)
+      _sign_temp = @signof(b.lower)
       copy_unum!(a, b.lower)
+      @write_sign(b.lower, _sign_temp)
       sss_onesided_mult!(b)
     end
   end

@@ -24,6 +24,13 @@ end
 export calculate
 
 doc"""
+  `Unums.@write_sign(a, b)` overwrites the UInt16 sign value into a.
+"""
+macro write_sign(a, b)
+  :($a.flags = ($a.flags & ~UNUM_SIGN_MASK) | $b)
+end
+
+doc"""
   `additiveinverse!` creates the additive inverse value of a unum, by flipping
   the sign.  This can be better than the `-` operator because it doesn't copy
   the unum.  A reference to the unum is returned.
@@ -188,4 +195,15 @@ function lower_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   return is_negative(x) ? __outward_exact!(x) : make_exact!(x)
 end
 
-export upper_bound_exact!, lower_bound_exact!
+################################################################################
+## dumb exactitude functions.
+
+doc"""
+  `Unums.make_exact(::Unum)` forces the ubit of a unum to be 0.
+"""
+make_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags &= ~UNUM_UBIT_MASK; x)
+
+doc"""
+  `Unums.make_ulp(::Unum)` forces the ubit of a unum to be 1.
+"""
+make_ulp!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags |= UNUM_UBIT_MASK; x)
