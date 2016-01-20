@@ -48,11 +48,25 @@ to function, and the contents of this space will be bashed.
   end
 end
 
+doc"""
+  `@signof(x)` extracts the 16-bit unsigned "sign" component of the flag.
+"""
+macro signof(x)
+  :($x.flags & UNUM_SIGN_MASK)
+end
+
+doc"""
+  `@ubitof(x)` extracts the 16-bit unsigned "ubit" component of the flag.
+"""
+macro ubitof(x)
+  :($x.flags & UNUM_UBIT_MASK)
+end
+
 #some really dumb ones, but we'll put these in for legibility.
-is_ulp{ESS,FSS}(x::Unum{ESS,FSS})      = ((x.flags & UNUM_UBIT_MASK) != 0)
-is_exact{ESS,FSS}(x::Unum{ESS,FSS})    = ((x.flags & UNUM_UBIT_MASK) == 0)
-is_negative{ESS,FSS}(x::Unum{ESS,FSS}) = ((x.flags & UNUM_SIGN_MASK) != 0)
-is_positive{ESS,FSS}(x::Unum{ESS,FSS}) = ((x.flags & UNUM_SIGN_MASK) == 0)
+is_ulp{ESS,FSS}(x::Unum{ESS,FSS})      = (@ubitof(x) != 0)
+is_exact{ESS,FSS}(x::Unum{ESS,FSS})    = (@ubitof(x) == 0)
+is_negative{ESS,FSS}(x::Unum{ESS,FSS}) = (@signof(x) != 0)
+is_positive{ESS,FSS}(x::Unum{ESS,FSS}) = (@signof(x) == 0)
 is_neg_def{ESS,FSS}(x::Unum{ESS,FSS})  = (!is_zero(x)) && is_negative(x)
 is_pos_def{ESS,FSS}(x::Unum{ESS,FSS})  = (!is_zero(x)) && is_positive(x)
 export is_ulp, is_exact, is_negative, is_positive
@@ -177,7 +191,6 @@ end
 
 is_pos_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_mmr(x)
 is_neg_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_mmr(x)
-
 export is_subnormal, is_exp_zero
 export is_frac_zero, is_zero, is_sss, is_pos_sss, is_neg_sss
 export is_mmr, is_pos_mmr, is_neg_mmr
@@ -185,11 +198,20 @@ export is_mmr, is_pos_mmr, is_neg_mmr
 make_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags &= ~UNUM_UBIT_MASK; x)
 make_ulp!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags |= UNUM_UBIT_MASK; x)
 export make_exact!, make_ulp!
-#=
-function width{ESS,FSS}(x::Unum{ESS,FSS})
-  is_exact(x) && return zero(Unum{ESS,FSS})
-  #return the difference, but made exact, and with ulp and sign bits bashed away.
-  return unum_unsafe(__outward_exact(x) - __inward_exact(x), z16)
+
+doc"""
+  `is_magnitude_less_than_one(::Unum)` checks to see if the magnitude (absolute
+  value) is less than one.  This is important for multiplication, in particular
+  checking for smaller than smallest subnormal and more than maxreal
+  calculations.
+"""
+function is_magnitude_less_than_one{ESS,FSS}(x::Unum{ESS,FSS})
+  #checking subnormal status.
+  if (is_exp_zero(x))
+    #check to see if the top bit is zero
+    return (x.esize > 0) | is_top_frac_bit_zero(x)
+  else
+    #check to see if the top bit of the exponent is zero.
+    return (decode_exp(x) < 0)
+  end
 end
-export width
-=#

@@ -13,12 +13,16 @@ type UboundSmall{ESS,FSS} <: Ubound{ESS,FSS}
 end
 
 function call{ESS,FSS}(::Type{Ubound{ESS,FSS}}, x::UnumSmall{ESS,FSS}, y::UnumSmall{ESS,FSS})
-  UboundSmall{ESS,FSS}(x, y)
+  UboundSmall{ESS,FSS}(UnumSmall{ESS,FSS}(x), UnumSmall{ESS,FSS}(y))
 end
 
 #an empty constructor defaults to the extended real line.
-function call{ESS,FSS}(::Type{Ubound{ESS,FSS}})
-  Ubound{ESS,FSS}(neg_inf(Unum{ESS,FSS}), pos_inf(Unum{ESS,FSS}))
+@generated function call{ESS,FSS}(::Type{Ubound{ESS,FSS}})
+  if FSS < 7
+    :(UboundSmall{ESS,FSS}(neg_inf(Unum{ESS,FSS}), pos_inf(Unum{ESS,FSS})))
+  else
+    :(UboundLarge{ESS,FSS}(neg_inf(Unum{ESS,FSS}), pos_inf(Unum{ESS,FSS})))
+  end
 end
 
 function __check_UboundLarge{ESS,FSS}(lower::UnumLarge{ESS,FSS}, upper::UnumLarge{ESS,FSS})
@@ -34,7 +38,7 @@ type UboundLarge{ESS,FSS} <: Ubound{ESS,FSS}
 end
 
 function call{ESS,FSS}(::Type{Ubound{ESS,FSS}}, x::UnumLarge{ESS,FSS}, y::UnumLarge{ESS,FSS})
-  UboundLarge{ESS,FSS}(x, y)
+  UboundLarge{ESS,FSS}(UnumLarge{ESS,FSS}(x), UnumLarge{ESS,FSS}(y))
 end
 
 export Ubound

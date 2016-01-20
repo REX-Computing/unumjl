@@ -144,19 +144,11 @@ pm_pa = Ubound{0,0}(pmany, pall_)
 #and a general purpose function for testing an operation,
 function testop(op, expected)
   #now create a matrix of warlpiris
-  amatrix = warlpiris
-  for i = 1:14
-    amatrix = [amatrix warlpiris]
-  end
-  #then transpose it.
-  bmatrix = amatrix'
   fails = 0
-
   for i=1:15
     for j=1:15
       try
         res = op(warlpiris[i], warlpiris[j])
-
         if !isequal(res, expected[i, j])
           println("$i, $j: $(bits(warlpiris[i])) $op $(bits(warlpiris[j])) failed as $(bits(res)); should be $(bits(expected[i,j]))")
           fails += 1

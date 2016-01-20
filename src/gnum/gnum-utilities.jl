@@ -80,6 +80,10 @@ function get_ubound!{ESS,FSS}(src::Gnum{ESS,FSS}, dest::Ubound{ESS,FSS})
   nothing
 end
 
+doc"""
+`set_g_flags!(v::Unum{ESS,FSS})` sets the flags on any given unum to the appropriate
+g-layer flag scheme.
+"""
 function set_g_flags!{ESS,FSS}(v::Unum{ESS,FSS})
   #clear the mask, keeping only flags and scratchpad values.
   is_inf(v) &&  (v.flags |= GNUM_INF_MASK; return)
@@ -90,7 +94,7 @@ function set_g_flags!{ESS,FSS}(v::Unum{ESS,FSS})
 end
 
 doc"""
-  `set_flags(::Gnum{ESS,FSS}, ::Type{Val{side}})` sets flags on one side of the
+  `set_flags!(::Gnum{ESS,FSS}, ::Type{Val{side}})` sets flags on one side of the
   gnum by examining the value.
 """
 @generated function set_flags!{ESS,FSS,side}(v::Gnum{ESS,FSS}, ::Type{Val{side}})

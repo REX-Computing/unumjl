@@ -15,9 +15,21 @@ end
 
 @generated function set_frac_top!{ESS,FSS}(x::Unum{ESS,FSS})
   if (FSS < 7)
-    :(x.fraction |= 0x8000_0000_0000_0000)
+    :(x.fraction |= t64)
   else
-    :(x.fraction[1] |= 0x8000_0000_0000_0000)
+    :(x.fraction[1] |= t64)
+  end
+end
+
+doc"""
+  `Unums.is_top_frac_bit_zero(::Unum)` reports whether or not the top bit in the
+  fraction is zero.
+"""
+@generated function is_top_frac_bit_zero{ESS,FSS}(x::Unum{ESS,FSS})
+  if (FSS < 7)
+    :(x.fraction & t64 == 0)
+  else
+    :(x.fraction[1] & t64 == 0)
   end
 end
 

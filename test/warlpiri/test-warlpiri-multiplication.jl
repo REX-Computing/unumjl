@@ -37,4 +37,5 @@ wmult = Utype[
 #n_all * line
  junk_ n_all n_all n_all n_all n_all n_all junk_ junk_ pall_ pall_ pall_ pall_ pall_ pall_
 ]
+
 testop(*, wmult)

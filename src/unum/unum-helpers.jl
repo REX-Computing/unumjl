@@ -55,86 +55,6 @@ end
   end
 end
 
-#=
-#takes a peek at the fraction and decides if ubit needs to be set (if the boundary
-#is not flush with max_fss), but also decides if fsize_of_exact needs to be set.
-function __frac_analyze(fraction::UInt64, is_ubit::UInt16, fss::Int)
-  #two possibilities:  fss is less than 6 (and the fraction is not on a 64-bit border)
-  _mfs::Int16 = max_fsize(fss)
-  if (fss < 6)
-    #set the high mask
-    high_mask::UInt64 = __frac_mask(fss)
-    #generate the low mask and check it out.
-    low_mask::UInt64 = ~high_mask
-    is_ubit = (fraction & low_mask != 0) ? UNUM_UBIT_MASK : is_ubit
-
-    #mask out the fraction.
-    fraction = fraction & high_mask
-
-    fsize = (is_ubit != 0) ? _mfs : __minimum_data_width(fraction)
-    (fraction & high_mask, fsize, is_ubit)
-  else
-    #we don't need to check for lost bits because when 6 or greater, the fractions
-    #are aligned with the 64-bit boundaries.
-    (is_ubit != 0) && return (fraction, _mfs, is_ubit)
-    (fraction, __minimum_data_width(fraction), z16)
-  end
-end
-
-function __frac_analyze(fraction::Array{UInt64}, is_ubit::UInt16, fss::Int)
-  #we don't need to check for lost bits because when 6 or greater, the fractions
-  #are aligned with the 64-bit boundaries.
-  (is_ubit != 0) && return (fraction, _mfs, is_ubit)
-  (fraction, __minimum_data_width(fraction), z16)
-end
-
-#match the fraction to fss, setting the ubit if digits were thrown out in the
-#process of trimming to fraction.
-
-__frac_match_check(frac::Array{UInt64}, fss::Int)
-end
-
-function __frac_match(frac::Uint64, fss::Int)
-end
-
-function __frac_match(frac::Array{UInt64}, fss::Int)
-  flength = length(frac)
-  cells = __frac_cells(fss)
-  temp_frac = zeros(UInt64, cells)
-  ubit = zero(UInt16)
-  #create an appropriate superint
-  if (flength < cells)
-    #fill the remainder of resultfrac with data from frac
-    temp_frac[cells - flength + 1:cells] = frac
-    res = temp_frac
-  else
-    #mirror the previous process
-    temp_frac = frac[flength - cells + 1:flength]
-
-    ubit = ([frac][1:flength - cells] == zeros(UInt64, flength - cells)) ? 0 : UNUM_UBIT_MASK
-    if (ubit == 0)
-      (res, __, ubit) = __frac_trim(temp_frac, max_fsize(fss))
-    else
-      #trim more, but only for masking purposes.
-      (res, __, ___) = __frac_trim(temp_frac, max_fsize(fss))
-    end
-  end
-  (res, ubit)
-end
-
-#calculates how many words of fraction are necessary to support a certain fss
-__frac_cells(fss::Int) = UInt16(fss < 6 ? 1 : (1 << (fss - 6)))
-
-#set the lsb of a superint to 1 based on fss.  This function has undefined
-#behavior if the passed superint already has a bit set at this location.
-function __set_lsb(a::UInt64, fss::Int)
-  return a | (0x8000_0000_0000_0000 >> (1 << fss - 1)))
-end
-function __set_lsb(a::Array{UInt64, 1}, fss::Int)
-    return a | [zeros(UInt64, __frac_cells(fss) - 1); o64]
-end
-=#
-
 ################################################################################
 # EXPONENT ENCODING AND DECODING
 doc"""
@@ -150,7 +70,7 @@ function encode_exp(unbiasedexp::Int64)
 end
 
 doc"""
-`Unums.encode_exp(::UInt16, ::UInt64)` takes a duple `(esize, exponent)` and
+`Unums.decode_exp(::UInt16, ::UInt64)` takes a duple `(esize, exponent)` and
 returns the unbiased exponent which is represented by this value.  This does
 not account for subnormal representations.
 """
