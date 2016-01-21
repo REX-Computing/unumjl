@@ -74,6 +74,9 @@ const LOWER_UNUM = Val{:lower}
 const UPPER_UNUM = Val{:upper}
 const SCRATCHPAD = Val{:scratchpad}
 const BUFFER = Val{:buffer}
+#other values used for instruction directives in mults and divs
+const DISCARD_PRIMARY = Val{:discard_primary}
+const DISCARD_SECONDARY = Val{:discard_secondary}
 
 #create a global scratchpad array.
 const GLOBAL_SCRATCHPAD_SIZE = __cell_length(11) + (__cell_length(11) >> 1)

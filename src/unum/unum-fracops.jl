@@ -112,3 +112,40 @@ end
     :(is_ulp(a) && __add_ubit!(a.fraction, a.fsize))
   end
 end
+
+
+doc"""
+  `Unums.__tandem_copy_add_frac!(data::Unum, scratchpad::Unum, shift::Int64)`
+  adds the value in data to scratchpad incurring the specified rightshift, while
+  at the same time copying the value of scratchpad back into the data variable.
+  This is done without heap allocation in the FSS >= 6 case.
+"""
+@gen_code function __tandem_copy_add_frac!{ESS,FSS}(carry::UInt64, data::Unum{ESS,FSS}, scratchpad::Unum{ESS,FSS}, shift::UInt16)
+  if (FSS < 6)
+    @code quote
+      __temp_scratchpad::UInt64 = scratchpad.fraction
+      scratchpad.fraction += data.fraction >> shift
+      data.fraction = __temp_scratchpad
+      carry += (scratchpad.fraction < __temp_scratchpad) * o64
+    end
+  else
+    throw(ArgumentError("FSS >= 6 not supported yet."))
+  end
+end
+
+doc"""
+  `Unums.__add_frac_with_shift!(data::Unum, scratchpad::Unum, shift::Int64)`
+  adds the value in data's fraction to the scratchpad incurring the specified rightshift.
+  This is done without heap allocation in the FSS >= 6 case.
+"""
+@gen_code function __add_frac_with_shift!{ESS,FSS}(carry::UInt64, data::Unum{ESS,FSS}, scratchpad::Unum{ESS,FSS}, shift::UInt16)
+  if (FSS < 6)
+    @code quote
+      old_fraction = scratchpad.fraction
+      scratchpad.fraction += data.fraction >> shift
+      carry += (scratchpad.fraction < old_fraction) * o64
+    end
+  else
+    throw(ArgumentError("FSS >= 6 not supported yet."))
+  end
+end

@@ -55,9 +55,7 @@ macro signof(x)
   :($x.flags & UNUM_SIGN_MASK)
 end
 
-doc"""
-  `Unums.@ubitof(x)` extracts the 16-bit unsigned "ubit" component of the flag.
-"""
+doc"""`Unums.@ubitof(x)` extracts the 16-bit unsigned "ubit" component of the flag."""
 macro ubitof(x)
   :($x.flags & UNUM_UBIT_MASK)
 end
@@ -175,7 +173,7 @@ is_neg_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_sss(x)
 
 doc"""
   `is_mmr(::Unum)` sign-agnostically checks to see if the passed unum is the positive
-  'more than maxreal' interval, or the open bound (maxreal, ∞)
+  'more than maxreal' interval, or the open bound ±(maxreal, ∞)
 """
 @gen_code function is_mmr{ESS,FSS}(x::Unum{ESS,FSS})
   xesize = max_esize(ESS)
@@ -196,16 +194,10 @@ doc"""
   end
 end
 
-doc"""
-  `is_pos_mmr(::Unum)` checks to see if the passed unum is the positive
-  'more than maxreal' interval, or the open bound (maxreal, ∞)
-"""
+doc""" `is_pos_mmr(::Unum)` checks to see if the passed unum is the positive 'more than maxreal' interval, or the open bound (maxreal, ∞)"""
 is_pos_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_mmr(x)
 
-doc"""
-  `is_neg_mmr(::Unum)` checks to see if the passed unum is the negative
-  'more than maxreal' interval, or the open bound (-∞, -maxreal)
-"""
+doc""" `is_neg_mmr(::Unum)` checks to see if the passed unum is the negative 'more than maxreal' interval, or the open bound (-∞, -maxreal)"""
 is_neg_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_mmr(x)
 
 export is_subnormal, is_exp_zero

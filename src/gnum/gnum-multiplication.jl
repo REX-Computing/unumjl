@@ -83,7 +83,7 @@ function mul_onesided!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   end
 
   #we have exhausted all of the special cases, so just do the multiplication.
-  should_calculate(b, LOWER_UNUM) && __multiply!(a, b, LOWER_UNUM)
+  should_calculate(b, LOWER_UNUM) && __multiply!(a, b, LOWER_UNUM, UPPER_UNUM)
   #swap parity if a was negative.
   is_negative(a) && parity_swap!(b)
 
@@ -172,14 +172,14 @@ function sss_onesided_mult!{ESS,FSS}(b::Gnum{ESS,FSS})
     #we do something different if it's negative vs. if it's positive.
     if is_negative(b.lower)
       neg_sss!(b.upper)
-      __multiply!(b.buffer, b, LOWER_UNUM)
+      __multiply!(b.buffer, b, LOWER_UNUM, DISCARD_PRIMARY)
       #check to see if we need to retrace.
       is_exact(b.lower) && __inward_ulp!(b.lower)
     else
       #we'll need to copy the value of b.lower over to b.upper
       copy_unum!(b.lower, b.upper)
       pos_sss!(b.lower)
-      __multiply!(b.buffer, b, UPPER_UNUM)
+      __multiply!(b.buffer, b, UPPER_UNUM, DISCARD_PRIMARY)
       #check to see if we need to retrace.
       is_exact(b.upper) && __inward_ulp!(b.upper)
     end
@@ -200,13 +200,13 @@ function mmr_onesided_mult!{ESS,FSS}(b::Gnum{ESS,FSS})
     if is_negative(b.lower)
       copy_unum!(b.lower, b.upper)
       neg_mmr!(b.lower)
-      __multiply!(b.buffer, b, UPPER_UNUM)
+      __multiply!(b.buffer, b, UPPER_UNUM, DISCARD_SECONDARY)
       #check to see if we need to retrace.
       is_exact(b.lower) && __outward_ulp!(b.lower)
     else
       #we'll need to copy the value of b.lower over to b.upper
       pos_mmr!(b.upper)
-      __multiply!(b.buffer, b, LOWER_UNUM)
+      __multiply!(b.buffer, b, LOWER_UNUM, DISCARD_SECONDARY)
       #check to see if we need to retrace.
       is_exact(b.upper) && __outward_ulp!(b.upper)
     end
@@ -222,19 +222,31 @@ end
 ## actual algorithmic multiplication
 
 doc"""
-  `__multiply!(::Unum, ::Gnum, ::Type{Val{side}})` performs the algorithmic
-  multiplication of an unum into one side of the gnum.
-"""
-function __multiply!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-  @scratch_this_operation!(b)
-end
+  `Unums.__multiply!(::Unum, ::Gnum, ::Type{Val}, ::Type{Val})`
+  performs the algorithmic multiplication of an unum into one side of the gnum.
 
-#=
-@gen_code function __signless_exact_multiply!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
+  The *primary result* is the result of the exact multiplication between the two
+  values; the *secondary result* is the result of multiplying the ulp values.
+
+  The first value parameter contains the side that contains the multiplicand:
+  this may be UPPER_GNUM, LOWER_GNUM, or BUFFER.
+
+  The second value parameter contains a directive that determines what to do
+  when the value is inexact.  If this is UPPER_GNUM, LOWER_GNUM, or BUFFER, then
+  the secondary result is stored in the respective destination.  This destination
+  cannot be identical to the first value parameter.
+
+  You may also specify DISCARD_PRIMARY or DISCARD_SECONDARY as the directives,
+  which will discard the primary or secondary results.
+"""
+@gen_code function __multiply!{ESS,FSS,side,directive}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}}, ::Type{Val{directive}})
   max_exp = max_exponent(ESS)
   sml_exp = min_exponent(ESS, FSS)
   min_exp = min_exponent(ESS)
   mesize = max_esize(ESS)
+  mfsize = max_fsize(FSS)
+
+  (side == directive) && throw(ArgumentError("multiply algorithm cannot send an ulp result to the same side as source"))
 
   @code quote
     a_exp::Int64 = decode_exp(a)
@@ -242,7 +254,7 @@ end
     a_dev::UInt64 = is_exp_zero(a) * o64
     b_dev::UInt64 = is_exp_zero(b.$side) * o64
 
-    b.scratchpad.flags |= b.$side.flags & UNUM_SIGN_MASK
+    @write_sign(b.scratchpad, @signof(b.$side))
 
     scratchpad_exp::Int64 = a_exp + b_exp + a_dev + b_dev
     #preliminary comparisons that will stop us from performing unnecessary steps.
@@ -251,11 +263,13 @@ end
   end
 
   if FSS < 6
+    #fss < 6 can perform a multiplication within the existing 64-bit integer width.
     @code :(b.scratchpad.fraction = __chunk_mult_small(a.fraction, b.$side.fraction))
   elseif FSS == 6
-    :(nan!(b))
+    #fss = 6 requires access to the scratchpad array.
+    @code :(nan!(b); return)
   else
-    :(nan!(b))
+    @code :(nan!(b); return)
   end
 
   @code quote
@@ -289,7 +303,8 @@ end
         (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
       end
     else
-      scratchpad_exp += 1
+      #promote the exponent if necessary.
+      (carry > 1) && (scratchpad_exp += 1)
       if scratchpad_exp > $max_exp
         @preserve_sflags b mmr!(b, b.scratchpad.flags & UNUM_SIGN_MASK, SCRATCHPAD)
       else
@@ -300,10 +315,47 @@ end
         #re-encode the exponent.
         (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
       end
+      #set the carry to one
+      carry = 1
+    end
+  end
+
+  #if we're instructed to discard the secondary value, then simply copy over
+  #the values, and we're done.
+  (directive == :discard_secondary) && (@code :(copy_unum_with_gflags!(b.scratchpad, b.$side); return); return)
+  #assign the destination for the secondary varibale.
+  sdest = (directive == :discard_primary) ? side : directive
+
+  @code quote
+    #if both sides were exact, the result is fairly simple.  Just copy the scratchpad results
+    #on over to the destination side, we don't have to do anything further.
+    is_exact(a) && is_exact(b.$side) && (copy_unum_with_gflags!(b.scratchpad, b.$side); return)
+
+    #from here on out we engage the heuristic algorithm.  The 'direct' algorithm
+    #would be to do two multiplications, but it is possible to save on that
+    #calculation.  The algorithm is as follows:
+    # we're going to do the multiplication X1 * X2
+    # X1 = (2^P1)(F1) (+) (2^(P1-U1))
+    # X2 = (2^P2)(F2) (+) (2^(P2-U2))
+    # X1 * X2 = 2^(P1P2)(F1F2 (+) (2^-U1)F2 + (2^-U2)F1 + 2^(-U1-U2))
+    # where x (+) a ≡ x + (0, a)
+
+    #copy the scratchpad back.
+    if (is_ulp(a))
+      carry = __tandem_copy_add_frac!(carry, b.$side, b.scratchpad, a.fsize)
+    else
+      copy_unum!(b.scratchpad, b.$side)
+    end
+    #copy the scratchpad back.
+    if (is_ulp(b.$side))
+      carry = __add_frac_with_shift!(carry, a, b.scratchpad, b.$side.fsize)
     end
 
-    copy_unum_with_gflags!(b.scratchpad, b.$side)
-    #(b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
-    #flip the ubit.
+    #tentatively make the fsize the maximum
+    b.$side.fsize = $mfsize
+    make_ulp!(b.$side)
+
+    #reassess the carry/frac
+
   end
-=#
+end

@@ -165,30 +165,26 @@ function __outward_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   x
 end
 
+doc"""`upper_ulp!(::Unum)` converts to the unum which is the ulp immediatel above itit."""
 function upper_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
   is_zero(x) && return pos_sss!(x)
   return is_positive(x) ? make_min_ulp!(x) : __inward_ulp!(x)
 end
 
+doc"""`lower_ulp!(::Unum)` converts to the unum which is the ulp immediately below it."""
 function lower_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
   is_zero(x) && return neg_sss!(x)
   return is_positive(x) ? __inward_ulp!(x) : make_min_ulp!(x)
 end
 
-doc"""
-  upper_exact! converts x into the unum which is the exact number that
-  upper bounds it.
-"""
+doc"""`upper_exact!(::Unum)` converts to the unum which is the exact number that upper bounds it."""
 function upper_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   __is_nan_or_inf(x) && (nan!(x); return)
   is_exact(x) && return x
   return is_negative(x) ? make_exact!(x) : __outward_exact!(x)
 end
 
-doc"""
-  lower_exact! converts x into the unum which is the exact number that
-  upper bounds it.
-"""
+doc"""`lower_exact!(::Unum)` converts to the unum which is the exact number that upper bounds it."""
 function lower_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   __is_nan_or_inf(x) && (nan!(x); return)
   is_exact(x) && return x
@@ -198,12 +194,8 @@ end
 ################################################################################
 ## dumb exactitude functions.
 
-doc"""
-  `Unums.make_exact(::Unum)` forces the ubit of a unum to be 0.
-"""
+doc"""`Unums.make_exact(::Unum)` forces the ubit of a unum to be 0."""
 make_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags &= ~UNUM_UBIT_MASK; x)
 
-doc"""
-  `Unums.make_ulp(::Unum)` forces the ubit of a unum to be 1.
-"""
+doc"""`Unums.make_ulp(::Unum)` forces the ubit of a unum to be 1."""
 make_ulp!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags |= UNUM_UBIT_MASK; x)
