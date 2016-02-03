@@ -84,7 +84,7 @@ function mul_onesided!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   end
 
   #we have exhausted all of the special cases, so just do the multiplication.
-  should_calculate(b, LOWER_UNUM) && __multiply!(a, b, LOWER_UNUM, UPPER_UNUM)
+  should_calculate(b, LOWER_UNUM) && (__multiply!(a, b, LOWER_UNUM, UPPER_UNUM))
   #swap parity if a was negative.
 
   #return the gnum.
@@ -249,9 +249,10 @@ doc"""
     b.scratchpad.flags &= ~UNUM_SIGN_MASK
 
     scratchpad_exp::Int64 = a_exp + b_exp + a_dev + b_dev
+
     #preliminary comparisons that will stop us from performing unnecessary steps.
-    (scratchpad_exp > $max_exp + 1) && (@preserve_sflags b mmr!(b, z16, Val{$side}); return)
-    (scratchpad_exp < $sml_exp - 2) && (@preserve_sflags b sss!(b, z16, Val{$side}); return)
+    (scratchpad_exp > $max_exp + 1) && (@preserve_sflags b mmr!(b, z16, Val{side}); return)
+    (scratchpad_exp < $sml_exp - 2) && (@preserve_sflags b sss!(b, z16, Val{side}); return)
   end
 
   if FSS < 6
@@ -265,6 +266,7 @@ doc"""
   end
 
   @code quote
+
     #fraction multiplication:  where va is "virtual bit" that is 1 for normals or 0 for subnormals.
     #  va + a
     #  vb + b
@@ -296,23 +298,24 @@ doc"""
         (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
         carry = 1
       end
-    else
-      #promote the exponent if necessary.
-      if (carry > 1)
-        (scratchpad_exp += 1)
-        if scratchpad_exp > $max_exp
-          @preserve_sflags b (mmr!(b, z16, SCRATCHPAD); return)
-        else
-          #shift things over by one since we went up in size.
-          __rightshift_frac_with_underflow_check!(b.scratchpad, 1)
-          #carry from the carry over into the fraction.
-          (carry == 3) && set_frac_top!(b.scratchpad)
-          #re-encode the exponent.
-          (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
-        end
-        #set the carry to one
-        carry = 1
+    elseif (carry == 1)
+      if scratchpad_exp > $max_exp
+        @preserve_sflags b (mmr!(b, z16, Val{side}); return)
       end
+    else
+      (scratchpad_exp += 1)
+      if scratchpad_exp > $max_exp
+        @preserve_sflags b (mmr!(b, z16, Val{side}); return)
+      else
+        #shift things over by one since we went up in size.
+        __rightshift_frac_with_underflow_check!(b.scratchpad, 1)
+        #carry from the carry over into the fraction.
+        (carry == 3) && set_frac_top!(b.scratchpad)
+        #re-encode the exponent.
+        (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
+      end
+      #set the carry to one
+      carry = 1
     end
   end
 
