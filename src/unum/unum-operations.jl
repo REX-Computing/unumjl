@@ -41,6 +41,13 @@ function additiveinverse!{ESS,FSS}(x::Unum{ESS,FSS})
 end
 export additiveinverse!
 
+doc"""
+  `abs!(::Unum)` forces the value of the unum to be positive.  Returns the
+  unum for chaining purposes.
+"""
+abs!{ESS,FSS}(x::Unum{ESS,FSS}) = ((x.flags &= ~UNUM_SIGN_MASK); x)
+export abs!
+
 @gen_code function copy_unum!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
   @code quote
     dest.fsize = src.fsize
@@ -199,3 +206,43 @@ make_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags &= ~UNUM_UBIT_MASK; x)
 
 doc"""`Unums.make_ulp(::Unum)` forces the ubit of a unum to be 1."""
 make_ulp!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags |= UNUM_UBIT_MASK; x)
+
+################################################################################
+## carry resolution
+
+doc"""
+  `Unums.__carry_resolve!(::UInt64, ::Unum, ::Val{::Bool})` resolves the calculation of a unum
+  with a hypothetical carry (invisible bit) value that may exceed one after
+  multiplication and/or addition events.  The passed boolean value indicates
+  whether or not a g-flag should be used for the mmr result.
+"""
+@generated function __carry_resolve!{ESS,FSS,use_gflag}(carry::UInt64, x::Unum{ESS,FSS}, ::Type{Val{use_gflag}})
+  _mexp = max_exponent(ESS)
+
+  #set the code for how to deal with mmr.
+  mmr_code = use_gflag ? :(set_g_mmr!(x)) : :(mmr!(x))
+
+  #set the code for the top unit in the fraction.
+  top_unit = ESS < 7 ? :(x.fraction) : :(x.fraction[1])
+
+  quote
+    #promote if exp was zero and there's a carry.
+    if (is_exp_zero(x) && (carry == 1))
+      (x.esize, x.exponent) = encode_exp(decode_exp(x) + 1)
+      return
+    end
+
+    #do nothing if the carry is less than or equal to one.
+    (carry <= 1) && return
+    exponent = decode_exp(x)
+    shift::Int64 = 63 - leading_zeros(carry)
+    (exponent > _mexp) && ($mmr_code; return)
+    #rightshift the fraction
+    __rightshift_frac_with_underflow_check!(x, shift)
+    #next copy the top bits over to the fraction.
+    $top_unit |= carry << (64 - shift)
+    #finally, update the exponent
+    (x.esize, x.exponent) = encode_exp(exponent)
+    nothing
+  end
+end

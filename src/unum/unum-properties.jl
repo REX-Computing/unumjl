@@ -170,27 +170,35 @@ is_neg_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_sss(x)
 
 ################################################################################
 ##  MMR CHECKS
+doc"""
+  `is_mmr_frac(::Unum)` overloads the is_mmr_frac(::ArrayNum) procedure to allow
+  for transparent checking of whether or not a Unum has the look of MMR, whether
+  or not the Unum has a big or small structure
+"""
+@generated function is_mmr_frac{ESS,FSS}(x::Unum{ESS,FSS})
+  xfsm1::UInt16 = FSS == 0 ? 0 : max_fsize(FSS) - 1
+  if FSS < 7
+    xfraction::UInt64 = FSS == 0 ? 0 : mask_top(xfsm1)
+    :(x.fraction == $xfraction)
+  else
+    :(is_mmr_frac(x.fraction))
+  end
+end
 
 doc"""
   `is_mmr(::Unum)` sign-agnostically checks to see if the passed unum is the positive
   'more than maxreal' interval, or the open bound ±(maxreal, ∞)
 """
-@gen_code function is_mmr{ESS,FSS}(x::Unum{ESS,FSS})
+@generated function is_mmr{ESS,FSS}(x::Unum{ESS,FSS})
   xesize = max_esize(ESS)
   xfsize = max_fsize(FSS)
-  xfsm1::UInt16 = ESS == 0 ? 0 : xfsize - 1
   xexponent = max_biased_exponent(ESS)
-  @code quote
+  quote
     is_ulp(x) || return false
     x.esize == $xesize || return false
     x.fsize == $xfsize || return false
     x.exponent == $xexponent || return false
-  end
-  if FSS < 7
-    xfraction::UInt64 = ESS == 0 ? 0 : mask_top(xfsm1)
-    @code :(x.fraction == $xfraction)
-  else
-    @code :(is_mmr_frac(x.fraction))
+    is_mmr_frac(x) || return false
   end
 end
 

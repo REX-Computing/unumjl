@@ -23,6 +23,8 @@ function is_nan{ESS,FSS}(x::Gnum{ESS,FSS})
   x.scratchpad.flags & GNUM_NAN_MASK != 0
 end
 
+set_g_mmr!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags |= GNUM_MMR_MASK)
+
 is_g_inf{ESS,FSS}(x::Unum{ESS,FSS}) = x.flags & GNUM_INF_MASK != 0
 @generated function is_inf{ESS,FSS,side}(x::Gnum{ESS,FSS}, ::Type{Val{side}})
  :(is_g_inf(x.$side))

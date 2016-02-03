@@ -116,7 +116,7 @@ function copy_unum_with_gflags!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS}
   dest.flags |= gflags
 end
 
-function parity_swap!{ESS,FSS}(target::Gnum{ESS,FSS})
+function additive_inverse!{ESS,FSS}(target::Gnum{ESS,FSS})
   if is_twosided(target)
     #swap the order of lower/upper via a buffer intermediate.
     copy_unum_with_gflags!(target.lower, target.buffer)

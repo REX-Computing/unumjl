@@ -125,6 +125,8 @@ doc"""
     @code quote
       __temp_scratchpad::UInt64 = scratchpad.fraction
       scratchpad.fraction += data.fraction >> shift
+      #then do the top bit.
+      scratchpad.fraction += (t64 >> shift) * (!is_exp_zero(data))
       data.fraction = __temp_scratchpad
       carry += (scratchpad.fraction < __temp_scratchpad) * o64
     end
@@ -143,6 +145,8 @@ doc"""
     @code quote
       old_fraction = scratchpad.fraction
       scratchpad.fraction += data.fraction >> shift
+      #then do the top bit.
+      scratchpad.fraction += (t64 >> shift) * (!is_exp_zero(data))
       carry += (scratchpad.fraction < old_fraction) * o64
     end
   else
