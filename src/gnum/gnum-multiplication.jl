@@ -198,7 +198,7 @@ function mmr_onesided_mult!{ESS,FSS}(b::Gnum{ESS,FSS})
     #check to see if we need to retrace.
     is_exact(b.lower) && make_ulp!(b.lower)
     #make the upper side mmr.
-    mmr!(b, z16, LOWER_UNUM)
+    mmr!(b, z16, UPPER_UNUM)
     ignore_both_sides!(b)
   else
     #then everything stays mmr.
@@ -302,6 +302,7 @@ doc"""
       if scratchpad_exp > $max_exp
         @preserve_sflags b (mmr!(b, z16, Val{side}); return)
       end
+      (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
     else
       (scratchpad_exp += 1)
       if scratchpad_exp > $max_exp
@@ -327,14 +328,16 @@ doc"""
   #this code ge
   retrace_code1 = (directive == :discard_primary) ? :(nothing) : :(carry = __tandem_copy_add_frac!(carry, b.$side, b.scratchpad, a.fsize))
   retrace_code2 = (directive == :discard_primary) ? :(nothing) : :(copy_unum!(b.scratchpad, b.$side))
-  (sdest == :upper) && (@code :(set_twosided!(b)))
+  needs_twosided = (sdest == :upper) ? (:(set_twosided!(b))) : :(nothing)
   #if we're writing to the lower side, then be prepared to collapse an mmr into a onesided.
   mmr_collapse = (side == :lower) && !(directive == :discard_primary) ? :(set_onesided!(b)) : :(nothing)
 
   @code quote
     #if both sides were exact, the result is fairly simple.  Just copy the scratchpad results
     #on over to the destination side, we don't have to do anything further.
+
     is_exact(a) && is_exact(b.$side) && (copy_unum_with_gflags!(b.scratchpad, b.$side); return)
+    $needs_twosided
 
     #the scratchpad needs to be exact, but as a temporary shim we need to make
     #it an ulp to assess if the result is mmr.

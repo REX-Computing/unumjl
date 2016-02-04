@@ -4,12 +4,14 @@ using Base.Test
 onenum = true
 
 if (onenum)
-x = mmr(Unum{0,0})
-y = sss(Unum{0,0})
-println(bits(x), "*", bits(y))
+T = Unum{3,4}
+x = convert(T, 3)
+y = convert(T, 5)
+println(x, "*", y)
+z = convert(T, 15)
 r = x * y
-println("result: ", bits(r))
-println("should have been 0001 -> 0101")
+println("result: ", r)
+println("should have been ", z)
 else
 include("./test-infrastructure.jl")
 include("./test-operations.jl")
