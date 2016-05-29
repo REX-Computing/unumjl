@@ -7,38 +7,40 @@
 #next significant cell and seeks a decesion for that.  If all of the cells are
 #equal then it spits out false.
 
-import Base: <, >, ==, !=
+import Base: <, >, <=, >=, ==, !=
 
-@gen_code function <{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
-  @code quote
-    res::Bool = false
-    alive::Bool = true
-  end
+function <{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    @code quote
-      @inbounds res = res | (alive & (a.a[$idx] < b.a[$idx]))
-      @inbounds alive = alive & (b.a[$idx] == a.a[$idx])
-    end
+    (a.a[idx] < b.a[idx]) && return true
+    (a.a[idx] > b.a[idx]) && return false
   end
-  @code :(res)
+  return false
 end
 
-#the greater than function operates the same way with antisymmetrical relation
-#checks.
-@gen_code function >{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
-  @code quote
-    res::Bool = false
-    alive::Bool = true
-  end
+function >{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    @code quote
-      @inbounds res = res | (alive & (a.a[$idx] > b.a[$idx]))
-      @inbounds alive = alive & (a.a[$idx] == b.a[$idx])
-    end
+    (a.a[idx] > b.a[idx]) && return true
+    (a.a[idx] < b.a[idx]) && return false
   end
-  @code :(res)
+  return false
 end
 
+function <={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
+  for idx = 1:__cell_length(FSS)
+    (a.a[idx] < b.a[idx]) && return true
+    (a.a[idx] > b.a[idx]) && return false
+  end
+  return true
+end
+
+function >={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
+  for idx = 1:__cell_length(FSS)
+    (a.a[idx] > b.a[idx]) && return true
+    (a.a[idx] < b.a[idx]) && return false
+  end
+  return true
+end
+#=
 function cmpplusubit(a::UInt64, b::UInt64, fsize)
   mask = mask_top(fsize)
   (a > b) && ((a & mask) != (b & mask))
@@ -72,20 +74,18 @@ end
     accum & (!alive)
   end
 end
+=#
 
-
-@gen_code function !={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
-  @code :(accum = z64)
+function !={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    @code :(accum |= a.a[$idx] $ b.a[$idx])
+    (a.a[idx] != b.a[idx]) && return true
   end
-  @code :(accum != 0)
+  return false
 end
 
-@gen_code function =={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
-  @code :(accum = z64)
+function =={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    @code :(accum |= a.a[$idx] $ b.a[$idx])
+    (a.a[idx] != b.a[idx]) && return false
   end
-  @code :(accum == 0)
+  return true
 end

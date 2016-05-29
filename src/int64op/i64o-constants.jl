@@ -7,49 +7,42 @@ Base.zero{FSS}(a::Type{ArrayNum{FSS}}) = ArrayNum{FSS}(zeros(UInt64, __cell_leng
 doc"""
 `zero!` sets an `ArrayNum` to zero.
 """
-@gen_code function zero!{FSS}(a::ArrayNum{FSS})
-  l = __cell_length(FSS)
+function zero!{FSS}(a::ArrayNum{FSS})
   #unroll the loop that fills the contents of the a with zero.
-  for idx = 1:l
-    @code :(@inbounds a.a[$idx] = 0)
-  end
-end
-export zero!
-
-@generated function Base.one{FSS}(::Type{ArrayNum{FSS}})
-  l = __cell_length(FSS)
-  quote
-    arr = zeros(UInt64, $l)
-    arr[$l] = 1
-    ArrayNum{FSS}(arr)
+  for idx = 1:__cell_length(FSS)
+    @inbounds a.a[idx] = 0
   end
 end
 
-@generated function Base.one{FSS}(a::Type{ArrayNum{FSS}})
+##create Unums.frac_zero, out of zero(UInt64) and zero!(ArrayNum)
+@fracfunc zero
+
+function Base.one{FSS}(::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
-  quote
-    arr = zeros(UInt64, $l)
-    arr[$l] = 1
-    ArrayNum{FSS}(arr)
-  end
+  arr = zeros(UInt64, l)
+  arr[l] = 1
+  ArrayNum{FSS}(arr)
 end
 
-@generated function top{FSS}(::Type{ArrayNum{FSS}})
+function Base.one{FSS}(a::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
-  quote
-    arr = zeros(UInt64, $l)
-    arr[1] = t64
-    ArrayNum{FSS}(arr)
-  end
+  arr = zeros(UInt64, l)
+  arr[l] = 1
+  ArrayNum{FSS}(arr)
 end
 
-@generated function top{FSS}(a::Type{ArrayNum{FSS}})
+function top{FSS}(::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
-  quote
-    arr = zeros(UInt64, $l)
-    arr[1] = t64
-    ArrayNum{FSS}(arr)
-  end
+  arr = zeros(UInt64, l)
+  arr[1] = t64
+  ArrayNum{FSS}(arr)
+end
+
+function top{FSS}(a::Type{ArrayNum{FSS}})
+  l = __cell_length(FSS)
+  arr = zeros(UInt64, l)
+  arr[1] = t64
+  ArrayNum{FSS}(arr)
 end
 export top
 

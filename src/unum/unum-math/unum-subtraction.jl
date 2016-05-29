@@ -26,18 +26,9 @@ function sub!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   b
 end
 
-function additive_inverse!(b)
+function additive_inverse!{ESS,FSS}(b::Unum{ESS,FSS})
   is_nan(b) && return #lazy eval
-  if is_twosided(b)
-    #additive inverse them and then switch lower and upper.
-    additive_inverse!(b.lower)
-    additive_inverse!(b.upper)
-    copy_unum!(b.upper, b.scratchpad)
-    copy_unum!(b.lower, b.upper)
-    copy_unum!(b.scratchpad, b.lower)
-  else
-    additive_inverse!(b.lower)
-  end
+  b.flags $= UNUM_SIGN_MASK
 end
 
 @generated function __arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})

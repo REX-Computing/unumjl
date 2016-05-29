@@ -10,12 +10,11 @@ doc"""
 are zero.  Used for checking zero at the Unum level.
 """
 is_all_zero(n::UInt64) = (n == 0)
-@gen_code function is_all_zero{FSS}(n::ArrayNum{FSS})
-  @code :(accum = zero(UInt64))              #set an accumulator to zero.
+function is_all_zero{FSS}(n::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    @code :(@inbounds accum |= n.a[$idx])   #accumulate bits.
+    @inbounds (n.a[idx] != 0) && return false   #accumulate bits.
   end
-  @code :(accum == 0)                         #check to see if the accumulated quantity is zero.
+  return true
 end
 
 doc"""
@@ -23,24 +22,22 @@ doc"""
 are one.  Used for checking not_zero at the Unum level.
 """
 is_not_zero(n::UInt64) = (n != 0)
-@gen_code function is_not_zero{FSS}(n::ArrayNum{FSS})
-  @code :(accum = zero(UInt64))
+function is_not_zero{FSS}(n::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    @code :(@inbounds accum |= n.a[$idx])
+    @inbounds (n.a[idx] != 0) && return true
   end
-  @code :(accum != 0)
+  return false
 end
 
 doc"""
 `is_all_ones` outputs whether or not all of the bits in an UInt64 or an `ArrayNum`
 are one.
 """
-@gen_code function is_all_ones{FSS}(n::ArrayNum{FSS})
-  @code :(accum = f64)
+function is_all_ones{FSS}(n::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    @code :(@inbounds accum &= n.a[$idx])
+    @inbounds (n.a[idx] != f64) && return false
   end
-  @code :(accum == f64)
+  return true
 end
 
 doc"""
@@ -49,12 +46,12 @@ doc"""
 one at the Unum level.
 """
 is_top(a::UInt64) = (a == t64)
-@gen_code function is_top{FSS}(n::ArrayNum{FSS})
-  @code :(accum = (n.a[1] $ t64))
+function is_top{FSS}(n::ArrayNum{FSS})
+  (n.a[1] != t64) && return false
   for idx = 2:__cell_length(FSS)
-    @code :(@inbounds accum |= n.a[$idx])
+    @inbounds (n.a[idx] != 0) && return false
   end
-  @code :(accum == 0)
+  return true
 end
 
 doc"""
@@ -63,25 +60,21 @@ doc"""
 the subnormal one at the Unum level.
 """
 is_not_top(a::UInt64) = (a != t64)
-@gen_code function is_not_top{FSS}(n::ArrayNum{FSS})
-  @code :(accum = (n.a[1] $ t64))
+function is_not_top{FSS}(n::ArrayNum{FSS})
+  (n.a[1] != t64) && return true
   for idx = 2:__cell_length(FSS)
-    @code :(@inbounds accum |= n.a[$idx])
+    @inbounds (n.a[idx] != 0) && return true
   end
-  @code :(accum != 0)
+  return false
 end
 
 doc"""
 `is_mmr_frac` has the sole purpose of checking if the fraction looks like mmr.
 """
-@gen_code function is_mmr_frac{FSS}(n::ArrayNum{FSS})
+function is_mmr_frac{FSS}(n::ArrayNum{FSS})
   l = __cell_length(FSS)
-  @code :(accum = f64)
-  for idx = 1:l
-    @code :(@inbounds accum &= n.a[$idx])
+  for idx = 1:(l - 1)
+    @inbounds (n.a[idx] != f64) && return false
   end
-  @code quote
-    accum &= (n.a[$l] $ o64)
-    accum == f64
-  end
+  return (n.a[l] == 0xFFFF_FFFF_FFFF_FFFE)
 end

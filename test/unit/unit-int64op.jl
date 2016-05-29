@@ -22,9 +22,8 @@ t64 = 0x8000_0000_0000_0000
 @test_throws ArgumentError Unums.__check_ArrayNum(8, [z64, z64])
 
 #test developer safety being disabled on ArrayNum type
-@unum_dev_switch begin
 
-  @unum_dev_on
+@devmode_on
 
   #ArrayNums of size < 7 are disallowed.
   @test_throws ArgumentError Unums.ArrayNum{0}([z64])
@@ -39,15 +38,15 @@ t64 = 0x8000_0000_0000_0000
   @test_throws ArgumentError Unums.ArrayNum{7}([z64])
   @test_throws ArgumentError Unums.ArrayNum{8}([z64, z64])
 
-  @unum_dev_off
+@devmode_off
 
   #these are OK now.
   Unums.ArrayNum{0}([z64])
   Unums.ArrayNum{6}([z64])
   Unums.ArrayNum{7}([z64])
 
-  dev_check && Unums.__set_dev_check()
-end
+@restore_devmode
+
 
 #but it's ok if we pass an ArrayNum an array with more elements than necessary.
 bigger_array = Unums.ArrayNum{7}([z64, z64, z64, z64])

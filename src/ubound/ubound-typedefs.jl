@@ -1,15 +1,12 @@
-abstract Ubound{ESS,FSS} <: Utype
+abstract Ubound{ESS,FSS} <: Real
 
-function __check_UboundSmall{ESS, FSS}(lower::UnumSmall{ESS,FSS}, upper::UnumSmall{ESS,FSS})
+function __check_UboundSmall{ESS, FSS}(_ESS, _FSS, lower::UnumSmall{ESS,FSS}, upper::UnumSmall{ESS,FSS})
   (lower < upper) || throw(ArgumentError("in a Ubound, lower must be smaller than upper"))
 end
 
-type UboundSmall{ESS,FSS} <: Ubound{ESS,FSS}
+@dev_check type UboundSmall{ESS,FSS} <: Ubound{ESS,FSS}
   lower::UnumSmall{ESS,FSS}
   upper::UnumSmall{ESS,FSS}
-  @dev_check function UboundSmall(lower, upper)
-    new(lower, upper)
-  end
 end
 
 function call{ESS,FSS}(::Type{Ubound{ESS,FSS}}, x::UnumSmall{ESS,FSS}, y::UnumSmall{ESS,FSS})
@@ -25,16 +22,13 @@ end
   end
 end
 
-function __check_UboundLarge{ESS,FSS}(lower::UnumLarge{ESS,FSS}, upper::UnumLarge{ESS,FSS})
+function __check_UboundLarge{ESS,FSS}(_ESS, _FSS, lower::UnumLarge{ESS,FSS}, upper::UnumLarge{ESS,FSS})
   (lower < upper) || throw(ArgumentError("in a Ubound, lower must be smaller than upper"))
 end
 
-type UboundLarge{ESS,FSS} <: Ubound{ESS,FSS}
+@dev_check type UboundLarge{ESS,FSS} <: Ubound{ESS,FSS}
   lower::UnumLarge{ESS,FSS}
   upper::UnumLarge{ESS,FSS}
-  @dev_check function UboundLarge(lower::UnumLarge{ESS,FSS}, upper::UnumLarge{ESS,FSS})
-    new(lower, upper)
-  end
 end
 
 function call{ESS,FSS}(::Type{Ubound{ESS,FSS}}, x::UnumLarge{ESS,FSS}, y::UnumLarge{ESS,FSS})

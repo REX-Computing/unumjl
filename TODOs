@@ -1,3 +1,13 @@
+1) Implement "Simple" Addition
+2) Implement "Simple" Subtraction
+3) Implement "Simple" Multiplication
+4) Implement "Simple" Division
+
+5) Implement "Gnum" Addition
+6) Implement "Gnum" Subtraction
+7) Implement "Gnum" Multiplication
+8) Implement "Gnum" Division
+
 Adjust the 'calculate' function to either reject or calculate when Unums use a
 fraction length that is much longer than 64 bits
 

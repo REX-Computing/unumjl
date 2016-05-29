@@ -7,46 +7,7 @@
 #unum-teoe-func.jl provides aliasing implementations for all of the function
 #in appendix a of "The End of Error"
 
-decode_exp{ESS,FSS}(x::Unum{ESS,FSS}) = decode_exp(x.esize, x.exponent)
-
-doc"""
-`decode_exp_frac(::Unum{ESS,FSS})` decodes an exponent but if the exponent is
-subnormal (strange or otherwise) it shifts the fraction and adjusts the frac_size.
-the quad (unbiased_exponent, fraction, fsize, zeroish) is returned.  Zeroish refers
-to the state of both exponent and fraction being zero.
-
-`decode_exp_frac(::Unum{ESS,FSS}, ::ArrayNum{FSS})` is for `FSS > 6`, and returns
-the same quad, except preallocated space for the new fraction should be passed
-to function, and the contents of this space will be bashed.
-"""
-@generated function decode_exp_frac{ESS,FSS}(x::Unum{ESS,FSS}, f::Union{ArrayNum{FSS}, UInt64} = z64)
-  FSS > 6 && (f == UInt64) && throw(ArgumentError("FSS $FSS > 6 is invalid for this form of decode_exp_frac"))
-  FSS < 7 && (f == ArrayNum{FSS}) && throw(ArgumentError("FSS $FSS < 6 is invalid for this form of decode_exp_frac"))
-
-  ftype = f
-  shift_code = FSS < 7 ? :(fraction <<= shft) : :(lsh!(fraction, shft))
-
-  quote
-    unbiased_exponent::Int = decode_exp(x)
-    fraction::$ftype = x.fraction
-    fsize::UInt16 = x.fsize
-    zeroish::Bool = false
-
-    #make modifications if we're subnormal.
-    if is_exp_zero(x)
-      if is_frac_zero(x)
-        zeroish = true
-      else
-        shft::UInt16 = clz(x.fraction) + 1
-        unbiased_exponent -= (shft - 1)
-        $shift_code
-        fsize -= min(shft, fsize)
-      end
-    end
-
-    (unbiased_exponent, fraction, fsize, zeroish)
-  end
-end
+@universal decode_exp(x::Unum) = decode_exp(x.esize, x.exponent)
 
 doc"""
   `Unums.@signof(x)` extracts the 16-bit unsigned "sign" component of the flag.
@@ -61,12 +22,12 @@ macro ubitof(x)
 end
 
 #some really dumb ones, but we'll put these in for legibility.
-is_ulp{ESS,FSS}(x::Unum{ESS,FSS})      = (@ubitof(x) != 0)
-is_exact{ESS,FSS}(x::Unum{ESS,FSS})    = (@ubitof(x) == 0)
-is_negative{ESS,FSS}(x::Unum{ESS,FSS}) = (@signof(x) != 0)
-is_positive{ESS,FSS}(x::Unum{ESS,FSS}) = (@signof(x) == 0)
-is_neg_def{ESS,FSS}(x::Unum{ESS,FSS})  = (!is_zero(x)) && is_negative(x)
-is_pos_def{ESS,FSS}(x::Unum{ESS,FSS})  = (!is_zero(x)) && is_positive(x)
+@universal is_ulp(x::Unum)      = (@ubitof(x) != 0)
+@universal is_exact(x::Unum)    = (@ubitof(x) == 0)
+@universal is_negative(x::Unum) = (@signof(x) != 0)
+@universal is_positive(x::Unum) = (@signof(x) == 0)
+@universal is_neg_def(x::Unum)  = (!is_zero(x)) && is_negative(x)
+@universal is_pos_def(x::Unum)  = (!is_zero(x)) && is_positive(x)
 export is_ulp, is_exact, is_negative, is_positive
 
 #a couple of testing conditions
@@ -101,7 +62,7 @@ is_pos_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_positive(x) && is_exact(x) && __is_
 is_neg_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_negative(x) && is_exact(x) && __is_nan_or_inf(x)
 export is_inf, is_pos_inf, is_neg_inf
 
-#aliasing
+#aliasing to base definition
 Base.isinf{ESS,FSS}(x::Unum{ESS,FSS}) = is_exact(x) && __is_nan_or_inf(x)
 
 @gen_code function is_finite{ESS,FSS}(x::Unum{ESS,FSS})

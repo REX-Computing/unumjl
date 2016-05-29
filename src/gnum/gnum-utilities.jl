@@ -117,6 +117,9 @@ function copy_unum_with_gflags!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS}
 end
 
 function additive_inverse!{ESS,FSS}(target::Gnum{ESS,FSS})
+  #lazy eval on this process.
+  is_nan(target) && return
+  
   if is_twosided(target)
     #swap the order of lower/upper via a buffer intermediate.
     copy_unum_with_gflags!(target.lower, target.buffer)

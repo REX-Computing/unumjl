@@ -3,10 +3,48 @@ README
 
 This is a pure Julia implementation of the unum prototype created by John Gustafson.
 
-This implementation is a bitwise, binary implementation, intended as a first-stage
-look at what hardware unums might look like.  The representation is not an exact
-bitwise replica of the unum spec as outlined in "The End of Error" and deviates
-in the following ways:
+This implementation is a bitwise, binary implementation, intended as a software
+approximation of what hardware unums might look like.  One benefit of using
+Julia is that the advanced type system makes selecting the Unum environment
+easy and, cosmetically, identical to the presentation in "The End of Error"
+
+Using Unums
+-----------
+
+The Unum{4,6} type is an effective container for Float64, and the Unum{3,5} type
+Is an effective container for Float32.
+
+  one = convert(Unum{4,6}, 1.0)
+  two = convert(Unum{4,6}, 2.0)
+
+You can use the "calculate" feature to calculate a Unum as a bigfloat.  Future
+versions will have better support for presenting Unums.
+
+  calculate(one + two) #==> 3.0
+
+You can't mix calculations of unums in mixed environments.
+
+  one32 = convert(Unum{3,5}, 1.0f)
+  calculate(one32 + two) #==> argument error
+
+You can also use the @glayer macro to pre-allocate space for bulk data
+operations.  This may result in improved operation performance
+
+  array1[idx] = convert(Unum{4,6}, rand(10000))
+  array1[idx] = convert(Unum{4,6}, rand(10000))
+  array1[idx] = convert(Unum{4,6}, rand(10000))
+
+  result = Utype[10000]
+
+  for idx = 1:10000
+    result[idx] = @glayer array1[idx] + array2[idx] * array3[idx]
+  end
+
+Under the hood
+--------------
+
+The representation is not an exact bitwise replica of the unum spec as outlined
+in "The End of Error" and deviates in the following ways:
 
 1) instead of having a global environment setting which determines fsizesize and
 esizesize, the unum data carry in its type information fsizesize and esizesize.
@@ -47,6 +85,11 @@ these functions will be implemented in C, and that will enable "shimming" of
 the various C functions for verification purposes, ultimately leading to a fast
 C library which even more closely emulates the processes that hardware will
 implement.
+
+Using unumjl
+------------
+
+
 
 unumjl was created by Isaac Yonemoto on behalf of Rex Computing
 

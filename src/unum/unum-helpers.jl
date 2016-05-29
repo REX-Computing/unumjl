@@ -4,56 +4,56 @@
 ###########################################################
 #Utility functions
 
-#_frac_trim:  Takes a Uint64 value and returns a triplet: (fraction, fsize, ubit)
-#this triplet represents the fraction VarInt trimmed to fsize, a new fsize,
-#in the case that it's exact and some zeros can be trimmed, and whether or not
-#ubit needs to be thrown (were there values cast out by fsize)?
-function __frac_trim(frac::UInt64, fsize::UInt16)
-  #generate masks from fsize values using the internal functions.
-  high_mask = mask_top(fsize)
-  low_mask = mask_bot(fsize)
-  #decide if we need to set the ubit
-  #mask out the high bits and check to see if what remains is zero.
-  #this needs to be in an array because that will collapse to the appropriate
-  #one-dimensional array in the array case and collapse to a one-element array
-  #in the single case, so that matches with the zeros() directive.
-  ubit = is_all_zero(low_mask & frac) ? z16 : UNUM_UBIT_MASK
-  #mask out the low bits and save that as the fraction.
-  frac &= high_mask
-  #we may need to trim the fraction further, in which case we alter fsize.
-  #also take the "zero" case and make sure we represent at least one digit.
-  fsize = (ubit == 0) ? __minimum_data_width(frac) : fsize
-  (frac, fsize, ubit)
+################################################################################
+# frac_trim - actively trims the fraction to size, setting a ubit as appropriate.
+
+function trim(frac::UInt64, fsize::UInt16)
+  frac & mask_top(fsize)
 end
 
-@gen_code function __frac_trim!{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
-  @code quote
-    middle_cell = div(fsize, 0x0040) + 1
-
-    #use bot_array from i64o-masks.jl.
-    bot_array[2] = mask_bot(fsize % 0x0040)
-
-    #set up an accumulator, and a mask variable.
-    accum::UInt64 = z64
-    mask::UInt64 = z64
-  end
-
-  for (idx = 1:__cell_length(FSS))
-    @code quote
-      @inbounds mask = bot_array[sign($idx - middle_cell) + 2]
-      @inbounds accum |= mask & frac[$idx]
-      @inbounds frac[$idx] &= ~mask
-    end
-  end
-
-  @code quote
-    if (accum == 0)
-      return (__minimum_data_width(frac), 0)
-    else
-      return (fsize, UNUM_UBIT_MASK)
-    end
+function trim!{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
+  middle_cell = div(fsize, 0x0040) + 1
+  frac.a[middle_cell] &= mask_top(fsize % 0x0040)
+  for idx = (middle_cell + 1):__cell_length(FSS)
+    frac.a[idx] = 0
   end
 end
+#generates the frac_trim!() functions
+@fracfunc trim fsize
+
+doc"""
+  `Unums.frac_trim!(x::Unum, fsize::UInt16)` strictly trims a fraction to a
+  certain size.  This doesn't set the ubit flag if digits are cut off, for that,
+  use `Unums.trim_and_set_ubit`
+"""
+Unums.frac_trim!
+
+################################################################################
+# trim_and_set_ubit - sets the ubit of the fraction if there is trailing data past the
+# desired fsize.
+
+needs_ubit(frac::UInt64, fsize::UInt16) = (frac & mask_bot(fsize)) != 0
+function needs_ubit{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
+  accum::UInt64 = zero(UInt64)
+  middle_cell = div(fsize, 0x0040) + 1
+  accum = frac.a[middle_cell] & mask_bot(fsize % 0x0040)
+  for idx = (middle_cell + 1):__cell_length(FSS)
+    accum |= frac.a[idx]
+  end
+  return (accum != 0)
+end
+
+
+@universal function trim_and_set_ubit!(x::Unum, fsize::UInt16)
+  x.flags |= (needs_ubit(x.fraction, fsize) * UNUM_UBIT_MASK)
+  frac_trim!(x, fsize)
+end
+doc"""
+  `Unums.trim_and_set_ubit!(x::Unum, fsize::UInt16)` is a utility to adjust the
+  fsize of a unum.  It checks to see if setting the fsize would need require the
+  ubit flag to be thrown, throws it, and then resizes it.
+"""
+trim_and_set_ubit!
 
 ################################################################################
 # EXPONENT ENCODING AND DECODING
@@ -77,11 +77,6 @@ not account for subnormal representations.
 #the inverse operation is finding the unbiased exponent of an Unum.
 decode_exp(esize::UInt16, exponent::UInt64) = Int64(exponent) - (1 << esize) + 1
 
-doc"""
-`Unums.max_fsize(::Int64)` retrieves the maximum possible fsize value based on
-the FSS value.
-"""
-max_fsize(FSS::Int64) = UInt16((1 << FSS) - 1)
 doc"""
 `Unums.max_esize(::Int64)` retrieves the maximum possible esize value based on
 the ESS value.

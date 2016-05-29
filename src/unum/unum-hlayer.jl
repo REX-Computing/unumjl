@@ -5,39 +5,36 @@
 #
 #N.B. typeof() will correctly identify the Unums.UnumSmall and Unums.UnumLarge
 #types.
-@gen_code function Base.show{ESS,FSS}(io::IO, x::Unum{ESS,FSS})
-  @code quote
-    #we want to be able to represent having g-layer flags as part of this.
-    gflags = (x.flags & (~UNUM_FLAG_MASK))
-    #for nan, let's also show the noisy nan bit.
-    isnan(x) && (gflags |= (x.flags & UNUM_SIGN_MASK))
-    gflagstring = (gflags == 0) ? "" : @sprintf ", 0x%04X" gflags
-    is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS}$gflagstring)"); return)
-    is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
-    is_pos_sss(x) && (print(io, "sss(Unum{$ESS,$FSS}$gflagstring)"); return)
-    is_neg_inf(x) && (print(io, "-inf(Unum{$ESS,$FSS}$gflagstring)"); return)
-    is_neg_mmr(x) && (print(io, "-mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
-    is_neg_sss(x) && (print(io, "-sss(Unum{$ESS,$FSS}$gflagstring)"); return)
-    is_zero(x)    && (print(io, "zero(Unum{$ESS,$FSS})"); return)
-    isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS}$gflagstring)");return)
+@universal function Base.show(io::IO, x::Unum)
+  #we want to be able to represent having g-layer flags as part of this.
+  gflags = (x.flags & (~UNUM_FLAG_MASK))
+  #for nan, let's also show the noisy nan bit.
+  isnan(x) && (gflags |= (x.flags & UNUM_SIGN_MASK))
+  gflagstring = (gflags == 0) ? "" : @sprintf ", 0x%04X" gflags
+  is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS}$gflagstring)"); return)
+  is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
+  is_pos_sss(x) && (print(io, "sss(Unum{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_inf(x) && (print(io, "-inf(Unum{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_mmr(x) && (print(io, "-mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_sss(x) && (print(io, "-sss(Unum{$ESS,$FSS}$gflagstring)"); return)
+  is_zero(x)    && (print(io, "zero(Unum{$ESS,$FSS})"); return)
+  isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS}$gflagstring)");return)
 
-    fsize_string = @sprintf "0x%04X" x.fsize
-    esize_string = @sprintf "0x%04X" x.esize
-    flags_string = @sprintf "0x%04X" x.flags
-  end
-  @code (FSS < 7) ? :(fraction_string = @sprintf "0x%016X" x.fraction) : :(fraction_string = string(x.fraction.a))
-  @code quote
-    exponent_string = @sprintf "0x%016X" x.exponent
-    print(io, "Unum{$ESS,$FSS}($fsize_string, $esize_string, $flags_string, $fraction_string, $exponent_string)")
-  end
+  fsize_string = @sprintf "0x%04X" x.fsize
+  esize_string = @sprintf "0x%04X" x.esize
+  flags_string = @sprintf "0x%04X" x.flags
+
+  (FSS < 7) ? :(fraction_string = @sprintf "0x%016X" x.fraction) : :(fraction_string = string(x.fraction.a))
+  exponent_string = @sprintf "0x%016X" x.exponent
+  print(io, "Unum{$ESS,$FSS}($fsize_string, $esize_string, $flags_string, $fraction_string, $exponent_string)")
 end
 
 function Base.show{ESS,FSS}(io::IO, ::Type{Unum{ESS,FSS}})
-  #strip "Unums" off the front of displaying this type.
+  #strips the Large or Small suffix when displaying this type.
   print(io, "Unum{$ESS,$FSS}")
 end
 
-function Base.bits{ESS,FSS}(x::Unum{ESS,FSS}, space::ASCIIString = "")
+@universal function Base.bits(x::Unum, space::ASCIIString = "")
   res = string((x.flags & 0b10) >> 1,       space,
          bits(x.exponent)[64 - x.esize:64], space,
          bits(x.fraction)[1:(x.fsize + 1)], space,
@@ -51,7 +48,7 @@ doc"""
 `prettyprint` prints out a Unum in a pretty fashion.  Copy/pasting the output
 will create something that is pretty-parseable.
 """
-function prettyprint{ESS,FSS}(x::Unum{ESS,FSS})
+@unum function prettyprint(x::Unum)
 
   print_with_color(:blue, "Unum{$ESS,$FSS}:")
 
@@ -74,17 +71,6 @@ function prettyprint{ESS,FSS}(x::Unum{ESS,FSS})
   print_with_color(:red, "b")
   print_with_color(:yellow, string("×2^", exponent_value))
   println('"')
-end
-
-################################################################################
-#default environment settings
-#default environment, defaults to Unum{4,6} -
-const UNUM_ENVIRONMENT = [4, 6]
-doc"""
-`Unums.environment` outputs the current environment as the appropriate Unum type
-"""
-function environment()
-  Unum{UNUM_ENVIRONMENT[1], UNUM_ENVIRONMENT[2]}
 end
 
 abstract ubit_coersion_symbol

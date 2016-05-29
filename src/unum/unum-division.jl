@@ -1,6 +1,34 @@
 #unum-division.jl - currently uses the goldschmidt method, but will also
 #implement other division algorithms.
 
+doc"""
+  `div!(::Unum, ::Unum, ::Gnum)` takes two unums and
+  divides them, storing the result in the third, g-layer.  A reference to
+  the result gnum is returned.
+"""
+function div!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
+  put_unum!(b, c)
+  set_g_flags!(a)
+  div!(a, c)
+end
+
+import Base./
+doc"""
+  `/(x::Unum, y::Unum)` divides two unums, by creating a temporary gnum
+  and returning the output form.  This is not performant.  For performance
+  optimized code, use the `@unum` macro.
+"""
+function /{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
+  temp = zero(Gnum{ESS,FSS})
+  div!(x, y, temp)
+  #return the result as the appropriate data type.
+  emit_data(temp)
+end
+export /
+
+
+
+#=
 function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #some basic test cases.
 
@@ -270,3 +298,4 @@ function __div_exact{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, sign::UInt16)
 
   Unum{ESS,FSS}(fsize, esize, sign | is_ulp, fraction, exponent)
 end
+=#

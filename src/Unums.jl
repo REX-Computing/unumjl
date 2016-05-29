@@ -7,15 +7,10 @@
 
 module Unums
 
-#create the abstract Utype type
-abstract Utype <: Real
-export Utype
-
 #various tools to help coding.
 include("./tools.jl")
-
-#development safety option scheme
-include("./options/devsafety.jl")
+#engage the unpms options engine.
+include("./options/options.jl")
 
 
 ################################################################################
@@ -29,6 +24,10 @@ include("./ubound/ubound-typedefs.jl")
 #type definition of gnum.
 include("./gnum/gnum-typedefs.jl")
 
+#create the abstract Utype which encompasses all possibilities of Unum/Ubound/Gnum
+typealias Utype{ESS,FSS} Union{Unum{ESS,FSS}, Ubound{ESS,FSS}, Gnum{ESS,FSS}}
+export Utype
+
 ################################################################################
 #IMPLEMENTATION FILES
 #implementation of int64 and int64 array utility code.
@@ -36,15 +35,14 @@ include("./int64op/int64ops.jl")
 #implementation of unums.
 include("./unum/unum.jl")
 #ubound-related code
-include("./ubound/ubound.jl")
+#include("./ubound/ubound.jl")
 #gnums-related code
-include("./gnum/gnum.jl")
+#include("./gnum/gnum.jl")
 
 #utility files
 #include("unum-bitwalk.jl")
 #include("unum-promote.jl")
 #include("unum-expwalk.jl")
 #include("unum_solver.jl")
-
 
 end #module

@@ -107,6 +107,11 @@ doc"""
   `__check_mul_hard_override!(::Unum, ::Gnum)` checks to see if the terms in
   the multiplier or the multiplicand trigger a "hard override".  These values
   are:
+
+  nan (multiplier, multiplicand) -> outputs nan
+  inf (multiplier, multiplicand) -> outputs inf (unless other value is zero)
+  zero (multiplier, multiplicand) -> outputs zero (unless other value is inf)
+  one (multiplier, multiplicand) -> leaves value unchanged.
 """
 function __check_mul_hard_override!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
   ############################################
@@ -124,20 +129,23 @@ function __check_mul_hard_override!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
     is_twosided(b) && ((b.lower.flags & UNUM_SIGN_MASK) != (b.upper.flags & UNUM_SIGN_MASK)) && (@scratch_this_operation!(b))
     #infinity can't multiply times just zero, either
     should_calculate(b, LOWER_UNUM) && is_zero(b, LOWER_UNUM) && (@scratch_this_operation!(b))
-    should_calculate(b, UPPER_UNUM) && is_zero(b, LOWER_UNUM) && (@scratch_this_operation!(b))
+    should_calculate(b, UPPER_UNUM) && is_zero(b, UPPER_UNUM) && (@scratch_this_operation!(b))
     #set to onesided.
-    inf!(b, @signof(b.lower), LOWER_UNUM);
+    inf!(b, z16, LOWER_UNUM);
     ignore_side!(b, LOWER_UNUM); set_onesided!(b)
   end
   #next, check that infinities on either side don't mess things up.
+  #if our lower value was infinity, then the whole thing must be infinity.
   if should_calculate(b, LOWER_UNUM) && is_inf(b, LOWER_UNUM)
     is_g_zero(a) && (@scratch_this_operation!(b))
-    b.lower.flags &= ~UNUM_UBIT_MASK
-    ignore_side!(b, LOWER_UNUM)
+    inf!(b, z16, LOWER_UNUM)
+    #ignore it then set to onesided (although really it shouldn't be twosided)
+    ignore_side!(b, UPPER_UNUM); set_onesided!(b)
   end
+  #on the upper side we must consider the possibility that there are other numbers below.
   if should_calculate(b, UPPER_UNUM) && is_inf(b, UPPER_UNUM)
     is_g_zero(a) && (@scratch_this_operation!(b))
-    b.lower.flags &= ~UNUM_UBIT_MASK
+    inf!(b, z16, UPPER_UNUM)
     ignore_side!(b, UPPER_UNUM)
   end
 

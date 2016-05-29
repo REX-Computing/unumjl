@@ -1,20 +1,26 @@
+doc"""
+  `Unums.Gflags` is an internal type strtucture thats carries calculation
+  override information about the gnum.  Certain special values (infinity, NaN,
+  zero, etc.) can trigger overrides of the default calculation and proceed to
+  a faster calculation.  This needs to be in a separate, to allow the gnum
+  itself to be immutable, and code-optimized.
+"""
+type Gflags
+  lower::UInt16
+  upper::UInt16
+end
+
 
 doc"""
   `Unums.Gnum{ESS,FSS}` is an internal type structure that's not exposed to
   the global scope.  It represents the g-layer from the "End of Error".  Some
   of the status flags are stored in the flags parameter of the 'lower' term.
 
-  this will be mostly used by the internal `@unum` directive which will take
+  this will be mostly used by the internal `@glayer` directive which will take
   an expression and convert it to a series of functions, which, at compile-time,
   will allocate a set of 'global' gnum registers, then pass them through a chain
   of mutator functions which will keep the gnum value in the registers, then
-  output the whole thing as a single UType value as needed (Unum or Ubound)
-
-  the Gnum value keeps a 'scratchpad' variable to store intermediate calculations
-  for any expressions.  The array value for this is pre-allocated, global, and
-  extra-long to keep additional precision for fused operations.  In 'reality',
-  although this scratchpad shouldn't be considered to be tied to each register,
-  it is convenient to include it with the Gnum so that it is strongly typed.
+  output the whole thing as a single Utype value as needed (Unum or Ubound)
 
   The Gnum value also keeps a 'buffer' variable to store calculated unums for
   certain operations.  This variable is DISTINCT from the 'scratchpad' in that
@@ -23,27 +29,24 @@ doc"""
   mmr - (val) requires calculating a lower bound starting with bigexact.  Or
   multiplication of ubounds requires storing unum variables for comparison.
 """
-immutable Gnum{ESS,FSS}
-  lower::Unum{ESS,FSS}
-  upper::Unum{ESS,FSS}
+abstract Gnum{ESS,FSS} <: Real
 
-  #the scratchpad is a place to store intermediate values in a calculation.  The
-  #scratchpad has access to an extra-long fraction array.
-  scratchpad::Unum{ESS,FSS}
-
-  #the buffer is a second place to store values, but these values will not be
-  #changed across a calculation.  For example, when checking min/max bounds for
-  #multiplication, or queuing a value for a mmr calculation.
-  buffer::Unum{ESS,FSS}
+immutable GnumSmall{ESS,FSS} <: Gnum{ESS,FSS}
+  lower::UnumSmall{ESS,FSS}
+  upper::UnumSmall{ESS,FSS}
+  #the buffer a preallocated location to store unum values.
+  buffer::UnumSmall{ESS,FSS}
+  #flags is a section that holds flagged values about the lower and upper unums
+  flags::Gflags
 end
 
-@generated function Base.zero{ESS,FSS}(t::Type{Gnum{ESS,FSS}})
-  if (FSS < 7)
-    :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS})))
-  else
-    :(Gnum{ESS,FSS}(zero(Unum{ESS,FSS}), zero(Unum{ESS,FSS}),
-      Unum{ESS,FSS}(z16, z16, z16, ArrayNum{FSS}(GNUM_SCRATCHPAD), z64), zero(Unum{ESS,FSS})))
-  end
+immutable GnumLarge{ESS,FSS} <: Gnum{ESS,FSS}
+  lower::UnumLarge{ESS,FSS}
+  upper::UnumLarge{ESS,FSS}
+  #the buffer a preallocated location to store unum values.
+  buffer::UnumLarge{ESS,FSS}
+  #flags is a section that holds flagged values about the lower and upper unums]
+  flags::Gflags
 end
 
 #these g-layer values go into the scratchpad to indicate properties of the gnum.

@@ -15,19 +15,13 @@ doc"""
   the `zero!` function forcibly converts an existing unum to zero.  You can pass
   a flag that sets the sign or ubit, but it defaults to positive/not a ubit.
 """
-@gen_code function zero!{ESS,FSS}(x::Unum{ESS,FSS}, flags::UInt16 = z16)
-  @code quote
-    x.fsize = z16
-    x.esize = z16
-    x.flags = flags
-    x.exponent = z64
-  end
+function zero!{ESS,FSS}(x::Unum{ESS,FSS}, flags::UInt16 = z16)
+  x.fsize = z16
+  x.esize = z16
+  x.flags = flags
+  x.exponent = z64
 
-  if FSS < 7
-    @code :(x.fraction = z64; x)
-  else
-    @code :(zero!(x.fraction); x)
-  end
+  frac_zero!(x)
 end
 export zero!
 

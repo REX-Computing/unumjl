@@ -7,9 +7,9 @@ Base.bits{FSS}(a::ArrayNum{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "
 Base.getindex{FSS}(a::ArrayNum{FSS}, key...) = getindex(a.a, key...)
 Base.setindex!{FSS}(a::ArrayNum{FSS}, X, keys...) = setindex!(a.a, X, keys...)
 
-@gen_code function copydata!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
+function copydata!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    @code :(b.a[$idx] = a.a[$idx])
+    b.a[idx] = a.a[idx]
   end
 end
 
@@ -36,12 +36,9 @@ end
 
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
-@gen_code function __minimum_data_width{FSS}(n::ArrayNum{FSS})
-  l = max_fsize(FSS)
-  @code quote
-    res = max(z16, $l - ctz(n))
-    res == 0xFFFF ? z16 : res
-  end
+function __minimum_data_width{FSS}(n::ArrayNum{FSS})
+  res = max(z16, max_fsize(FSS) - ctz(n))
+  res == 0xFFFF ? z16 : res
 end
   #explanation of formula:
   #length(a) << 6:            total bits in the array representation

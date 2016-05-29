@@ -1,5 +1,7 @@
 #int64o-math.jl
 
+#=
+
 #carried_add adds the value in the first passed arraynum into the second arraynum.
 @gen_code function __carried_add!{FSS}(carry::UInt64, a::ArrayNum{FSS}, b::ArrayNum{FSS})
   #this algorithm follows exactly from the elementary school addition algorithm.
@@ -134,3 +136,5 @@ end
 # chunk_mult handles simply the chunked multiply of two superints
 @gen_code function __chunk_mult!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, c::ArrayNum{FSS})
 end
+
+=#
