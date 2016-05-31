@@ -31,74 +31,66 @@ end
 export is_ulp, is_exact, is_negative, is_positive
 
 #a couple of testing conditions
-@gen_code function __is_nan_or_inf{ESS,FSS}(x::Unum{ESS,FSS})
-  #calculate expected fsize and esize.
-  xesize = max_esize(ESS)
-  xfsize = max_fsize(FSS)
-  xexponent = max_biased_exponent(ESS)
-  @code quote
-    (x.fsize == $xfsize) || return false
-    (x.esize == $xesize) || return false
-    (x.exponent == $xexponent) || return false
-  end
+@universal function __is_nan_or_inf(x::Unum)
+  (x.fsize == max_fsize(FSS)) || return false
+  (x.esize == max_esize(ESS)) || return false
+  (x.exponent == max_biased_exponent(ESS)) || return false
 
   if FSS < 7
-    xfraction = mask_top(xfsize)
-    @code :(x.fraction == $xfraction)
+    x.fraction == mask_top(max_fsize(FSS))
   else
-    @code :(is_all_ones(x.fraction))
+    is_all_ones(x.fraction)
   end
 end
 
-is_nan{ESS,FSS}(x::Unum{ESS,FSS}) = is_ulp(x) && __is_nan_or_inf(x)
-Base.isnan{ESS,FSS}(x::Unum{ESS,FSS}) = is_ulp(x) && __is_nan_or_inf(x)
+@universal is_nan(x::Unum) = is_ulp(x) && __is_nan_or_inf(x)
+@universal Base.isnan(x::Unum) = is_ulp(x) && __is_nan_or_inf(x)
 export is_nan
 
 #isinf matches the julia definiton and triggers on either positive or negative
 #infinity.  is_pos_inf and is_neg_inf both are Unum-specific functions that detect
 #the expected values.
-is_inf{ESS,FSS}(x::Unum{ESS,FSS}) = is_exact(x) && __is_nan_or_inf(x)
-is_pos_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_positive(x) && is_exact(x) && __is_nan_or_inf(x)
-is_neg_inf{ESS, FSS}(x::Unum{ESS, FSS}) = is_negative(x) && is_exact(x) && __is_nan_or_inf(x)
+@universal is_inf(x::Unum) = is_exact(x) && __is_nan_or_inf(x)
+@universal is_pos_inf(x::Unum) = is_positive(x) && is_exact(x) && __is_nan_or_inf(x)
+@universal is_neg_inf(x::Unum) = is_negative(x) && is_exact(x) && __is_nan_or_inf(x)
 export is_inf, is_pos_inf, is_neg_inf
-
 #aliasing to base definition
-Base.isinf{ESS,FSS}(x::Unum{ESS,FSS}) = is_exact(x) && __is_nan_or_inf(x)
+@universal Base.isinf(x::Unum) = is_exact(x) && __is_nan_or_inf(x)
 
-@gen_code function is_finite{ESS,FSS}(x::Unum{ESS,FSS})
+
+@universal function is_finite(x::Unum)
   #record the maximum esize and fsize values.  Any value less than this and
   #it's finite.
-  mesize = max_esize(ESS)
-  mfsize = max_fsize(FSS)
-  mexponent = max_biased_exponent(ESS)
-  @code quote
-    x.esize < $mesize && return true
-    x.fsize < $mfsize && return true
-    x.exponent < $mexponent && return true
-  end
+  x.esize < max_esize(ESS) && return true
+  x.fsize < max_fsize(FSS) && return true
+  x.exponent < max_biased_exponent(ESS) && return true
+
   if (FSS < 7)
-    mfraction = mask_top(mfsize)
-    @code :(x.fraction < $mfraction)
+    x.fraction < mask_top(max_fsize(FSS))
   else
-    @code :(!is_all_ones(x.fraction))
+    is_not_ones(x.fraction)
   end
 end
-Base.isfinite{ESS,FSS}(x::Unum{ESS,FSS}) = is_finite(x)
+@universal Base.isfinite(x::Unum) = is_finite(x)
 
 #NB:  The difference between "is_exp_zero" and "issubnormal" - is_exp_zero admits
 #zero as a solution; issubnormal is in compliance with the standard julia
 #issubnormal function and does not admit zero as a true result.
-is_subnormal{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && is_not_zero(x.fraction)
-is_exp_zero{ESS,FSS}(x::Unum{ESS,FSS}) = x.exponent == z64
-@gen_code function is_strange_subnormal{ESS,FSS}(x::Unum{ESS,FSS})
-  mesize::UInt16 = max_esize(ESS)
-  @code :((x.exponent == z64) && (x.esize < $mesize))
+@universal is_subnormal(x::Unum) = (x.exponent == z64) && is_not_zero(x.fraction)
+@universal is_exp_zero(x::Unum) = x.exponent == z64
+
+doc"""
+  Unums.is_strange_subnormal(x) returns if the unum value x is a "strange subnormal".
+  A "strange subnormal" is a subnormal where the esize is not maxed out.  These
+  subnormal values can be "corrected" to normal rerpresentations.
+"""
+@universal function is_strange_subnormal(x::Unum)
+  (x.esize < max_esize(ESS)) && is_subnormal(x)
 end
 
-Base.issubnormal{ESS,FSS}(x::Unum{ESS,FSS}) = is_subnormal(x)                    #alias the unum-form to the julia-compliant form.
-#use ESS because this will be checked by the compiler, instead of at runtime.
-is_frac_zero{ESS,FSS}(x::Unum{ESS,FSS}) = is_all_zero(x.fraction)
-is_zero{ESS,FSS}(x::Unum{ESS,FSS}) = (x.exponent == z64) && is_exact(x) && is_frac_zero(x)
+@universal Base.issubnormal(x::Unum) = (x.exponent == z64) && is_not_zero(x.fraction) #alias the unum-form to the julia-compliant form.
+@universal is_frac_zero(x::Unum) = is_all_zero(x.fraction)
+@universal is_zero(x::Unum) = (x.exponent == z64) && is_exact(x) && is_frac_zero(x)
 
 doc"""
   `is_unit(x::Unum{ESS,FSS})` tests if the value in a unum is +/- 1.  Because of
@@ -108,7 +100,7 @@ doc"""
   fraction 0b1000...0000.  When ESS == 0 there is only access to the subnormal
   form.
 """
-function is_unit{ESS,FSS}(x::Unum{ESS,FSS})
+@universal function is_unit(x::Unum)
   #asymmetric exponents make this slightly more laborious than might be expected
   #one is not an ulp, it is exact.
   is_ulp(x) && return false
@@ -119,15 +111,14 @@ function is_unit{ESS,FSS}(x::Unum{ESS,FSS})
   return false
 end
 
-is_one{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_unit(x)
-is_neg_one{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_unit(x)
+@universal is_one(x::Unum) = is_positive(x) && is_unit(x)
+@universal is_neg_one(x::Unum) = is_negative(x) && is_unit(x)
 #checks if the value is sss ("smaller than small subnormal")
-@generated function is_sss{ESS,FSS}(x::Unum{ESS,FSS})
-  mesize::UInt16 = max_esize(ESS)
-  :(is_ulp(x) && (x.esize == $mesize) && (x.exponent == z64) && is_all_zero(x.fraction))
+@universal function is_sss(x::Unum)
+  is_ulp(x) && (x.esize == max_esize(ESS)) && (x.exponent == z64) && is_all_zero(x.fraction)
 end
-is_pos_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_sss(x)
-is_neg_sss{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_sss(x)
+@universal is_pos_sss(x::Unum) = is_positive(x) && is_sss(x)
+@universal is_neg_sss(x::Unum) = is_negative(x) && is_sss(x)
 
 ################################################################################
 ##  MMR CHECKS
@@ -136,13 +127,13 @@ doc"""
   for transparent checking of whether or not a Unum has the look of MMR, whether
   or not the Unum has a big or small structure
 """
-@generated function is_mmr_frac{ESS,FSS}(x::Unum{ESS,FSS})
-  xfsm1::UInt16 = FSS == 0 ? 0 : max_fsize(FSS) - 1
-  if FSS < 7
-    xfraction::UInt64 = FSS == 0 ? 0 : mask_top(xfsm1)
-    :(x.fraction == $xfraction)
+@universal function is_mmr_frac(x::Unum)
+  if FSS == 0
+    x.fraction == 0
+  elseif FSS < 7
+    x.fraction == mask_top(max_fsize(FSS) - 1)
   else
-    :(is_mmr_frac(x.fraction))
+    is_mmr_frac(x.fraction)
   end
 end
 
@@ -150,24 +141,19 @@ doc"""
   `is_mmr(::Unum)` sign-agnostically checks to see if the passed unum is the positive
   'more than maxreal' interval, or the open bound ±(maxreal, ∞)
 """
-@generated function is_mmr{ESS,FSS}(x::Unum{ESS,FSS})
-  xesize = max_esize(ESS)
-  xfsize = max_fsize(FSS)
-  xexponent = max_biased_exponent(ESS)
-  quote
-    is_ulp(x) || return false
-    x.esize == $xesize || return false
-    x.fsize == $xfsize || return false
-    x.exponent == $xexponent || return false
-    is_mmr_frac(x) || return false
-  end
+@universal function is_mmr(x::Unum)
+  is_ulp(x) || return false
+  x.esize == max_esize(ESS) || return false
+  x.fsize == max_fsize(FSS) || return false
+  x.exponent == max_biased_exponent(ESS)|| return false
+  is_mmr_frac(x)
 end
 
-doc""" `is_pos_mmr(::Unum)` checks to see if the passed unum is the positive 'more than maxreal' interval, or the open bound (maxreal, ∞)"""
-is_pos_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_positive(x) && is_mmr(x)
+doc""" `is_pos_mmr(::Unum)` checks to see if the passed unum is the positive 'more than maxreal' interval, (maxreal, ∞)"""
+@universal is_pos_mmr(x::Unum) = is_positive(x) && is_mmr(x)
 
-doc""" `is_neg_mmr(::Unum)` checks to see if the passed unum is the negative 'more than maxreal' interval, or the open bound (-∞, -maxreal)"""
-is_neg_mmr{ESS,FSS}(x::Unum{ESS,FSS}) = is_negative(x) && is_mmr(x)
+doc""" `is_neg_mmr(::Unum)` checks to see if the passed unum is the negative 'more than maxreal' interval, (-∞, -maxreal)"""
+@universal is_neg_mmr(x::Unum) = is_negative(x) && is_mmr(x)
 
 export is_subnormal, is_exp_zero
 export is_frac_zero, is_zero, is_sss, is_pos_sss, is_neg_sss
@@ -180,7 +166,7 @@ doc"""
   calculations.  As is evident by this awkward syntax, you're really not supposed
   to use this outside of the Unums namespace.
 """
-function is_magnitude_less_than_one{ESS,FSS}(x::Unum{ESS,FSS})
+@universal function is_magnitude_less_than_one(x::Unum)
   #checking subnormal status.
   if (is_exp_zero(x))
     #check to see if the top bit is zero

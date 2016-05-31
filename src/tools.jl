@@ -41,7 +41,7 @@ function fname(ex::Expr)
   ex.args[1].args[1]
 end
 #vfunc generates a type-parameter variadic function head.
-function vfunc(fn::Symbol)
+function vfunc(fn)
   :($fn{ESS,FSS})
 end
 
@@ -87,7 +87,10 @@ macro universal(f)
     end
   end
 
-  return esc(:($fsmall; $flarge))
+  return esc(quote
+    Base.@__doc__ $fsmall
+    $flarge
+  end)
 end
 
 ################################################################################

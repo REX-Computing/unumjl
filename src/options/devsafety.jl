@@ -144,8 +144,6 @@ macro dev_check(expr)
     #append the substitute constructor onto the end of the type definition
     push!(expr.args[3].args, constructor)
 
-    println(expr)
-
     return esc(expr)
   else
     ArgumentError("checkable macro must precede a function or type definition")

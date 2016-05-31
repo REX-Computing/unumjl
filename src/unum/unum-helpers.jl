@@ -19,14 +19,12 @@ function trim!{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
   end
 end
 #generates the frac_trim!() functions
-@fracfunc trim fsize
-
 doc"""
   `Unums.frac_trim!(x::Unum, fsize::UInt16)` strictly trims a fraction to a
   certain size.  This doesn't set the ubit flag if digits are cut off, for that,
   use `Unums.trim_and_set_ubit`
 """
-Unums.frac_trim!
+@fracfunc trim fsize
 
 ################################################################################
 # trim_and_set_ubit - sets the ubit of the fraction if there is trailing data past the
@@ -44,16 +42,15 @@ function needs_ubit{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
 end
 
 
-@universal function trim_and_set_ubit!(x::Unum, fsize::UInt16)
-  x.flags |= (needs_ubit(x.fraction, fsize) * UNUM_UBIT_MASK)
-  frac_trim!(x, fsize)
-end
 doc"""
   `Unums.trim_and_set_ubit!(x::Unum, fsize::UInt16)` is a utility to adjust the
   fsize of a unum.  It checks to see if setting the fsize would need require the
   ubit flag to be thrown, throws it, and then resizes it.
 """
-trim_and_set_ubit!
+@universal function trim_and_set_ubit!(x::Unum, fsize::UInt16)
+  x.flags |= (needs_ubit(x.fraction, fsize) * UNUM_UBIT_MASK)
+  frac_trim!(x, fsize)
+end
 
 ################################################################################
 # EXPONENT ENCODING AND DECODING

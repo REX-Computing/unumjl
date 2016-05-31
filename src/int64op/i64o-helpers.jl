@@ -50,7 +50,7 @@ macro fracfunc(name, params...)
   smallcall = __ffcall(name, smallexpr, :UnumSmall, params...)
   largecall = __ffcall(name, largeexpr, :UnumLarge, params...)
   esc(quote
-    $smallcall
+    Base.@__doc__ $smallcall
     $largecall
   end)
 end
