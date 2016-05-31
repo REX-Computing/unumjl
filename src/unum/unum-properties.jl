@@ -21,6 +21,13 @@ macro ubitof(x)
   :($x.flags & UNUM_UBIT_MASK)
 end
 
+doc"""`Uunums.@flipsign(x)` flips the sign of the the unum x"""
+macro flipsign(x)
+  :($x.flags $= UNUM_SIGN_MASK)
+end
+
+@universal uflag!(x::Unum, f::UInt16) = (x.flags = f; x)
+
 #some really dumb ones, but we'll put these in for legibility.
 @universal is_ulp(x::Unum)      = (@ubitof(x) != 0)
 @universal is_exact(x::Unum)    = (@ubitof(x) == 0)

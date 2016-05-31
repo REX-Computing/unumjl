@@ -83,6 +83,13 @@ macro universal(f)
         ltype = symbol(utypeparam, :Large)
         fsmall.args[1].args[idx].args[2] = :($stype{ESS,FSS})
         flarge.args[1].args[idx].args[2] = :($ltype{ESS,FSS})
+      elseif isa(utypeparam, Expr)
+        if (utypeparam.head == :curly) && (utypeparam.args[1] == :Type) && (utypeparam.args[2] in [:Unum, :Ubound, :Gnum])
+          stype = symbol(utypeparam.args[2], :Small)
+          ltype = symbol(utypeparam.args[2], :Large)
+          fsmall.args[1].args[idx].args[2].args[2] = :($stype{ESS,FSS})
+          flarge.args[1].args[idx].args[2].args[2] = :($ltype{ESS,FSS})
+        end
       end
     end
   end

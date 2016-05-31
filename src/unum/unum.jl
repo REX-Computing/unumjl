@@ -3,7 +3,7 @@
 #type definition itself, that must be forwarded separately.)
 
 include("./unum-helpers.jl")
-#include("./unum-constants.jl")
+include("./unum-constants.jl")
 include("./unum-properties.jl")
 #include("./unum-operations.jl")
 #include("./unum-convert.jl")

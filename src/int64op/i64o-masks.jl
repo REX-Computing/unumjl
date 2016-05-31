@@ -11,10 +11,9 @@ Unums.mask_top! function.
 Passing an Int64 to `mask_top(FSS::Int64)` automatically detects it to generate
 a mask for the FSS in general.
 """
-function mask_top(fsize::UInt16)
-  reinterpret(UInt64, -9223372036854775808 >> fsize)
-end
+mask_top(fsize::UInt16) = reinterpret(UInt64, -9223372036854775808 >> fsize)
 mask_top(FSS::Int64) = mask_top(max_fsize(FSS))
+mask_top(::UInt64, fsize::UInt16) = reinterpret(UInt64, -9223372036854775808 >> fsize)
 
 doc"""
 `Unums.mask_bot` returns an UInt64 with the 'bottom mask' of a particular fsize.
@@ -25,24 +24,26 @@ will need the Unums.mask_bot! function.
 Passing an Int64 to `mask_top(FSS::Int64)` automatically detects it to generate
 a mask for the FSS in general.
 """
-function mask_bot(fsize::UInt16)
-  ~reinterpret(UInt64, -9223372036854775808 >> fsize)
-end
+mask_bot(fsize::UInt16) = ~reinterpret(UInt64, -9223372036854775808 >> fsize)
 mask_bot(FSS::Int64) = mask_bot(max_fsize(FSS))
+mask_bot(::UInt64, fsize::UInt16) = ~reinterpret(UInt64, -9223372036854775808 >> fsize)
 
-const top_array = [f64, z64, z64]
 doc"""
 `Unums.mask_top!` fills an array with the 'top mask' of a particular fsize.  The
 top mask labels the bits which are part of the unum representation.
 """
 function mask_top!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
-  middle_cell = div(fsize, 0x0040) + 1
-  top_array[2] = mask_top(fsize % 0x0040)
+  middle_spot = div(fsize, 0x0040) + 1
+  middle_cell = mask_top(fsize % 0x0040)
   for idx = 1:__cell_length(FSS)
-    @inbounds n.a[idx] = top_array[sign(idx - middle_cell) + 2]
+    @inbounds n.a[idx] = (idx < middle_spot) * f64
+    @inbounds n.a[idx] += (idx == middle_spot) * middle_cell
   end
-  n
+  return n
 end
+
+#generates frac_mask_top!{ESS,FSS}(Unum{ESS,FSS})
+@fracfunc mask_top fsize
 
 const bot_array = [z64, z64, f64]
 doc"""
@@ -52,12 +53,16 @@ part of the unum representation and are there only because of the padding
 scheme.
 """
 function mask_bot!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
-  middle_cell = div(fsize, 0x0040) + 1
-  bot_array[2] = mask_bot(fsize % 0x0040)
+  middle_spot = div(fsize, 0x0040) + 1
+  middle_cell = mask_bot(fsize % 0x0040)
   for idx = 1:__cell_length(FSS)
-    @inbounds n.a[idx] = bot_array[sign(idx - middle_cell) + 2]
+    @inbounds n.a[idx] = (idx > middle_spot) * f64
+    @inbounds n.a[idx] += (idx == middle_spot) * middle_cell
   end
+  return n
 end
+
+@fracfunc mask_bot fsize
 
 doc"""
 `Unums.fill_mask!` takes two arraynums and fills the first one with the UInt64 AND
@@ -73,9 +78,9 @@ end
 doc"""
 `Unums.bottom_bit` returns the bottom bit of a fraction with a given fsize.
 """
-function bottom_bit(fsize::UInt16)
-  reinterpret(UInt64, -9223372036854775808 >>> fsize)
-end
+bottom_bit(fsize::UInt16) = reinterpret(UInt64, -9223372036854775808 >>> fsize)
+bottom_bit(FSS::Int64) = bottom_bit(max_fsize(FSS))
+bottom_bit(::UInt64, fsize::UInt16) = reinterpret(UInt64, -9223372036854775808 >>> fsize)
 
 doc"""
 `Unums.bottom_bit!` returns the bottom bit of a fraction with a given fsize.
@@ -87,7 +92,7 @@ function bottom_bit!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
   for idx = 1:__cell_length(FSS)
     @inbounds n.a[idx] = (idx == middle_cell) * middle_word
   end
-  n
+  return n
 end
 
 function bottom_bit!{FSS}(n::ArrayNum{FSS})
@@ -96,5 +101,5 @@ function bottom_bit!{FSS}(n::ArrayNum{FSS})
     @inbounds n.a[idx] = z64
   end
   @inbounds n.a[l] = o64
-  n
+  return n
 end
