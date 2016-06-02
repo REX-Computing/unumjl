@@ -1,9 +1,15 @@
 #unum-oddsandends.jl
 #mathematical odds and ends
 
-#literally calculate the value of the Unum.  Please don't use this for Infs and NaNs
-__arraynumval(x::UInt64) = x
-function __arraynumval{FSS}(v::ArrayNum{FSS})
+################################################################################
+
+doc"""
+  `Unums.frac_val(::UInt64)`
+  `Unums.frac_val(::ArrayNum)`
+  returns the integral value for a number used as a fraction.
+"""
+frac_val(x::UInt64) = x
+function frac_val{FSS}(v::ArrayNum{FSS})
   (typeof(v) == UInt64) && return big(v)
   sum = big(0)
   for i = 1:length(v.a)
@@ -12,59 +18,48 @@ function __arraynumval{FSS}(v::ArrayNum{FSS})
   sum
 end
 
-function calculate{ESS,FSS}(x::Unum{ESS,FSS})
+doc"""`Unums.calculate(x::Unum)` returns a bigfloat equivalent of the unum.  NB:
+currently doesn't work so well for FSS > 9"""
+@universal function calculate(x::Unum)
   sign = (x.flags & UNUM_SIGN_MASK != 0) ? -1 : 1
   #the sub`normal case
   if (x.exponent == 0)
-    2.0^(decode_exp(x) + 1) * sign * (__arraynumval(x.fraction)) / 2.0^(64 * length(x.fraction))
+    2.0^(decode_exp(x) + 1) * sign * (frac_val(x.fraction)) / 2.0^(64 * length(x.fraction))
   else #the normalcase
-    2.0^(decode_exp(x)) * sign * (1 + __arraynumval(x.fraction) / 2.0^(64 * length(x.fraction)))
+    2.0^(decode_exp(x)) * sign * (1 + frac_val(x.fraction) / 2.0^(64 * length(x.fraction)))
   end
 end
 export calculate
 
-doc"""
-  `Unums.@write_sign(a, b)` overwrites the UInt16 sign value into a.
-"""
-macro write_sign(a, b)
-  :($a.flags = ($a.flags & ~UNUM_SIGN_MASK) | $b)
-end
+################################################################################
 
 doc"""
   `additiveinverse!` creates the additive inverse value of a unum, by flipping
   the sign.  This can be better than the `-` operator because it doesn't copy
   the unum.  A reference to the unum is returned.
 """
-function additiveinverse!{ESS,FSS}(x::Unum{ESS,FSS})
-  x.flags $= UNUM_SIGN_MASK
-  x
-end
+@universal additiveinverse!(x::Unum) = (x.flags $= UNUM_SIGN_MASK; return x)
 export additiveinverse!
 
 doc"""
   `abs!(::Unum)` forces the value of the unum to be positive.  Returns the
   unum for chaining purposes.
 """
-abs!{ESS,FSS}(x::Unum{ESS,FSS}) = ((x.flags &= ~UNUM_SIGN_MASK); x)
+@universal abs!(x::Unum) = ((x.flags &= ~UNUM_SIGN_MASK); return x)
 export abs!
 
-@gen_code function copy_unum!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
-  @code quote
-    dest.fsize = src.fsize
-    dest.esize = src.esize
-    dest.flags = src.flags & UNUM_FLAG_MASK
-    dest.exponent = src.exponent
-  end
+@universal function Base.copy!(dest::Unum, src::Unum)
+  dest.fsize = src.fsize
+  dest.esize = src.esize
+  dest.flags = src.flags & UNUM_FLAG_MASK
+  dest.exponent = src.exponent
 
-  if FSS < 7
-    @code :(dest.fraction = src.fraction)
-  else
-    for idx = 1:__cell_length(FSS)
-      @code :(@inbounds dest.fraction[$idx] = src.fraction[$idx])
-    end
-  end
+  (FSS < 7) ? (dest.fraction = src.fraction) : (copy!(dest.fraction, src.fraction))
+
+  return dest  #for chaining purposes
 end
 
+#=
 doc"""
   Unums.match_fsize!{ESS,FSS} takes the location of fsize and moves it over to dest.
 
@@ -75,6 +70,7 @@ function match_fsize!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
   dest_exp::Int64 = decode_exp(dest)
   dest.fsize = UInt16(min(src.fsize + dest_exp - src_exp, max_fsize(FSS)))
 end
+=#
 #=
 #note the difference between "more/less", and "next/prev" - next/prev refers
 #to position along the number line, "more/less" refers to magnitude along the
@@ -103,7 +99,7 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
 =#
-
+#=
 function __resolve_subnormal!{ESS,FSS}(a::Unum{ESS,FSS})
   #resolves a unum with an "unusual exponent", i.e. when esize is not
   #max_esize.  This is an "unsafe" operation, in that it does not check
@@ -246,3 +242,4 @@ doc"""
     nothing
   end
 end
+=#

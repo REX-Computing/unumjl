@@ -111,7 +111,7 @@ function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, exponent::UInt64, fraction, flags:
   end
   Unum{ESS,FSS}(exponent, fraction, flags, esize, fsize)
 end
-function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, exponent::Int64, fraction, flags)
+function unum{ESS,FSS}(::Type{Unum{ESS,FSS}}, exponent::Int64, fraction, flags::UInt16)
   (esize, exp) = encode_exp(exponent)
   fsize = __minimum_data_width(fraction)
   unum(Unum{ESS,FSS}, exp, fraction, flags, esize, fsize)
@@ -120,6 +120,39 @@ end
   __general_unum_check(ESS, FSS, x.exponent, x.esize, x.fsize)
   (FSS > 6) && __check_ArrayNum(x.fraction)
   (FSS < 7) ? UnumSmall{ESS,FSS}(x.exponent, x.fraction, x.flags, x.esize, x.fsize) : UnumLarge{ESS,FSS}(x.exponent, x.fraction, x.flags, x.esize, x.fsize)
+end
+
+doc"""
+  `Unums.buildunum(::Type{[UnumLarge|UnumSmall]}, exponent::Int64, fraction, flags, fsize)` builds a
+  unum out of the respective components.  `buildunum` is intended for internal
+  use and instead of throwing errors when the values are outside of the standard
+  ranges, it will create constants mmr/sss.
+"""
+@universal function buildunum(T::Type{Unum}, true_exponent::Int64, fraction, flags::UInt16, fsize::UInt16)
+  #determine properties of the destination type.
+  min_exp_subnormal = min_exponent(ESS, FSS)
+  min_exp_normal = min_exponent(ESS)
+  max_exp = max_exponent(ESS)
+  mfsize = max_fsize(FSS)
+
+  #eject easy candidates.
+  (true_exponent < min_exp_subnormal) && return sss(T, flags & UNUM_SIGN_MASK)
+  (true_exponent > max_exp) && return mmr(T, flags & UNUM_SIGN_MASK)
+
+  #check if we need to make this a subnormal number.
+  if (true_exponent < min_exp_normal)
+    #figure the needed difference.
+    shiftvalue = UInt16(min_exp_normal - true_exponent)
+    #load the values into a holding unum.
+    u = T(z64, fraction, flags | ubit, max_esize(ESS), min(fsize, mfsize))
+    rsh_and_set_ubit!(u, shiftvalue)
+    frac_bitfromtop!(u, shiftvalue)
+    trim_and_set_ubit!(u, min(fsize + shiftvalue, mfsize))
+    u
+  else
+    (esize, exponent) = encode_exp(true_exponent)
+    T(exponent, fraction, flags, esize, min(fsize, mfsize))
+  end
 end
 
 export unum

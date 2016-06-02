@@ -2,177 +2,164 @@
 #implements conversions between unums and ints, floats.
 
 ################################################################################
-## UNUM TO UNUM
+## UNUM TO UNUM conversion
 
-@generated function __subnormal_ubit_trim{ESS,FSS}(::Type{Unum{ESS,FSS}}, esize::UInt16, fsize::UInt16)
+function __subnormal_ubit_trim{ESS,FSS}(::Type{Unum{ESS,FSS}}, esize::UInt16, fsize::UInt16)
   #this function handles the situation where we're trying to convert a zero ulp
   #into a zero ulp of another size, which may or may not have the appropriate
   #capacity to handle the ulp.
+  #calculate the (negative) exponent + 1 on the high value of the subnormal number
+  high_value_rep::UInt16 = (0x0001 << esize) + fsize
+  #find the appropriate esize to rerepresent this value.
 
-  #pre-calculate the max esize and max fsize.
-  mesize::UInt16 = max_esize(ESS)
-  mfsize::UInt16 = max_fsize(FSS)
-  quote
-    #calculate the (negative) exponent + 1 on the high value of the subnormal number
-    high_value_rep::UInt16 = (0x0001 << esize) + fsize
-    #find the appropriate esize to rerepresent this value.
+  suggested_esize::UInt16 = 0x000F - leading_zeros(high_value_rep)
+  esize::UInt16 = min(suggested_esize, max_esize(ESS))
 
-    suggested_esize::UInt16 = 0x000F - leading_zeros(high_value_rep)
-    esize::UInt16 = min(suggested_esize, $mesize)
+  suggested_fsize::UInt16 = high_value_rep - (0x0001 << esize)
+  fsize::UInt16 = min(suggested_fsize, max_fsize(FSS))
 
-    suggested_fsize::UInt16 = high_value_rep - (0x0001 << esize)
-    fsize::UInt16 = min(suggested_fsize, $mfsize)
+  (esize, fsize)
+end
 
-    (esize, fsize)
+function check_lower_cells{ESS,FSS, DEST_FSS}(x::Unum{ESS,FSS}, ::Type{Val{DEST_FSS}})
+  if (DEST_FSS < 7)
+    start_idx = 2
+    accum = (FSS < 7) ? (x.fraction & mask_bot(DEST_FSS)) : (x.fraction.a[1] & mask_bot(DEST_FSS))
+  else
+    (__cell_length(DEST_FSS) + 1)
+    accum = z64
+  end
+
+  for idx = start_idx:__cell_length(FSS)
+    accum |= x.fraction.a[idx]
+  end
+
+  UNUM_UBIT_MASK * (accum == z64)
+end
+
+#int the case that DEST_FSS is strictly less than src FSS, then the opration is to pull the single
+#value (if DEST_FSS requires an int64)
+function pull_upper_cells{ESS,FSS, DEST_FSS}(src::Unum{ESS,FSS}, ::Type{Val{DEST_FSS}})
+  if (DEST_FSS < 7)
+    return (FSS < 7) ? src.fraction : src.fraction.a[1]
+  else
+    return ArrayNum{DEST_FSS}(src.fraction.a[1:__cell_length(DEST_FSS)])
   end
 end
+
+#in the case that the DEST_FSS is bigger than or equal to the src FSS, then the relevant operation
+#is to simply copy over the cells into a blank array with zeros in the rest of the slots.
+function copy_cells{ESS, FSS, DEST_FSS}(src::Unum{ESS,FSS}, ::Type{Val{DEST_FSS}})
+  (DEST_FSS < 7) && return src.fraction
+  result = zero(ArrayNum{DEST_FSS})
+  (FSS < 7) ? (result.a[1] = src.fraction) : (result.a[1:__cell_length(FSS)] = src.fraction.a)
+  return result
+end
+
+doc"""
+  `Unums.full_decode(::Unum,::Type{Val{DEST_FSS}})` decodes a unum value into a
+  normalized int64 exponent, fraction, fsize, and ubit.  This can be a costly
+  operation, since we don't expect too many conversions between unum types.
+"""
+function full_decode{ESS, FSS, DEST_FSS}(temp::Unum{ESS, FSS}, ::Type{Val{DEST_FSS}})
+  #first, copy x into a new variable.
+  leftshift = 0
+  if (temp.exponent == 0) #then we have a strictly subnormal (strange or regular) number.  Be prepared to shift left.
+    #now, count leading zeros.
+    leftshift = clz(temp.fraction) + 1
+    #next, shift the shadow fraction to the left appropriately.
+    frac_lsh!(temp, leftshift)
+  end
+
+  #set exponent and fsize, and a default ubit value.
+  exponent = decode_exp(temp) - leftshift
+  fsize = min(temp.fsize - leftshift, max_fsize(DEST_FSS))
+  ubit = z16
+
+  #reshape the fraction as necessary.
+  (DEST_FSS < FSS) && (ubit |= check_lower_cells(temp, Val{DEST_FSS}))
+  fraction = (DEST_FSS < FSS) ? pull_upper_cells(temp, Val{DEST_FSS}) : copy_cells(temp, Val{DEST_FSS})
+
+  #full_decode returns the exponent and fraction
+  return (exponent, fraction, fsize, ubit)
+end
+
 
 function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DEST_FSS}}, x::Unum{SRC_ESS,SRC_FSS})
+  (DEST_ESS == SRC_ESS) && (DEST_FSS == SRC_FSS) && throw(ArgumentError("error attempting to convert the same Unum"))
 
-  ############################################
-  # TODO:  TURN THIS INTO A GENERATED FUNCTION
-  ############################################
+  #set the type.
+  T = (DEST_FSS < 7) ? UnumSmall{DEST_ESS, DEST_FSS} : UnumLarge{DEST_ESS, DEST_FSS}
 
-  #check for NaN, because that doesn't really follow the rules you expect
-  is_nan(x) && return nan(Unum{DEST_ESS, DEST_FSS})
+  #deal with NaN and inf, because those have unusual rules.
+  is_nan(x) && return nan(T)
+  is_inf(x) && return inf(T, @signof(x))
+  is_zero(x) && return zero(T)
 
-  is_inf(x) && return inf(Unum{DEST_ESS, DEST_FSS}, x.flags & UNUM_SIGN_MASK)
+  temp = copy(x)
 
-  #and then handle flags
-  flags::UInt16 = x.flags
-  esize::UInt16
-  fsize::UInt16
-  exponent::UInt64
-
-
-  if (SRC_FSS < 7)
-    (destination_exp, src_frac, fsize, zeroish) = decode_exp_frac(x)
-  else
-    (destination_exp, src_frac, fsize, zeroish) = decode_exp_frac(x, ArrayNum{SRC_FSS}(zeros(UInt64, __cell_length(SRC_FSS))))
-  end
+  #first convert to a "universal" format that doesn't have restrictions, or
+  #subnormals).  be sure to pass the DEST_FSS, so true_fraction can be the
+  #needed type
+  (true_exponent, true_fraction, true_fsize, ubit) = full_decode{DEST_FSS}(temp, Val{DEST_FSS})
 
   #first, do the exponent part..
-  (SRC_ESS <= DEST_ESS) && is_mmr(x) && return nan(Unum{DEST_ESS, DEST_FSS})
+  (SRC_ESS <= DEST_ESS) && is_mmr(x) && return nan(T)
 
-  #determine properties of the destination type.
-  min_exp_subnormal = min_exponent(DEST_ESS, DEST_FSS)
-  min_exp_normal = min_exponent(DEST_ESS)
-  max_exp = max_exponent(DEST_ESS)
-
-  #check to see if we are beyond the extremes of the numerical range.
-  (destination_exp > max_exp) && return mmr(Unum{DEST_ESS,DEST_FSS}, x.flags & UNUM_SIGN_MASK)
-  (destination_exp < min_exp_subnormal) && return sss(Unum{DEST_ESS,DEST_FSS}, x.flags & UNUM_SIGN_MASK)
-
-  if (zeroish)
-    #check to see if ubit is thrown.
-    if (flags & UNUM_UBIT_MASK != 0)
-      (esize, fsize) = __subnormal_ubit_trim(Unum{DEST_ESS, DEST_FSS}, x.esize, x.fsize)
-      exponent = z64
-    else
-      esize = z16
-      exponent = z64
-    end
-  elseif (destination_exp < min_exp_normal)
-    #set the exponent and esize to be the smallest possible exponent
-    esize = max_esize(DEST_ESS)
-    exponent = z64
-    shft = min_exp_normal - destination_exp
-    #change fsize.  If fraction starts out as zero, we're just shifting the virtual
-    #one over.
-    if (src_frac == 0)
-      fsize = UInt16(shft) - o16
-      src_frac = t64 >> (shft - 0x0001)
-    else
-      #recalculate fsize
-      fsize = min(fsize + shft, max_fsize(DEST_FSS))
-      #rightshift the fraction
-      if (SRC_FSS < 7)
-        (src_frac, flags) = __rightshift_with_underflow_check(src_frac, shft, flags)
-      else
-        (src_frac, flags) = __rightshift_with_underflow_check!(src_frac, shft, flags)
-      end
-      #add in the the
-      set_bit!(src_frac, shft)
-    end
-  else
-    #do the default exponent encoding.  No mucking with fractions necessary.
-    (esize, exponent) = encode_exp(destination_exp)
-  end
-
-  #set cell_length values
-  LENGTH_DEST = __cell_length(DEST_FSS)
-  LENGTH_SRC =  __cell_length(SRC_FSS)
-
-  #next, transcribe the fraction.  First, allocate the space necessary for the
-  #result.
-  fraction = (DEST_FSS > 6) ? zero(ArrayNum{DEST_FSS}) : z64
-
-  #First, go through everything between destination length and source length and check to make sure it's zero.
-  if (DEST_FSS > 6)
-    accum = z64
-    for idx = (LENGTH_DEST + 1):LENGTH_SRC
-      @inbounds accum |= src_frac[idx]
-    end
-    (accum != 0) && (flags |= UNUM_UBIT_MASK)
-  end
-
-  #next, if DEST_FSS < 7, then do a masking operation.
-  if (DEST_FSS < 7)
-    @inbounds fraction = mask_top(DEST_FSS) & src_frac[1]
-    @inbounds flags |= ((mask_bot(DEST_FSS) & src_frac[1]) != 0) ? UNUM_UBIT_MASK : z16
-  else
-    for idx = (1:min(LENGTH_DEST, LENGTH_SRC))
-      @inbounds fraction[idx] = src_frac[idx]
-    end
-  end
-  #trim fsize, if necessary.
-  fsize = min(max_fsize(DEST_FSS), fsize)
-
-  Unum{DEST_ESS, DEST_FSS}(fsize, esize, flags, fraction, exponent)
+  #use the buildunum function to build the unum
+  buildunum(true_exponent, true_fraction, x.flags | ubit, true_fsize)
 end
 
 
+################################################################################
+# convert trampoline: splits a generic unum convert into a specific convert.
+function Base.convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
+  (FSS < 7) ? convert(UnumSmall{ESS,FSS}, x) : convert(UnumLarge{ESS,FSS}, x)
+end
 ##################################################################
 ## INTEGER TO UNUM
 
+const __unsupported_int_types = [BigInt, Int128, UInt128]
 #CONVERSIONS - INTEGER -> UNUM
-@gen_code function Base.convert{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Integer)
+@universal function Base.convert(T::Type{Unum}, i::Integer)
+  #currently unsupported:  BigInt, Int128, UInt128
+  (typeof(i) in __unsupported_int_types) && throw(ArgumentError("conversion from int type $(typeof(x)) still unsupported"))
+
+  i64val::UInt64 = zero(UInt64)
+
   #in ESS = 0 we are required to use subnormal one, so this requires
   #special code.
   if (ESS == 0)
-    @code :((x == 1) && return one(Unum{ESS,FSS}))
+    (i == 1) && return one(T)
+  end
+  #do a zero check
+  if (i == 0)
+    return zero(T)
+  elseif (i < 0)
+    #flip the sign and promote the integer to Unt64
+    i64val = UInt64(-i)
+    flags = UNUM_SIGN_MASK
+  else
+    #promote to UInt64
+    i64val = UInt64(i)
+    flags = z16
   end
 
-  @code quote
-    #do a zero check
-    if (x == 0)
-      return zero(Unum{ESS,FSS})
-    elseif (x < 0)
-      #flip the sign and promote the integer to Unt64
-      x = UInt64(-x)
-      flags = UNUM_SIGN_MASK
-    else
-      #promote to UInt64
-      x = UInt64(x)
-      flags = z16
-    end
+  #find the msb of x, this will tell us how much to move things
+  msbx = 63 - leading_zeros(i64val)
+  frac = i64val << (64 - msbx)
+  fsize = 0x003f  #set it to 63
 
-    #find the msb of x, this will tell us how much to move things
-    msbx = 63 - leading_zeros(x)
-    #do a check to see if we should release almost_infinite
-    (msbx > max_exponent(ESS)) && return mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK)
+  r = buildunum(T, msbx, frac, flags, fsize)
 
-    #move it over.  One bit should spill over the side.
-    frac = x << (64 - msbx)
-    #pass the whole shebang to unum_easy.
-    r = unum(Unum{ESS,FSS}, flags, frac, msbx)
+  #check for the "infinity hack" where we accidentally generate infinity by having
+  #just the right set of bits.
+  res = is_inf(r) ? mmr(T, flags & UNUM_SIGN_MASK) : r
 
-    #check for the "infinity hack" where we accidentally generate infinity by having
-    #just the right set of bits.
-    is_inf(r) ? mmr(Unum{ESS,FSS}, flags & UNUM_SIGN_MASK) : r
-  end
+  res
 end
 
+#=
 ##################################################################
 ## FLOATING POINT CONVERSIONS
 
@@ -288,3 +275,4 @@ for F in [Float16, Float32, Float64]
     end
   end
 end
+=#

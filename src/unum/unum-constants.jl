@@ -129,7 +129,7 @@ end
 
 #mmr and bigexact - "more than maxreal" and "biggest exact number".
 mmr{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16) = __mmr_bigexact_set!(zero(Unum{ESS,FSS}), signmask | UNUM_UBIT_MASK)
-@universal mmr(T::Type{Unum}, signmask::UInt16 = z16) = __mmr_bigexact_set!(zero(t), signmask | UNUM_UBIT_MASK)
+@universal mmr(T::Type{Unum}, signmask::UInt16 = z16) = __mmr_bigexact_set!(zero(T), signmask | UNUM_UBIT_MASK)
 @universal mmr!(x::Unum, signmask::UInt16 = z16) = __mmr_bigexact_set!(x, signmask | UNUM_UBIT_MASK)
 
 pos_mmr{ESS,FSS}(::Type{Unum{ESS,FSS}}) = mmr(Unum{ESS,FSS})

@@ -22,7 +22,7 @@ end
 doc"""
   `Unums.frac_trim!(x::Unum, fsize::UInt16)` strictly trims a fraction to a
   certain size.  This doesn't set the ubit flag if digits are cut off, for that,
-  use `Unums.trim_and_set_ubit`
+  use `Unums.trim_and_set_ubit!`
 """
 @fracfunc trim fsize
 
@@ -41,7 +41,6 @@ function needs_ubit{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
   return (accum != 0)
 end
 
-
 doc"""
   `Unums.trim_and_set_ubit!(x::Unum, fsize::UInt16)` is a utility to adjust the
   fsize of a unum.  It checks to see if setting the fsize would need require the
@@ -50,6 +49,20 @@ doc"""
 @universal function trim_and_set_ubit!(x::Unum, fsize::UInt16)
   x.flags |= (needs_ubit(x.fraction, fsize) * UNUM_UBIT_MASK)
   frac_trim!(x, fsize)
+  return x
+end
+
+doc"""
+  `Unums.rsh_and_set_ubit!(x::Unum, shift::UInt16)` is a utility that shifts the
+  unum fraction to the right and sets the ubit if the fraction gets shifted past
+  the right side of the unum.
+"""
+@universal function rsh_and_set_ubit!(x::Unum, shift::UInt16)
+  mfize = max_fsize(FSS)
+  x.flags |= (needs_ubit(x.fraction, mfsize - shift) * UNUM_UBIT_MASK)
+  x.fsize = min(x.fsize + shift, mfsize)
+  frac_rsh!(x, shift)
+  return x
 end
 
 ################################################################################

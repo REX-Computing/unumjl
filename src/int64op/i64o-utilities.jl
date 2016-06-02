@@ -1,5 +1,13 @@
 #i64o-utilities.jl
 
+#implement the deep copy constructor and the overwriting copy! function for ArrayNums.
+Base.copy{FSS}(a::ArrayNum{FSS}) = ArrayNum{FSS}(copy(a.a))
+function Base.copy!{FSS}(dest::ArrayNum{FSS}, src::ArrayNum{FSS})
+  for idx = 1:__cell_length(FSS)
+    @inbounds dest.a[idx] = src.a[idx]
+  end
+end
+
 #bits function for hlayer output.
 Base.bits{FSS}(a::ArrayNum{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "", a.a)
 
@@ -7,21 +15,15 @@ Base.bits{FSS}(a::ArrayNum{FSS}) = mapreduce(bits, (s1, s2) -> string(s1, s2), "
 Base.getindex{FSS}(a::ArrayNum{FSS}, key...) = getindex(a.a, key...)
 Base.setindex!{FSS}(a::ArrayNum{FSS}, X, keys...) = setindex!(a.a, X, keys...)
 
-function copydata!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
-  for idx = 1:__cell_length(FSS)
-    b.a[idx] = a.a[idx]
-  end
-end
-
 doc"""
 `Unums.set_bit!` sets a bit in the ArrayNum referred to by the value b, this bit
 is one-indexed with the bit 1 being the most significant.  A value of zero has
 undefined effects.  Useful for setting bits after shifting a non-subnormal value.
 """
-function set_bit!{FSS}(a::ArrayNum{FSS}, b::Int64)
+function set_bit!{FSS}(a::ArrayNum{FSS}, bit::Int64)
   a_index = ((b - o16) >> 6) + o16
   b_index = ((b - o16) % 64)
-  @inbounds a[a_index] = a[a_index] | (0x8000_0000_0000_0000 >> b_index)
+  @inbounds a.a[a_index] = a.a[a_index] | (0x8000_0000_0000_0000 >> b_index)
   a
 end
 
@@ -30,9 +32,12 @@ doc"""
 being the the most significant.  A value of zero has undefined effects.  Useful
 for setting bits after shifting a non-subnormal value.
 """
-function set_bit(a::UInt64, b::Int64)
+function set_bit(a::UInt64, bit::Int64)
   0x8000_0000_0000_0000 >> (b - o16)
 end
+
+@fracfunc set_bit bit
+
 
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.
@@ -50,6 +55,13 @@ end
 
 #this is a better formula for a single-width unsigned integer representation.
 __minimum_data_width(n::UInt64) = (res = max(z16, 0x003F - ctz(n)); res == 0xFFFF ? z16 : res)
+
+doc"""`@zero` looks for the local FSS value and outputs either z64 or zero(ArrayNum{FSS}) as needed.
+"""
+macro zero()
+  esc(:(FSS < 7 ? z64 : ArrayNum{FSS}))
+end
+
 
 #=
 

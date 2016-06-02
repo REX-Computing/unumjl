@@ -1,9 +1,6 @@
 #unit-convert.jl
 #unit tests methods to convert unums
 
-#TEST helper functions
-#bitof - retrieves single bits from an int64, zero indexed.
-
 #integer to unum
 
 @test [calculate(convert(Unum{3,6},i)) for i=-50:50] == [BigFloat(i) for i = -50:50]
@@ -17,7 +14,7 @@
 
 #unum to unum
 #from a small unum - to a bigger small unum.
-@test convert(Unum{4,6}, Unum{0,0}(z16, z16, z16, z64, z64)) == Unum{4,6}(z16, z16, z16, z64, z64)
+@test convert(Unum{4,6}, Unum{0,0}(z64, z64, z16, z16, z16)) == Unum{4,6}(z64, z64, z16, z16, z16)
 #from a bigger small unum - to a smaller unum, with no trimming.
 @test convert(Unum{1,1}, one(Unum{4,6})) == one(Unum{1,1})
 #from a big small unum to a smaller unum which requires subnormality.
@@ -29,7 +26,7 @@
 @test convert(Unum{4,6}, zero(Unum{0,0})) == zero(Unum{4,6})
 
 @test convert(Unum{0,0}, sss(Unum{4,7})) == sss(Unum{0,0})
-@test convert(Unum{4,6}, sss(Unum{0,0})) == Unum{4,6}(z16, z16, Unums.UNUM_UBIT_MASK, z64, z64)
+@test convert(Unum{4,6}, sss(Unum{0,0})) == Unum{4,6}(z64, z64, Unums.UNUM_UBIT_MASK, z16, z16)
 
 #float to unum
 #test that the general conversion works for normal floating points in the {4,6} environment
