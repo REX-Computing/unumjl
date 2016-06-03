@@ -144,15 +144,17 @@ doc"""
     #figure the needed difference.
     shiftvalue = UInt16(min_exp_normal - true_exponent)
     #load the values into a holding unum.
-    u = T(z64, fraction, flags, max_esize(ESS), min(fsize, mfsize))
-    rsh_and_set_ubit!(u, shiftvalue)
-    frac_set_bit!(u, shiftvalue)
-    trim_and_set_ubit!(u, min(fsize + shiftvalue, mfsize))
-    u
+    result = T(z64, fraction, flags, max_esize(ESS), min(fsize, mfsize))
+    rsh_and_set_ubit!(result, shiftvalue)
+    frac_set_bit!(result, shiftvalue)
   else
+    shiftvalue = z16
     (esize, exponent) = encode_exp(true_exponent)
-    T(exponent, fraction, flags, esize, min(fsize, mfsize))
+    result = T(exponent, fraction, flags, esize, min(fsize, mfsize))
   end
+  trim_and_set_ubit!(result, min(fsize + shiftvalue, mfsize))
+  exact_trim!(result)
+  result
 end
 
 export unum

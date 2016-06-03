@@ -33,8 +33,8 @@ doc"""
 @universal function exact_trim!(x::Unum)
   is_ulp(x) && return x  #kick out if we're an ulp.
   tz = ctz(x.fraction)
-  mfsize = max_fsize(FSS)
-  x.fsize = (tz > mfsize) ? z16 : (mfsize - tz)
+  x.fsize = (tz == 0x0040) ? 0 : (0x003f - tz)
+  return x
 end
 
 ################################################################################

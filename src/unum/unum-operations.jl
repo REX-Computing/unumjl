@@ -108,7 +108,7 @@ doc"""
 """
 @universal function resolve_degenerates!(x::Unum)
   (x.exponent != 0) && return x   #kick out if our exponent is not zero.
-  (x.esize != max_esize(ESS)) && return x #kick out if we're not a strange subnormal.
+  (x.esize == max_esize(ESS)) && return x #kick out if we're not a strange subnormal.
   if is_all_zero(x.fraction)
     is_exact(x) && return zero(typeof(x))
     return x #if we're actually zero or a zero+ulp subnormal we can't shift.
@@ -119,7 +119,7 @@ doc"""
   leftshift = clz(x.fraction) + o16
   #next, shift the shadow fraction to the left appropriately.
   frac_lsh!(x, leftshift)
-  true_exponent -= leftshift
+  true_exponent -= leftshift - o16
   exact_trim!(x)
   (x.esize, x.exponent) = encode_exp(true_exponent)
   return x

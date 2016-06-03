@@ -30,7 +30,8 @@
 
 #float to unum
 #test that the general conversion works for normal floating points in the {4,6} environment
-
+#=
+move this to continuous testing.
 seed = randn(100)
 f16a = [BigFloat(Float16(seed[i])) for i = 1:100]
 f32a = [BigFloat(Float32(seed[i])) for i = 1:100]
@@ -41,6 +42,7 @@ c64a = [calculate(convert(Unum{4,6}, Float64(seed[i]))) for i = 1:100]
 @test f16a == c16a
 @test f32a == c32a
 @test f64a == c64a
+=#
 
 #test that NaNs convert.
 @test isnan(convert(Unum{4,6}, NaN16))
@@ -126,5 +128,5 @@ tinyfloat = reinterpret(Float64, o64)
 @test zero(Float32) == convert(Float32, zero(Unum{4,6}))
 @test zero(Float64) == convert(Float64, zero(Unum{4,6}))
 #test that subnormals convert correctly
-@test 1.0 == convert(Float64, Unum{0,0}(z16, z16, z16, t64, z64))
+@test 1.0 == convert(Float64, Unum{0,0}(z64, t64, z16, z16, z16))
 #test converting *to* a subnormal float.
