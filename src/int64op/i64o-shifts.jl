@@ -37,7 +37,7 @@ function lsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
   return a
 end
 
-@fracfunc lsh shft
+@fracproc lsh shft
 
 rsh(a::UInt64, b::Int64) = a >> b
 rsh(a::UInt64, b::UInt16) = a >> b
@@ -74,7 +74,7 @@ function rsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
   a
 end
 
-@fracfunc rsh shft
+@fracproc rsh shft
 
 ################################################################################
 ## a common operation is to rightshift with an underflow check.  Note that this

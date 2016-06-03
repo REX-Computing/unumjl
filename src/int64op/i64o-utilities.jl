@@ -20,9 +20,9 @@ doc"""
 is one-indexed with the bit 1 being the most significant.  A value of zero has
 undefined effects.  Useful for setting bits after shifting a non-subnormal value.
 """
-function set_bit!{FSS}(a::ArrayNum{FSS}, bit::Int64)
-  a_index = ((b - o16) >> 6) + o16
-  b_index = ((b - o16) % 64)
+function set_bit!{FSS}(a::ArrayNum{FSS}, bit::UInt16)
+  a_index = ((bit - o16) >> 6) + o16
+  b_index = ((bit - o16) % 64)
   @inbounds a.a[a_index] = a.a[a_index] | (0x8000_0000_0000_0000 >> b_index)
   a
 end
@@ -32,11 +32,13 @@ doc"""
 being the the most significant.  A value of zero has undefined effects.  Useful
 for setting bits after shifting a non-subnormal value.
 """
-function set_bit(a::UInt64, bit::Int64)
-  0x8000_0000_0000_0000 >> (b - o16)
+function set_bit(a::UInt64, bit::UInt16)
+  a | (0x8000_0000_0000_0000 >> (bit - o16))
 end
-
-@fracfunc set_bit bit
+doc"""
+`Unums.frac_set_bit!(x, bit)` sets (one-indexed) bit, which is useful for
+"""
+@fracproc set_bit bit
 
 
 #__minimum_data_width

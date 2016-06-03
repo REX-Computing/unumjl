@@ -1,5 +1,5 @@
 #unum-fracops.jl
-
+#=
 #pass-throughs on fraction operations which make working with unums much better.
 #basically, the distinction between side-effect-less functions on UInt64s and
 #side-effected functions on ArrayNum{FSS} are encapsulated.
@@ -153,3 +153,4 @@ doc"""
     throw(ArgumentError("FSS >= 6 not supported yet."))
   end
 end
+=#

@@ -99,44 +99,35 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
   Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
 end
 =#
-#=
-function __resolve_subnormal!{ESS,FSS}(a::Unum{ESS,FSS})
-  #resolves a unum with an "unusual exponent", i.e. when esize is not
-  #max_esize.  This is an "unsafe" operation, in that it does not check
-  #if the passed value is actually subnormal, or that esize isn't pushed to the brim.
-  _aexp::Int64 = decode_exp(a)
-  #don't forget to add one, because in theory we're going to want to move that
-  #first one PAST the left end of the fraction value.
-  _ashl::UInt16 = clz(a.fraction) + 1
 
-  is_zero(a) && return
-
-  if (_aexp - _ashl) >= min_exponent(ESS)
-    (a.esize, a.exponent) = encode_exp(_aexp - _ashl + 1) #don't forget the +1 because decode_exp on a subnormal is
-    #one off of the actual exponent.
-    #constrain the fsize to zero.
-    a.fsize = (_ashl > a.fsize) ? 0 : a.fsize - _ashl
-
-    __leftshift_frac!(a, _ashl)
-  else  #then all we have to do is encode it as the deeper exponent.
-    #reassign _ashl to be the most we can shift it over.
-    _ashl = _aexp - min_exponent(ESS) + 1
-    #take care of the corner case where thete's a single one that we're disappearing
-    if (a.fsize + 1 == _ashl)
-      a.fsize = z16
-      a.esize = max_esize(ESS)
-      a.exponent = z64
-      __zero_frac!(a)
-    else
-      a.fsize = (a.fsize - _ashl)
-      a.esize = max_esize(ESS)
-      __leftshift_frac!(a, _ashl)
-      a.exponent = z64
-    end
+doc"""
+  `Unums.resolve_degenerates!(::Unum)` checks for degeneracy in unum values,
+  and resolves to "canonical" form - which means all nonzero subnormals are
+  converted to normal form if possible, and exact zeros are the smallest zero.
+  fsize is maximally trimmed for exact values.
+"""
+@universal function resolve_degenerates!(x::Unum)
+  (x.exponent != 0) && return x   #kick out if our exponent is not zero.
+  (x.esize != max_esize(ESS)) && return x #kick out if we're not a strange subnormal.
+  if is_all_zero(x.fraction)
+    is_exact(x) && return zero(typeof(x))
+    return x #if we're actually zero or a zero+ulp subnormal we can't shift.
   end
-  a
+
+  true_exponent = decode_exp(x)
+  #now, count leading zeros, be prepared to shift left.
+  leftshift = clz(x.fraction) + o16
+  #next, shift the shadow fraction to the left appropriately.
+  frac_lsh!(x, leftshift)
+  true_exponent -= leftshift
+  exact_trim!(x)
+  (x.esize, x.exponent) = encode_exp(true_exponent)
+  return x
 end
 
+
+
+#=
 @gen_code function __inward_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
   @code quote
     is_strange_subnormal(x) && __resolve_subnormal!(x)

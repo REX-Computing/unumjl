@@ -43,7 +43,7 @@ function mask_top!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
 end
 
 #generates frac_mask_top!{ESS,FSS}(Unum{ESS,FSS})
-@fracfunc mask_top fsize
+@fracproc mask_top fsize
 
 const bot_array = [z64, z64, f64]
 doc"""
@@ -62,7 +62,7 @@ function mask_bot!{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
   return n
 end
 
-@fracfunc mask_bot fsize
+@fracproc mask_bot fsize
 
 doc"""
 `Unums.fill_mask!` takes two arraynums and fills the first one with the UInt64 AND

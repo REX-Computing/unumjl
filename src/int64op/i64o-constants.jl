@@ -18,7 +18,7 @@ end
 doc"""
 `Unums.frac_zero!` sets the fraction of a unum to zero.
 """
-@fracfunc zero
+@fracproc zero
 
 function Base.one{FSS}(::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
@@ -55,7 +55,7 @@ end
 export top
 
 doc"""`Unums.frac_top!` sets the fraction of a unum to be zero, except with the top bit set."""
-@fracfunc top
+@fracproc top
 
 doc"""`Unums.all(x::UInt64)` returns a UInt64 or an ArrayNum with all bits set."""
 all(x::UInt64) = f64
@@ -64,7 +64,7 @@ doc"""`Unums.all!(x::UInt64)` sets all bits on an arraynum."""
 all!{FSS}(x::ArrayNum{FSS}) = for idx = 1:__cell_length(FSS); x.a[idx] = f64; end
 
 doc"""`Unums.frac_all!` sets the fraction of a unum to be all set."""
-@fracfunc all
+@fracproc all
 
 
 #=

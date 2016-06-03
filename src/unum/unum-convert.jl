@@ -34,7 +34,7 @@ function check_lower_cells{ESS,FSS, DEST_FSS}(x::Unum{ESS,FSS}, ::Type{Val{DEST_
     accum |= x.fraction.a[idx]
   end
 
-  UNUM_UBIT_MASK * (accum == z64)
+  UNUM_UBIT_MASK * (accum != z64)
 end
 
 #int the case that DEST_FSS is strictly less than src FSS, then the opration is to pull the single
@@ -62,52 +62,64 @@ doc"""
   operation, since we don't expect too many conversions between unum types.
 """
 function full_decode{ESS, FSS, DEST_FSS}(temp::Unum{ESS, FSS}, ::Type{Val{DEST_FSS}})
-  #first, copy x into a new variable.
-  leftshift = 0
+  leftshift::UInt16 = z16
   if (temp.exponent == 0) #then we have a strictly subnormal (strange or regular) number.  Be prepared to shift left.
     #now, count leading zeros.
-    leftshift = clz(temp.fraction) + 1
+    leftshift = clz(temp.fraction) + o16
     #next, shift the shadow fraction to the left appropriately.
     frac_lsh!(temp, leftshift)
   end
 
   #set exponent and fsize, and a default ubit value.
   exponent = decode_exp(temp) - leftshift
+
   fsize = min(temp.fsize - leftshift, max_fsize(DEST_FSS))
-  ubit = z16
+  ubit::UInt16 = z16
 
   #reshape the fraction as necessary.
   (DEST_FSS < FSS) && (ubit |= check_lower_cells(temp, Val{DEST_FSS}))
+
   fraction = (DEST_FSS < FSS) ? pull_upper_cells(temp, Val{DEST_FSS}) : copy_cells(temp, Val{DEST_FSS})
 
   #full_decode returns the exponent and fraction
   return (exponent, fraction, fsize, ubit)
 end
 
-
 function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DEST_FSS}}, x::Unum{SRC_ESS,SRC_FSS})
   (DEST_ESS == SRC_ESS) && (DEST_FSS == SRC_FSS) && throw(ArgumentError("error attempting to convert the same Unum"))
 
   #set the type.
   T = (DEST_FSS < 7) ? UnumSmall{DEST_ESS, DEST_FSS} : UnumLarge{DEST_ESS, DEST_FSS}
+  A = (DEST_FSS < 7) ? UInt64 : ArrayNum{DEST_FSS}
+
+  println("----")
 
   #deal with NaN and inf, because those have unusual rules.
   is_nan(x) && return nan(T)
   is_inf(x) && return inf(T, @signof(x))
-  is_zero(x) && return zero(T)
+  #check zeroish numbers (zero ulps and zeros)
+  if (x.exponent == z64) && (is_all_zero(x.fraction))
+    is_exact(x) && return zero(T)
+    #if we're a zero ulp, then we need to do a special conversion done by indexing
+    #zero ulps.
+    zulp_index = zero_ulp_index(x.esize, x.fsize)
+    (esize, fsize) = zero_ulp_params(T, zulp_index)
+    return T(z64, zero(A), x.flags, esize, fsize)
+  end
 
   temp = copy(x)
 
   #first convert to a "universal" format that doesn't have restrictions, or
   #subnormals).  be sure to pass the DEST_FSS, so true_fraction can be the
   #needed type
-  (true_exponent, true_fraction, true_fsize, ubit) = full_decode{DEST_FSS}(temp, Val{DEST_FSS})
+
+  (true_exponent, true_fraction, true_fsize, ubit) = full_decode(temp, Val{DEST_FSS})
 
   #first, do the exponent part..
   (SRC_ESS <= DEST_ESS) && is_mmr(x) && return nan(T)
 
   #use the buildunum function to build the unum
-  buildunum(true_exponent, true_fraction, x.flags | ubit, true_fsize)
+  buildunum(T, true_exponent, true_fraction, x.flags | ubit, true_fsize)
 end
 
 

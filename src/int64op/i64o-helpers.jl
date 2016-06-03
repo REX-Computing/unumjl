@@ -4,7 +4,7 @@ the FSS value.
 """
 max_fsize(FSS::Int64) = UInt16((1 << FSS) - 1)
 
-#two helper functions to enable fracfunc.
+#two helper functions to enable fracproc.
 function __ffcall(s::Symbol, inner_block, tname, p...)
   fracname = symbol("frac_", s, "!")
   #outer_curly is the curly variadic notation for the function name.
@@ -38,11 +38,11 @@ function __largeexpr(s::Symbol, p...)
 end
 
 doc"""
-`Unums.@fracfunc(fn)` generates two functions that takes Unum{ESS,FSS} and executes
+`Unums.@fracproc(fn)` generates two functions that takes Unum{ESS,FSS} and executes
 fn on the fraction part of the unum, if FSS < 7.  if FSS >= 7 then it executes
 fn! on the fraction part of the unum.
 """
-macro fracfunc(name, params...)
+macro fracproc(name, params...)
   fracname = symbol("frac_", name, "!")
   bangname = symbol(name, "!")
   smallexpr = __smallexpr(name, params...)

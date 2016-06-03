@@ -144,9 +144,9 @@ doc"""
     #figure the needed difference.
     shiftvalue = UInt16(min_exp_normal - true_exponent)
     #load the values into a holding unum.
-    u = T(z64, fraction, flags | ubit, max_esize(ESS), min(fsize, mfsize))
+    u = T(z64, fraction, flags, max_esize(ESS), min(fsize, mfsize))
     rsh_and_set_ubit!(u, shiftvalue)
-    frac_bitfromtop!(u, shiftvalue)
+    frac_set_bit!(u, shiftvalue)
     trim_and_set_ubit!(u, min(fsize + shiftvalue, mfsize))
     u
   else

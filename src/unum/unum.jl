@@ -7,7 +7,6 @@ include("./unum-constants.jl")
 include("./unum-properties.jl")
 include("./unum-operations.jl")
 include("./unum-convert.jl")
-#include("./unum-comparison.jl")
 #include("./unum-fracops.jl")
 
 #h-layer stuff
@@ -16,6 +15,8 @@ include("./unum-convert.jl")
 
 #mathematical stuff
 
+
+include("./math/unum-comparison.jl")
 #include("./unum-addition.jl")
 #include("./unum-subtraction.jl")
 #include("./unum-multiplication.jl")

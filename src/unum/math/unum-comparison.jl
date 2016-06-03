@@ -1,20 +1,18 @@
 #unum-comparison.jl
 
-#test equality on unums.
-import Base:  ==, <, >
+import Base:  ==, <, >  #this statement is necessary to redefine these functions directly
 
-function =={ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+@universal function ==(a::Unum, b::Unum)
   #first compare the ubits.... These must be the same or else they aren't equal.
   ((a.flags & UNUM_UBIT_MASK) != (b.flags & UNUM_UBIT_MASK)) && return false
-
   #next, compare the sign bits...  The only one that spans is zero.
   ((a.flags & UNUM_SIGN_MASK) != (b.flags & UNUM_SIGN_MASK)) && (return (is_zero(a) && is_zero(b)))
   #check if either is nan.  Note that NaN != NaN.
   (isnan(a) || isnan(b)) && return false
 
-  #resolve strange subnormals.
-  is_strange_subnormal(a) && (__resolve_subnormal!(a))
-  is_strange_subnormal(b) && (__resolve_subnormal!(b))
+  #resolve degenerate forms.
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
 
   #first calculate the exponents.
   _aexp::Int64 = decode_exp(a)
@@ -30,7 +28,7 @@ function =={ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   #with the same resolution.  These must be equal.
   return true
 end
-
+#=
 #note that unlike IEEE floating points, 0 == -0 for Unums.  So the only isequal
 #exception should be the NaN exception.  In order to achieve this, we take negative
 #zero and make it the degenerate zero.  We also collapse fsize and esize to the
@@ -105,8 +103,8 @@ Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
 
     true
     #####################################################
-    #=(_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : $maxfsize) :
-               cmpplusubit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : $maxfsize)=#
+    #(_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : $maxfsize) :
+   #           cmpplusubit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : $maxfsize)
   end
 end
 
@@ -194,7 +192,7 @@ end
     return true
   end
 end
-
+=#
 #=
 import Base.min
 import Base.max

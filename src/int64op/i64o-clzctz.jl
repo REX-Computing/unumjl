@@ -7,13 +7,14 @@ doc"""
 """
 clz(n::UInt64) = UInt16(leading_zeros(n))  #NB:  This should be shimmed with a 'fast' version
                                            #that goes directly to UInt16
+clz(n::UInt16) = UInt16(leading_zeros(n))
 function clz{FSS}(n::ArrayNum{FSS})
   res::UInt16 = z16
   cellvalue::UInt64 = z64
   #iterate down the array starting from the most significant cell
   for idx = 1:__cell_length(FSS)
     @inbounds (cellvalue = n.a[idx])
-    res += clz(cellvalue) 
+    res += clz(cellvalue)
     (cellvalue != z64) && return res
   end
   res
