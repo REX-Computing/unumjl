@@ -184,16 +184,17 @@ function lower_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   is_exact(x) && return x
   return is_negative(x) ? __outward_exact!(x) : make_exact!(x)
 end
-
+=#
 ################################################################################
 ## dumb exactitude functions.
 
 doc"""`Unums.make_exact(::Unum)` forces the ubit of a unum to be 0."""
-make_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags &= ~UNUM_UBIT_MASK; x)
+@universal make_exact!(x::Unum) = (x.flags &= ~UNUM_UBIT_MASK; x)
 
 doc"""`Unums.make_ulp(::Unum)` forces the ubit of a unum to be 1."""
-make_ulp!{ESS,FSS}(x::Unum{ESS,FSS}) = (x.flags |= UNUM_UBIT_MASK; x)
+@universal make_ulp!(x::Unum) = (x.flags |= UNUM_UBIT_MASK; x)
 
+#=
 ################################################################################
 ## carry resolution
 

@@ -61,7 +61,8 @@ doc"""
   normalized int64 exponent, fraction, fsize, and ubit.  This can be a costly
   operation, since we don't expect too many conversions between unum types.
 """
-function full_decode{ESS, FSS, DEST_FSS}(temp::Unum{ESS, FSS}, ::Type{Val{DEST_FSS}})
+function full_decode{ESS, FSS, DEST_FSS}(x::Unum{ESS, FSS}, ::Type{Val{DEST_FSS}})
+  temp = copy(x)
   leftshift::UInt16 = z16
   subnormal_adjustment::Int64 = zero(Int64)  #this is the extra value we add in for subnormal numbers.
 
@@ -108,13 +109,11 @@ function Base.convert{DEST_ESS,DEST_FSS,SRC_ESS,SRC_FSS}(::Type{Unum{DEST_ESS,DE
     return T(z64, zero(A), x.flags, esize, fsize)
   end
 
-  temp = copy(x)
-
   #first convert to a "universal" format that doesn't have restrictions, or
   #subnormals).  be sure to pass the DEST_FSS, so true_fraction can be the
   #needed type
 
-  (true_exponent, true_fraction, true_fsize, ubit) = full_decode(temp, Val{DEST_FSS})
+  (true_exponent, true_fraction, true_fsize, ubit) = full_decode(x, Val{DEST_FSS})
 
   #first, do the exponent part..
   (SRC_ESS <= DEST_ESS) && is_mmr(x) && return nan(T)
@@ -267,16 +266,14 @@ macro fcreate()
 
         signshift = bits - 2
 
-        #make a copy because full_decode is destructive.
-        temp = copy(x)
         #first, transfer the sign bit over.
-        res |= (convert(fp.I, temp.flags & UNUM_SIGN_MASK) << signshift)
+        res |= (convert(fp.I, x.flags & UNUM_SIGN_MASK) << signshift)
 
         #highjack the full_decode function to retrieve the unbiased exponent and the fraction.
-        (unbiased_exp, src_frac, _, __) = full_decode(temp, Val{6})
+        (unbiased_exp, src_frac, _, __) = full_decode(x, Val{6})
 
         #check to see that unbiased_exp is within appropriate bounds for Float32
-        (unbiased_exp > ebias) && return inf(F) * ((temp.flags & UNUM_SIGN_MASK == 0) ? 1 : -1)
+        (unbiased_exp > ebias) && return inf(F) * ((x.flags & UNUM_SIGN_MASK == 0) ? 1 : -1)
 
         if (unbiased_exp < emin)
          delta = emin - unbiased_exp

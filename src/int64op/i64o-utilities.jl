@@ -58,12 +58,8 @@ end
 #this is a better formula for a single-width unsigned integer representation.
 __minimum_data_width(n::UInt64) = (res = max(z16, 0x003F - ctz(n)); res == 0xFFFF ? z16 : res)
 
-doc"""`@zero` looks for the local FSS value and outputs either z64 or zero(ArrayNum{FSS}) as needed.
-"""
-macro zero()
-  esc(:(FSS < 7 ? z64 : ArrayNum{FSS}))
-end
-
+#simply assign this to a hash of the array itself.
+Base.hash{FSS}(n::ArrayNum{FSS}, h::UInt) = hash(n.a, h)
 
 #=
 

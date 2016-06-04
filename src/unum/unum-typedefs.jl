@@ -67,9 +67,15 @@ function __check_UnumLarge{FSS}(_ESS, _FSS, exponent::UInt64, fraction::ArrayNum
   nothing
 end
 
+#universal copy constructors
+UnumSmall{ESS,FSS}(x::UnumSmall{ESS,FSS}) = UnumSmall{ESS,FSS}(x.exponent, x.fraction, x.flags, x.esize, x.fsize)
+UnumLarge{ESS,FSS}(x::UnumLarge{ESS,FSS}) = UnumLarge{ESS,FSS}(x.exponent, copy(x.fraction), x.flags, x.esize, x.fsize)
 #overide call to provide copy constructors that look like Unum{ESS,FSS} instead of UnumSmall or UnumLarge
-@generated function Base.call{ESS, FSS}(::Type{Unum{ESS,FSS}}, x::Unum{ESS,FSS})
-  (FSS < 7) ? (:(UnumSmall(x))) : (:(UnumLarge(x)))
+@universal function Base.call(T::Type{Unum{ESS,FSS}}, x::Unum)
+  (FSS < 7) ? (UnumSmall(x)) : (UnumLarge(x))
+end
+@universal function Base.copy(x::Unum)
+  (FSS < 7) ? (UnumSmall(x)) : (UnumLarge(x))
 end
 
 #override call to allow direct instantiation using the Unum{ESS,FSS} pseudo-constructor.

@@ -28,44 +28,26 @@ import Base:  ==, <, >  #this statement is necessary to redefine these functions
   #with the same resolution.  These must be equal.
   return true
 end
-#=
-#note that unlike IEEE floating points, 0 == -0 for Unums.  So the only isequal
+
+#note that unlike IEEE floating points, 0 === -0 for Unums.  So the only isequal
 #exception should be the NaN exception.  In order to achieve this, we take negative
 #zero and make it the degenerate zero.  We also collapse fsize and esize to the
 #most reasonable value.
-@gen_code function Base.hash{ESS,FSS}(a::Unum{ESS,FSS}, h::UInt)
-  @code quote
-    b = Unum{ESS,FSS}(a)
-    #mask out the sign flag if it's zero so that they're degenerate.
-    is_zero(a) && (b.flags = a.flags & (~UNUM_SIGN_MASK))
+@universal function Base.hash(a::Unum, h::UInt)
+  #use the full_decode function to extract
+  resolve_degenerates!(a)
 
-    #convert strange subnormals.
-    is_strange_subnormal(a) && (b = __resolve_subnormal!(b))
-    if (!is_subnormal(a))
-      (esize, exponent) = encode_exp(decode_exp(a))
-      b.esize = esize
-      b.exponent = exponent
-    end
-  end
-  mfs = max_fsize(FSS)
-  if (FSS < 7)
-    @code :((b.fraction, b.fsize, _) = __frac_trim(a.fraction, $mfs))
-  else
-    @code :((b.fsize, _) = __frac_trim!(b.fraction, $mfs))
-  end
-
-  @code quote
-    #now generate the hash.
-    h = hash((UInt(b.fsize) << 32) | (UInt(b.esize) << 16) | (UInt(b.flags & (UNUM_UBIT_MASK | UNUM_SIGN_MASK))), h)
-    h = hash(b.fraction, h)
-    h = hash(b.exponent, h)
-    h
-  end
+  #now generate the hash.
+  h = hash(a.esize << 32 | a.fsize << 16 | a.flags, h)
+  h = hash(a.fraction, h)
+  h = hash(a.exponent, h)
+  h
 end
 
 #the corresponding isequal function.
-Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}) = (hash(a) == hash(b))
+@universal Base.isequal(a::Unum, b::Unum) = (hash(a) == hash(b))
 
+#=
 @generated function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   maxfsize = max_fsize(FSS)
   quote
