@@ -33,7 +33,11 @@ doc"""
 @universal function exact_trim!(x::Unum)
   is_ulp(x) && return x  #kick out if we're an ulp.
   tz = ctz(x.fraction)
-  x.fsize = (tz == 0x0040) ? 0 : (0x003f - tz)
+  if FSS < 7
+    x.fsize = (tz == 64) ? 0 : (0x003f - tz)
+  else
+    x.fsize = (tz == 2 ^ FSS) ? 0 : (0x003f - tz)
+  end
   return x
 end
 

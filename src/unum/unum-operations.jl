@@ -122,6 +122,7 @@ doc"""
   true_exponent -= leftshift - o16
   exact_trim!(x)
   (x.esize, x.exponent) = encode_exp(true_exponent)
+
   return x
 end
 

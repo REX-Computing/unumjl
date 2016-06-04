@@ -78,14 +78,14 @@ end
 
 function !={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    (a.a[idx] != b.a[idx]) && return true
+    @inbounds (a.a[idx] != b.a[idx]) && return true
   end
   return false
 end
 
 function =={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
-    (a.a[idx] != b.a[idx]) && return false
+    @inbounds (a.a[idx] != b.a[idx]) && return false
   end
   return true
 end
