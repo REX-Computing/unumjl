@@ -3,6 +3,140 @@
 #environment signature.
 
 doc"""
+  `Unums.frac_add!(carry, ::Unum, fraction)`
+  adds fraction into the the fraction value of unum.
+"""
+function frac_add!{ESS,FSS}(carry::UInt64, a::UnumSmall{ESS,FSS}, addin::UInt64)
+  (carry, a.fraction) = i64add(carry, a.fraction, addin)
+  return carry
+end
+function frac_add!{ESS,FSS}(carry::UInt64, a::UnumLarge{ESS,FSS}, addin::ArrayNum{FSS})
+  i64add!(carry, a.fraction, addin)
+end
+
+doc"""
+  `Unums.add(::Unum, ::Unum)` outputs a Unum OR Ubound corresponding to the sum
+  of two unums.  This is bound to the (+) operation if options[:usegnum] is not
+  set.  Note that in the case of degenerate unums, add may change the bit values
+  of the individual unums, but the values will not be altered.
+"""
+@universal function add(a::Unum, b::Unum)
+  #some basic checks out of the gate.
+  (is_nan(a) || is_nan(b)) && return nan(T)
+  is_zero(a) && return b
+  is_zero(b) && return a
+
+  #resolve degenerate conditions in both A and B before calculating the exponents.
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
+
+  #go ahead and decode the a and b exponents, these will be used, a lot.
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+
+  #check to see if the signs on a and b are mismatched.
+  if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
+    #kick it to the unum_difference function which calculates numeric difference
+    (_aexp > _bexp) ? unum_diff(a, b, _aexp, _bexp) : unum_diff(b, a, _bexp, _aexp)
+  else
+    #kick it to the unum_sum function which calculates numeric sum.
+    (_aexp > _bexp) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
+  end
+end
+
+#import the Base add operation and bind it to the add and add! functions
+import Base.+
+@bind_operation(+, add)
+
+doc"""
+  `Unums.unum_sum(::Unum, ::Unum, _aexp, _bexp)` outputs a Unum OR Ubound
+  corresponding to the sum of two unums.  This function as prerequisites
+  must have the exponent on a exceed the exponent on b.
+"""
+@universal function unum_sum(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
+  #basic secondary checks which eject early results.
+  is_inf(a) && return inf(T, @signof a)
+  is_mmr(a) && return mmr(T, @signof a)
+  #there is a corner case that b winds up being infinity (and a does not; same
+  #with mmr.)
+  is_inf(b) && return inf(T, @signof a)
+  is_mmr(b) && return mmr(T, @signof a)
+
+  if (is_exact(a) && is_exact(b))
+    sum_exact(a, b, _aexp, _bexp)
+  else
+    sum_inexact(a, b, _aexp, _bexp)
+  end
+end
+
+@universal function sum_exact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
+  #first, decide if we need to deviate either a or b on account of their being
+  #subnormal numbers.
+  _a_dev = is_exp_zero(a) * one(Int64)
+  _b_dev = is_exp_zero(b) * one(Int64)
+
+  #modify the exponent values on a and b to accomodate subnormality.
+  _aexp += _a_dev
+  _bexp += _b_dev
+
+  shift = to16(_aexp - _bexp) #this is the a exponent minus the b exponent.
+  #if the two numbers are very divergent in magnitude, only need to flip the ulp.
+  if (shift > (max_fsize(FSS) + 1))
+    res = make_ulp!(copy(a))
+    res.fsize = max_fsize(FSS)
+    return res
+  end
+
+  #copy the b unum as the temporary result.
+  result = copy(b)
+
+  #check to see if "shift" is zero.
+  if (shift == 0x0000)
+    #initialize carry to be one, if we're not subnormal
+    carry = (_b_dev == 0) * o64
+  else
+    carry = z64
+    rsh_and_set_ubit!(result, shift)
+    (_b_dev == 0) && frac_set_bit!(result, shift)
+  end
+
+  #increment the carry if the left unum is not subnormal.
+  carry += (_a_dev == 0) * o64
+
+  #add the two fractionals parts together, and set the carry.
+  carry = frac_add!(carry, result, a.fraction)
+
+  #resolve the possibility that the carry contains more than one bit.
+  resolve_carry!(carry, result, _aexp)
+
+  #if we wound up still subnormal, then re-subnormalize the exponent. (exp - 1)
+  result.exponent &= f64 * (carry != 0)
+
+  #check to make sure we haven't done the inf hack, where the result exactly
+  #equals inf.
+  is_inf(result) && return inf(T)
+
+  return result
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+## THERE IS SOME REDICULOUS LOGIC BEYOND THIS POINT WHICH MAY BE USED LATER.
+
+
+#=
+doc"""
   `add!(::Unum{ESS,FSS}, ::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and
   adds them, storing the result in the third, g-layer
 
@@ -279,14 +413,4 @@ end
     :(nan!(b))
   end
 end
-
-import Base.+
-function +{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
-  temp = zero(Gnum{ESS,FSS})
-  add!(x, y, temp)
-  #return the result as the appropriate data type.
-  emit_data(temp)
-end
-function +{ESS,FSS}(x::Unum{ESS,FSS})
-  Unum{ESS,FSS}(x)
-end
+=#

@@ -1,33 +1,45 @@
 #int64o-math.jl
-
-#=
-
-#carried_add adds the value in the first passed arraynum into the second arraynum.
-@gen_code function __carried_add!{FSS}(carry::UInt64, a::ArrayNum{FSS}, b::ArrayNum{FSS})
+doc"""
+  `Unums.i64add!(carry, a::ArrayNum, b::ArrayNum)`
+  adds the array b into the array a, and increments the carry value if there's
+  been a carry event.
+"""
+@gen_code function i64add!{FSS}(carry::UInt64, b::ArrayNum{FSS}, a::ArrayNum{FSS})
   #this algorithm follows exactly from the elementary school addition algorithm.
   #keep a "carry" variable around and go from least significant to most significant
   #bits.
   l = __cell_length(FSS)
   #initialize the carry variable.
-  @code :(cellcarry::UInt64 = z64)
+  @code quote
+    cellcarry::UInt64 = z64
+    overflow::Bool = z64
+  end
+
   for (idx = l:-1:1)
     @code quote
-      @inbounds (b.a[$idx] += a.a[$idx])     #perform the addition
-      @inbounds if (b.a[$idx] < a.a[$idx])   #check to see if we overflowed
-                  @inbounds b.a[$idx] += cellcarry #yes, then go ahead and add the previous digit's carry
-                  cellcarry = o64            #and reset the current carry to one.
-                else                         #maybe we didn't overflow
-                  @inbounds b.a[$idx] += cellcarry #go ahead and add the previous one in
-                                             #check to see if this causes an overflow and we need to reset cellcarry.
-                                             #the only possible situation is if it was FF..FF and adding one went to zero.
-                  @inbounds cellcarry = ((cellcarry != z64) && (b.a[$idx] == z64)) ? o64 : z64
-                end
+      @inbounds begin
+        (b.a[$idx] += a.a[$idx])     #perform the addition
+        overflow = b.a[$idx] < a.a[$idx]
+        b.a[$idx] += cellcarry
+        cellcarry = (overflow | ((cellcarry != z64) & (b.a[$idx] == z64))) * o64
+      end
     end
   end
   #add in the carry from the most significant segment to the entire carry.
   @code :(carry + cellcarry)
 end
+doc"""
+  `Unums.i64add(carry, a::ArrayNum, b::ArrayNum)`
+  adds the array b into the array a, and increments the carry value if there's
+  been a carry event.
+"""
+function i64add(carry::UInt64, a::UInt64, b::UInt64)
+  result::UInt64 = a + b
+  augment::UInt64 = (result < a) * o64
+  (carry + augment, result)
+end
 
+#=
 #carried_sub subtracts the value in the second passed arraynum from the first arraynum.
 @gen_code function __carried_diff!{FSS}(vdigit::UInt64, a::ArrayNum{FSS}, b::ArrayNum{FSS})
   #this algorithm follows exactly from the elementary school addition algorithm.

@@ -195,6 +195,27 @@ doc"""`Unums.make_exact(::Unum)` forces the ubit of a unum to be 0."""
 doc"""`Unums.make_ulp(::Unum)` forces the ubit of a unum to be 1."""
 @universal make_ulp!(x::Unum) = (x.flags |= UNUM_UBIT_MASK; x)
 
+
+doc"""
+  `Unums.resolve_carry!(carry::UInt64, ::Unum, exponent::Int64)` resolves a
+  carry (invisible bit) value that may exceed one after calculation events.
+  You should pass this function an exponent value that will be returned,
+  appropriately modified.
+"""
+@universal function resolve_carry!(carry::UInt64, x::Unum, exponent::Int64)
+  leftzeroes = clz(carry)
+  if (leftzeroes < 0x003F) #less than 63 zeroes
+    shift = 0x003F - leftzeroes
+    rsh_and_set_ubit!(x, shift)
+    #now copy the bits over from the carried segment.
+    frac_copy_top!(x, (((o64 << shift) - o64) & carry) << (leftzeroes + o16))
+    exponent += shift
+  end
+  (exponent > max_exponent(ESS)) && mmr!(x)  #set it to mmr, if the exponent is too large.
+  (x.esize, x.exponent) = encode_exp(exponent)
+end
+
+
 #=
 ################################################################################
 ## carry resolution

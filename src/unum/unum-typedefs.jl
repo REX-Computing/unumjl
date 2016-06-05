@@ -148,7 +148,7 @@ doc"""
   #check if we need to make this a subnormal number.
   if (true_exponent < min_exp_normal)
     #figure the needed difference.
-    shiftvalue = UInt16(min_exp_normal - true_exponent)
+    shiftvalue = to16(min_exp_normal - true_exponent)
     #load the values into a holding unum.
     result = T(z64, fraction, flags, max_esize(ESS), min(fsize, mfsize))
     rsh_and_set_ubit!(result, shiftvalue)

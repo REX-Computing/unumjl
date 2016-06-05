@@ -5,9 +5,9 @@ doc"""
   `clz(::UInt64)` and 'clz(::ArrayNum)' count the leading zeros and return a
   UInt16 value (instead of the Int64 standard value for leading_zeros.)
 """
-clz(n::UInt64) = UInt16(leading_zeros(n))  #NB:  This should be shimmed with a 'fast' version
+clz(n::UInt64) = to16(leading_zeros(n))  #NB:  This should be shimmed with a 'fast' version
                                            #that goes directly to UInt16
-clz(n::UInt16) = UInt16(leading_zeros(n))
+clz(n::UInt16) = to16(leading_zeros(n))
 function clz{FSS}(n::ArrayNum{FSS})
   res::UInt16 = z16
   cellvalue::UInt64 = z64
@@ -24,7 +24,7 @@ doc"""
   `ctz(::UInt64)` and 'ctz(::ArrayNum)' count the trailing zeros and return a
   UInt16 value (instead of the Int64 standard value for trailing_zeros.)
 """
-ctz(n::UInt64) = UInt16(trailing_zeros(n))
+ctz(n::UInt64) = to16(trailing_zeros(n))
 #for when it's a superint (that's not a straight Uint64)
 function ctz{FSS}(n::ArrayNum{FSS})
   res::UInt16 = z16

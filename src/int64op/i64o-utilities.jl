@@ -36,9 +36,23 @@ function set_bit(a::UInt64, bit::UInt16)
   a | (0x8000_0000_0000_0000 >> (bit - o16))
 end
 doc"""
-`Unums.frac_set_bit!(x, bit)` sets (one-indexed) bit, which is useful for
+`Unums.frac_set_bit!(x, bit)` sets (one-indexed) bit, which is useful for setting
+bits after shifting a non-subnormal value.
 """
 @fracproc set_bit bit
+
+doc"""
+`Unums.copy_top(x, val)` performs the logical or of the value with the fraction
+of x, or the first element in x fraction array.
+"""
+copy_top(a::UInt64, pattern::UInt64) = a | pattern
+copy_top!{FSS}(a::ArrayNum{FSS}, pattern::UInt64) = (a[1] |= pattern)
+
+doc"""
+`Unums.frac_copy_top!(x::Unum, pattern::UInt64)` performs the logical or of the pattern
+with the fraction of x, or the first element in x fraction array.
+"""
+@fracproc copy_top pattern
 
 
 #__minimum_data_width
@@ -60,41 +74,3 @@ __minimum_data_width(n::UInt64) = (res = max(z16, 0x003F - ctz(n)); res == 0xFFF
 
 #simply assign this to a hash of the array itself.
 Base.hash{FSS}(n::ArrayNum{FSS}, h::UInt) = hash(n.a, h)
-
-#=
-
-doc"""
-`__allones_for_fsize` checks to see if the object is all ones for a given
-fsize value.  keep in mind that zero passed length value is equivalent to one
-digit.  This is useful for checking if fractions have an effective value close
-to 1 or 2 (depending on subnormality).  Note: for array ints, the expected
-situation is to pass the array.
-"""
-function __allones_for_fsize(n::UInt64, fsize::UInt16)
-  _masktop = mask_top(fsize)
-  (n & _masktop) == _masktop
-end
-
-@gen_code function __allones_for_fsize{cells}(n::Array{UInt64,1}, fsize::UInt16, ::Val{cells})
-  @code quote
-    dividingcell::Int = div(fsize, 64) + 1
-    sidebits::UInt64 = fsize % 64   #how many bits will be left over in the critical cell.
-  end
-
-  for idx = 1:cells
-    @code quote
-      (dividingcell == 1) && return __allones_for_fsize(n[$idx])
-      #dividing line.
-      if $idx < dividingcell
-        #if it's before, it should be entirely ones (f64)
-        (n[$idx] != f64) && return false
-      elseif $idx == dividingcell
-        #if it's on the dividing line, measure what the count will be, we can
-        #ping back to the UInt64 version, keeping in mind that zero is strange.
-        (sidebits == 0) && return true
-        return __allones_for_fsize(n[$idx], sidebits)
-      end
-    end
-  end
-end
-=#

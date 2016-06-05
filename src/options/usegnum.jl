@@ -17,7 +17,7 @@ macro bind_operation(op, fsymbol)
   gsymbol = symbol(fsymbol, "!")
   gcreate = symbol(fsymbol, "_create")
   if options[:usegnum]
-    quote
+    esc(quote
       @universal $op(a::Unum,   b::Unum)   = $gcreate(a, b)
       @universal $op(a::Unum,   b::Ubound) = $gcreate(a, b)
       @universal $op(a::Ubound, b::Unum)   = $gcreate(a, b)
@@ -28,13 +28,13 @@ macro bind_operation(op, fsymbol)
       @universal $op(a::Gnum,   b::Unum)   = $gsymbol(a, b)
       @universal $op(a::Gnum,   b::Ubound) = $gsymbol(a, b)
       @universal $op(a::Gnum,   b::Gnum)   = $gsymbol(a, b)
-    end
+    end)
   else
-    quote
+    esc(quote
       @universal $op(a::Unum, b::Unum)     = $fsymbol(a, b)
       @universal $op(a::Unum, b::Ubound)   = $fsymbol(a, b)
       @universal $op(a::Unum, b::Ubound)   = $fsymbol(a, b)
       @universal $op(a::Ubound, b::Ubound) = $fsymbol(a, b)
-    end
+    end)
   end
 end

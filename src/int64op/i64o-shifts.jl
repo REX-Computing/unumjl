@@ -6,18 +6,20 @@
 lsh(a::UInt64, b::Int64) = a << b
 lsh(a::UInt64, b::UInt16) = a << b
 lsh!{FSS}(a::ArrayNum{FSS}, b::UInt16) = lsh!(a, Int64(b))
-#destructive version which clobbers the existing verion
 function lsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
+  (b < 0) && return rsh!(a, -b)
+  lsh!(a, to16(b))
+end
+#destructive version which clobbers the existing verion
+function lsh!{FSS}(a::ArrayNum{FSS}, b::UInt16)
   #kick it back to right shift if it's negative
-  (b < 0) && (rsh!(a, -b); return)
-
   l = __cell_length(FSS)
   #calculate how many cells apart our two ints shall be.
-  celldiff::Int64 = b >> 6
+  celldiff::UInt16 = b >> 6
   #calculate how much we have to shift
-  shift::Int64 = b & 0x0000_0000_0000_003F
+  shift::UInt16 = b & 0x003F
   shift == 0 && @goto cellmove          #skip it, if it's more efficient.
-  c_shift::Int64 = 64 - shift
+  c_shift::UInt16 = 0x0040 - shift
 
   #go ahead and shift all blocks.
   for idx = 1:l-1
@@ -42,19 +44,22 @@ end
 rsh(a::UInt64, b::Int64) = a >> b
 rsh(a::UInt64, b::UInt16) = a >> b
 rsh!(a::UInt64, b::UInt16) = rsh!(a, Int64(b))
-function rsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
-  #kick it back to right shift if it's negative
-  (b < 0) && (rsh!(a, -b); return)
 
-  #calculate how many cells apart our two ints shall be.
-  celldiff::Int64 = b >> 6
-  #calculate how much we have to shift
-  shift::Int64 = b & 0x0000_0000_0000_003F
-  shift == 0 && @goto cellmove                #consider this may be skippable.
-  c_shift::Int64 = 64 - shift
+function rsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
+  (b < 0) && return lsh!(a, -b)
+  rsh!(a, to16(b))
+end
+function rsh!{FSS}(a::ArrayNum{FSS}, b::UInt16)
+  #kick it back to right shift if it's negative
 
   l = __cell_length(FSS)
-
+  #calculate how many cells apart our two ints shall be.
+  celldiff::UInt16 = b >> 6
+  #calculate how much we have to shift
+  shift::UInt16 = b & 0x003F
+  shift == 0 && @goto cellmove          #skip it, if it's more efficient.
+  c_shift::UInt16 = 0x0040 - shift
+  
   #go ahead and shift all blocks.
   for idx = l:-1:2
     @inbounds a.a[idx] = (a.a[idx] >> shift) | a.a[idx - 1] << c_shift
@@ -75,7 +80,7 @@ function rsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
 end
 
 @fracproc rsh shft
-
+#=
 ################################################################################
 ## a common operation is to rightshift with an underflow check.  Note that this
 ## doesn't check at the FSS boundaries, and only checks for underflows at the
@@ -101,3 +106,4 @@ function __rightshift_with_underflow_check!{FSS}(f::ArrayNum{FSS}, s::Int64, fla
   rsh!(f, s)
   (f, flags)
 end
+=#

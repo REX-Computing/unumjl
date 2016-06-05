@@ -2,7 +2,7 @@ doc"""
 `Unums.max_fsize(::Int64)` retrieves the maximum possible fsize value based on
 the FSS value.
 """
-max_fsize(FSS::Int64) = UInt16((1 << FSS) - 1)
+max_fsize(FSS::Int64) = to16((1 << FSS) - 1)
 
 #two helper functions to enable fracproc.
 function __ffcall(s::Symbol, inner_block, tname, p...)

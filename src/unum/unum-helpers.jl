@@ -90,7 +90,7 @@ account for subnormal representations.
 function encode_exp(unbiasedexp::Int64)
   #make sure our unbiased exponent is a signed integer
   unbiasedexp = Int64(unbiasedexp)
-  esize = UInt16(64 - leading_zeros(UInt64(abs(unbiasedexp - 1))))
+  esize = to16(64 - leading_zeros(UInt64(abs(unbiasedexp - 1))))
   (esize, UInt64(unbiasedexp + 1 << esize - 1))
 end
 
@@ -106,7 +106,7 @@ doc"""
 `Unums.max_esize(::Int64)` retrieves the maximum possible esize value based on
 the ESS value.
 """
-max_esize(ESS::Int64) = UInt16((1 << ESS) - 1)
+max_esize(ESS::Int64) = to16((1 << ESS) - 1)
 
 doc"""
 `Unums.max_biased_exponent(::Int64)` retrieves the maximum possible biased exponent

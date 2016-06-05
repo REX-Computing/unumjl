@@ -7,11 +7,10 @@
 
 module Unums
 
-#various tools to help coding.
-include("./tools.jl")
 #engage the unpms options engine.
 include("./options/options.jl")
-
+#various tools to help coding.
+include("./tools.jl")
 
 ################################################################################
 #TYPE DEFINITION FILES

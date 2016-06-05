@@ -45,6 +45,19 @@ function vfunc(fn)
   :($fn{ESS,FSS})
 end
 
+if options[:devmode]
+  to16(n::Int64) = UInt16(n)
+else
+  to16(n::Int64) = UInt16(reinterpret(UInt64, n) & 0x0000_0000_0000_FFFF)
+end
+doc"""
+  `Unums.to16(::Int64)` converts a signed Int64 value to an unsigned Int16.
+  Normally one would do this by doing a direct conversion using call(Int16, ...)
+  however, this potentially throws inexact errors, so we will craftily hint to
+  LLVM that we are not worried about this possibility, except in dev mode.
+"""
+to16
+
 doc"""
   the `@universal` macro is prepended to a function defined with parameters that
   are generic Unum types (Unum, Ubound, Gnum), and generates two functions,
