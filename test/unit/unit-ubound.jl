@@ -14,8 +14,8 @@ wtwo = Unum{0,0}(o64, z64, z16, z16, z16)
 #and conversely we have a problem in the other direction
 @test_throws ArgumentError Ubound{0,0}(one(Unum{0,0}), Ubound{0,0}(zero(Unum{0,0}), wtwo))
 #and check that strange, overlapping ubounds are not ok.
-wnsome = Unum{0,0}(z16, z16, UInt16(3), UInt64(0), UInt64(0))
-@test_throws ArgumentError Ubound(Ubound(wnsome, zero(Unum{0,0})), Ubound(neg_one(Unum{0,0}), wtwo))
+wnsome = Unum{0,0}(UInt64(0), UInt64(0), UInt16(3), z16, z16)
+@test_throws ArgumentError Ubound{0,0}(Ubound{0,0}(wnsome, zero(Unum{0,0})), Ubound{0,0}(neg_one(Unum{0,0}), wtwo))
 
 ################################################################################
 ## open-ubound-helper:  A short function which returns the open interval version
