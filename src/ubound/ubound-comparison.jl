@@ -6,9 +6,9 @@ import Base: ==, <, >
 
 #==============================================================================#
 #equality comparison
-function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
+@universal function ==(a::Ubound, b::Ubound)
   #first, check to make sure that the left and right sides of the unum have the
-  #same exact vs. inexact character.
+  #same exact vs. inexact character.  This is a quick first-pass check to make
   low_exact = is_exact(a.lower)
   high_exact = is_exact(a.upper)
   (low_exact != is_exact(b.lower)) && return false
@@ -31,7 +31,8 @@ function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
 end
 
 function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  #resolve the ubound then check against the unum value.
+  #resolve the ubound then check against the unum value.  For now, this returns
+  #false.  A correct implementation will do a more detailed check.
   return false
   #=
   resd = ubound_resolve(a)
@@ -52,10 +53,10 @@ Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = isequal(b, a)
 
 #==============================================================================#
 
-<{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS}) = a.highbound < b.lowbound
-<{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = a < b.lowbound
-<{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS}) = a.highbound < b
+<{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS}) = a.upper < b.lower
+<{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = a < b.lower
+<{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS}) = a.upper < b
 
->{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS}) = a.lowbound > b.highbound
->{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = a > b.highbound
->{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS}) = a.lowbound > b
+>{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS}) = a.lower > b.upper
+>{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = a > b.upper
+>{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS}) = a.lower > b

@@ -1,6 +1,6 @@
 #unum-comparison.jl
 
-import Base:  ==, <, >  #this statement is necessary to redefine these functions directly
+import Base:  ==, <, >, <=, >=  #this statement is necessary to redefine these functions directly
 
 @universal function ==(a::Unum, b::Unum)
   #first compare the ubits.... These must be the same or else they aren't equal.
@@ -47,53 +47,52 @@ end
 #the corresponding isequal function.
 @universal Base.isequal(a::Unum, b::Unum) = (hash(a) == hash(b))
 
-#=
-@generated function >{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  maxfsize = max_fsize(FSS)
-  quote
-    (is_nan(a) || is_nan(b)) && return false
-    _b_pos::Bool = (is_positive(b))
-    _a_pos::Bool = (is_positive(a))
+@universal function >(a::Unum, b::Unum)
+  (is_nan(a) || is_nan(b)) && return false
+  _b_pos::Bool = (is_positive(b))
+  _a_pos::Bool = (is_positive(a))
+  _b_zer::Bool = is_zero(b)
+  _a_zer::Bool = is_zero(a)
 
-    (_b_pos) && (!_a_pos) && return false
-    (!_b_pos) && (_a_pos) && return (!(is_zero(a) && is_zero(b)))
+  (_b_pos) && (!_a_pos) && return false
+  (!_b_pos) && (_a_pos) && return (!_a_zer && _b_zer)
 
-    #zero can cause problems down the line.
-    is_zero(a) && return !(_b_pos || is_zero(b))
-    is_zero(b) && return _a_pos
+  #zero can cause problems down the line.
+  _a_zer && return !(_b_pos || _b_zer)
+  _b_zer && return _a_pos
 
-    #resolve exponents for strange subnormals.
-    is_strange_subnormal(a) && (__resolve_subnormal!(a); _aexp = decode_exp(a))
-    is_strange_subnormal(b) && (__resolve_subnormal!(b); _bexp = decode_exp(b))
+  #resolve degeneracies to make comparison much much easier..
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
 
-    #so now we know that these two have the same sign.
-    (decode_exp(b) > decode_exp(a)) && return (!_a_pos)
-    (decode_exp(b) < decode_exp(a)) && return _a_pos
-    #check fractions.
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+
+  #so now we know that these two have the same sign.
+  (_bexp > _aexp) && return !_a_pos
+  (_bexp < _aexp) && return _a_pos
+  #check fractions.
 
 
-    #if the fractions are equal, then the condition is satisfied only if a is
-    #an ulp and b is exact.
-    (b.fraction == a.fraction) && return ((is_exact(b) && is_ulp(a) && _a_pos) ||
-       (is_ulp(b) && is_exact(a) && !_a_pos))
-    #check the condition that b.fraction is less than a.fraction.  This should
-    #be xor'd to the _a_pos to give an instant failure condition.  Eg. if we are
-    #positive, then b > a means failure.
+  #if the fractions are equal, then the condition is satisfied only if a is
+  #an ulp and b is exact.
+  (b.fraction == a.fraction) && return ((is_exact(b) && is_ulp(a) && _a_pos) ||
+     (is_ulp(b) && is_exact(a) && !_a_pos))
+  #check the condition that b.fraction is less than a.fraction.  This should
+  #be xor'd to the _a_pos to give an instant failure condition.  Eg. if we are
+  #positive, then b > a means failure.
 
-    (b.fraction < a.fraction) && (!_a_pos) && return false
-    (a.fraction < b.fraction) && (_a_pos) && return false
+  (b.fraction < a.fraction) && (!_a_pos) && return false
+  (a.fraction < b.fraction) && (_a_pos) && return false
 
-    true
-    #####################################################
-    #(_a_pos) ? cmpplusubit(a.fraction, b.fraction, is_ulp(b) ? b.fsize : $maxfsize) :
-   #           cmpplusubit(b.fraction, a.fraction, is_ulp(a) ? b.fsize : $maxfsize)
-  end
+  true
 end
-
 #hopefully the julia compiler knows what to do here.
-function <{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  return b > a
-end
+@universal <(a::Unum, b::Unum) = (b > a)
+@universal <=(a::Unum, b::Unum) = !(a > b)
+@universal >=(a::Unum, b::Unum) = !(b > a)
+
+#=
 
 ###############################################################################3
 #specialized comparison functions
@@ -175,19 +174,18 @@ end
   end
 end
 =#
-#=
-import Base.min
-import Base.max
-function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+
+@universal function Base.min(a::Unum, b::Unum)
   #adjust them in case they are subnormal
-  is_strange_subnormal(a) && (a = __resolve_subnormal(a))
-  is_strange_subnormal(b) && (b = __resolve_subnormal(b))
+  resolve_subnormal!(a)
+  resolve_subnormal!(b)
 
   #first, fastest criterion:  Are they not the same sign?
   if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0
     is_negative(a) && return a
     return b
   end
+
   #next criterion, are the exponents different
   _aexp = decode_exp(a)
   _bexp = decode_exp(b)
@@ -205,10 +203,10 @@ function min{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   return b
 end
 
-function max{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
+@universal function Base.max(a::Unum, b::Unum)
   #adjust them in case they are subnormal
-  is_strange_subnormal(a) && (a = __resolve_subnormal(a))
-  is_strange_subnormal(b) && (b = __resolve_subnormal(b))
+  resolve_subnormal!(a)
+  resolve_subnormal!(b)
 
   #first, fastest criterion:  Are they not the same sign?
   if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0
@@ -231,5 +229,3 @@ function max{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
   (is_ulp(a) != is_negative(a)) && return b
   return a
 end
-export min, max
-=#

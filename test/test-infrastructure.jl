@@ -12,7 +12,7 @@
 
 #type constructor testing
 include("./unit/unit-unum.jl")
-#include("./unit/unit-ubound.jl")
+include("./unit/unit-ubound.jl")
 
 #testing things that get done to unums
 include("./unit/unit-constants.jl")
