@@ -87,6 +87,22 @@ macro universal(f)
   #next work with the parameters
   parameters = f.args[1].args
 
+  stypedefs = quote
+    G = GnumSmall{ESS,FSS}
+    B = UboundSmall{ESS,FSS}
+    U = UnumSmall{ESS,FSS}
+  end
+
+  ltypedefs = quote
+    G = GnumLarge{ESS,FSS}
+    B = UboundLarge{ESS,FSS}
+    U = UnumLarge{ESS,FSS}
+  end
+
+  #append these type definitions onto fsmall and flarge.
+  unshift!(fsmall.args[2].args, stypedefs)
+  unshift!(flarge.args[2].args, ltypedefs)
+
   for idx = 2:length(parameters)
     if (isa(parameters[idx], Expr)
          && (parameters[idx].head == :(::)))

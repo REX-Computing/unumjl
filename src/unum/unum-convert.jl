@@ -142,11 +142,11 @@ const __unsupported_int_types = [BigInt, Int128, UInt128]
   #in ESS = 0 we are required to use subnormal one, so this requires
   #special code.
   if (ESS == 0)
-    (i == 1) && return one(T)
+    (i == 1) && return one(U)
   end
   #do a zero check
   if (i == 0)
-    return zero(T)
+    return zero(U)
   elseif (i < 0)
     #flip the sign and promote the integer to Unt64
     i64val = UInt64(-i)
@@ -162,11 +162,11 @@ const __unsupported_int_types = [BigInt, Int128, UInt128]
   frac = i64val << (64 - msbx)
   fsize = 0x003f  #set it to 63
 
-  r = buildunum(T, msbx, frac, flags, fsize)
+  r = buildunum(U, msbx, frac, flags, fsize)
 
   #check for the "infinity hack" where we accidentally generate infinity by having
   #just the right set of bits.
-  res = is_inf(r) ? mmr(T, flags & UNUM_SIGN_MASK) : r
+  res = is_inf(r) ? mmr(U, flags & UNUM_SIGN_MASK) : r
 
   res
 end

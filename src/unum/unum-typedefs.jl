@@ -142,21 +142,21 @@ doc"""
   mfsize = max_fsize(FSS)
 
   #eject easy candidates.
-  (true_exponent < min_exp_subnormal) && return sss(T, flags & UNUM_SIGN_MASK)
-  (true_exponent > max_exp) && return mmr(T, flags & UNUM_SIGN_MASK)
+  (true_exponent < min_exp_subnormal) && return sss(U, flags & UNUM_SIGN_MASK)
+  (true_exponent > max_exp) && return mmr(U, flags & UNUM_SIGN_MASK)
 
   #check if we need to make this a subnormal number.
   if (true_exponent < min_exp_normal)
     #figure the needed difference.
     shiftvalue = to16(min_exp_normal - true_exponent)
     #load the values into a holding unum.
-    result = T(z64, fraction, flags, max_esize(ESS), min(fsize, mfsize))
+    result = U(z64, fraction, flags, max_esize(ESS), min(fsize, mfsize))
     rsh_and_set_ubit!(result, shiftvalue)
     frac_set_bit!(result, shiftvalue)
   else
     shiftvalue = z16
     (esize, exponent) = encode_exp(true_exponent)
-    result = T(exponent, fraction, flags, esize, min(fsize, mfsize))
+    result = U(exponent, fraction, flags, esize, min(fsize, mfsize))
   end
   trim_and_set_ubit!(result, min(fsize + shiftvalue, mfsize))
   exact_trim!(result)
