@@ -119,6 +119,58 @@ end
   return result
 end
 
+doc"""
+  Unums.add_bit_and_set_ulp!(::Unum, ulpsize1, ulpsize2) takes two ulps values.
+  The first ulp value will be added into the unum.  The second ulp value will
+  be converted into an fsize.
+"""
+@universal function add_bit_and_set_ulp!(a::Unum, big_ulp::UInt16, little_ulp::UInt16)
+  carried = frac_add_bit!(a, big_ulp)
+  if (carried)
+    #rightshift by one.
+    frac_rsh!(a, o16)
+    #increment little_ulp
+    little_ulp += 1
+    #re-encode exponent
+    exponent = decode_exp(a) + 1
+    (exponent > max_exponent(ESS)) && return mmr!(a)
+    (a.esize, a.exponent) = encode_exp(exponent)
+  end
+  a.fsize = min(little_ulp, max_fsize(FSS))
+  is_nan(a) && return mmr!(a)
+  return a
+end
+
+@universal function sum_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
+  #first, do the exact sum, to calculate the "base value" of the resulting sum.
+  base_value = sum_exact(a, b)
+
+  _rexp = decode_exp(base_value)
+  _shift_a = to16(_rexp - _aexp) + a.fsize
+  _shift_b = to16(_rexp - _bexp) + b.fsize
+
+  if (is_ulp(a) && is_ulp(b))
+    #figure out which one has a bigger ulp delta.
+    #case one:  shift_a and shift_b are both greater than max_fsize (rare!)
+    if (_shift_a > max_fsize(FSS)) && (_shift_b > max_fsize(FSS))
+      base_value.fsize = max_fsize(FSS)
+      return make_ulp!(base_value)
+    end
+
+    #the bigger ulp data gets added in
+    augmented_value = add_bit_and_set_ulp!(copy(base_value), max(_shift_a, _shift_b), min(_shift_a, _shift_b))
+
+    #create a ubound (of the correct type) with the base_value and augmented_value.
+    return B(base_value, augmented_value)
+  else
+    ulp_shift = is_ulp(a) * _shift_a + is_ulp(b) * _shift_b
+    base_value.fsize = min(ulp_shift, max_fsize(FSS))
+    make_ulp!(base_value)
+    #just in case this "hacks" to mmr.
+    is_nan(base_value) && return mmr(U)
+    return base_value
+  end
+end
 
 
 

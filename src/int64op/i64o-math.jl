@@ -39,6 +39,40 @@ function i64add(carry::UInt64, a::UInt64, b::UInt64)
   (carry + augment, result)
 end
 
+doc"""
+  Unums.add_bit(value, bit) adds the (zero-indexed) bit to the value.  Returns
+  (result, carried)
+"""
+function add_bit(value::UInt64, bit::UInt16)
+  result_value = value + (t64 >> bit)
+  (result_value, result_value < value)
+end
+function add_bit!{FSS}(value::ArrayNum{FSS}, bit::UInt16)
+  @code quote
+    cell_index = div(bit, 0x0040) + o16
+    added_cell = t64 >> (bit % 0x0040)
+    carried = false
+  end
+
+  for (idx = __cell_length(FSS):-1:1)
+    @code quote
+      @inbounds oldvalue = value.a[$idx]
+      @inbounds value.a[$idx] += ($idx == cell_index) * added_cell + carried * o64
+      @inbounds carried = (value.a[$idx] < oldvalue)
+    end
+  end
+  @code :(carried)
+end
+
+@universal function frac_add_bit!(u::Unum, bit::UInt16)
+  if (FSS < 7)
+    (u.fraction, carried) = add_bit(u.fraction, bit)
+  else
+    carried = add_bit!(u.fraction)
+  end
+  return carried
+end
+
 #=
 #carried_sub subtracts the value in the second passed arraynum from the first arraynum.
 @gen_code function __carried_diff!{FSS}(vdigit::UInt64, a::ArrayNum{FSS}, b::ArrayNum{FSS})
