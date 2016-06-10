@@ -1,17 +1,22 @@
 #unit-subtraction.jl
 
 #testing subtraction
-#=
+
 #__diff_exact - an exact subtraction with the first entity having a higher exponent
 
-wone = Unum{4,6}(z16,z16,z16,z64,o64)
-wtwo = Unum{4,6}(z16,UInt16(1),z16,z64,UInt64(3))
-wthr = Unum{4,6}(z16,UInt16(1),z16,t64,UInt64(3))
+wone = convert(Unum{4,6}, 1)
+wtwo = convert(Unum{4,6}, 2)
+wthr = convert(Unum{4,6}, 3)
 
-@test Unums.__diff_exact(wone, -wone, 0, 0) == zero(Unum{4,6})   #one plus one is two
-@test Unums.__diff_exact(wtwo, -wone, 1, 0) == wone              #two minus one is one
-@test Unums.__diff_exact(wthr, -wone, decode_exp(wthr), decode_exp(wone)) == wtwo
+eone = Unums.decode_exp(wone)
+etwo = Unums.decode_exp(wtwo)
+ethr = Unums.decode_exp(wthr)
 
+@test Unums.diff_exact(wone, -wone, eone, eone) == zero(Unum{4,6})   #one plus one is two
+@test Unums.diff_exact(wtwo, -wone, etwo, eone) == wone              #two minus one is one
+@test Unums.diff_exact(wthr, -wone, ethr, eone) == wtwo
+
+#=
 #11 September 2015 - identified through continuous testing.  The problem here is
 #that the two normal floats share their exponent factor, and clears a huge swath
 #of zeros in the fraction.

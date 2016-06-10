@@ -11,8 +11,8 @@ doc"""
   l = __cell_length(FSS)
   #initialize the carry variable.
   @code quote
-    cellcarry::UInt64 = z64
-    overflow::Bool = z64
+    carryevent::Bool = false  #tracks if a carry event occurred in the last cells
+    overflow::Bool = false    #tracks if the addition of the two cells causes overflow.
   end
 
   for (idx = l:-1:1)
@@ -20,13 +20,13 @@ doc"""
       @inbounds begin
         (b.a[$idx] += a.a[$idx])     #perform the addition
         overflow = b.a[$idx] < a.a[$idx]
-        b.a[$idx] += cellcarry
-        cellcarry = (overflow | ((cellcarry != z64) & (b.a[$idx] == z64))) * o64
+        b.a[$idx] += carryevent * o64
+        carryevent = overflow | ((carryevent) & (b.a[$idx] == z64))
       end
     end
   end
   #add in the carry from the most significant segment to the entire carry.
-  @code :(carry + cellcarry)
+  @code :(carry + carryevent * o64)
 end
 doc"""
   `Unums.i64add(carry, a::ArrayNum, b::ArrayNum)`
@@ -40,14 +40,14 @@ function i64add(carry::UInt64, a::UInt64, b::UInt64)
 end
 
 doc"""
-  Unums.add_bit(value, bit) adds the (zero-indexed) bit to the value.  Returns
+  Unums.add_ubit(value, bit) adds the (zero-indexed) bit to the value.  Returns
   (result, carried)
 """
-function add_bit(value::UInt64, bit::UInt16)
+function add_ubit(value::UInt64, bit::UInt16)
   result_value = value + (t64 >> bit)
   (result_value, result_value < value)
 end
-function add_bit!{FSS}(value::ArrayNum{FSS}, bit::UInt16)
+@gen_code function add_ubit!{FSS}(value::ArrayNum{FSS}, bit::UInt16)
   @code quote
     cell_index = div(bit, 0x0040) + o16
     added_cell = t64 >> (bit % 0x0040)
@@ -56,72 +56,97 @@ function add_bit!{FSS}(value::ArrayNum{FSS}, bit::UInt16)
 
   for (idx = __cell_length(FSS):-1:1)
     @code quote
-      @inbounds oldvalue = value.a[$idx]
-      @inbounds value.a[$idx] += ($idx == cell_index) * added_cell + carried * o64
-      @inbounds carried = (value.a[$idx] < oldvalue)
+      @inbounds begin
+        oldvalue = value.a[$idx]
+        value.a[$idx] += ($idx == cell_index) * added_cell + carried * o64
+        carried = (value.a[$idx] < oldvalue)
+      end
     end
   end
   @code :(carried)
 end
 
-@universal function frac_add_bit!(u::Unum, bit::UInt16)
+@universal function frac_add_ubit!(u::Unum, bit::UInt16)
   if (FSS < 7)
-    (u.fraction, carried) = add_bit(u.fraction, bit)
+    (u.fraction, carried) = add_ubit(u.fraction, bit)
   else
-    carried = add_bit!(u.fraction)
+    carried = add_ubit!(u.fraction, bit)
   end
   return carried
 end
 
-#=
-#carried_sub subtracts the value in the second passed arraynum from the first arraynum.
-@gen_code function __carried_diff!{FSS}(vdigit::UInt64, a::ArrayNum{FSS}, b::ArrayNum{FSS})
-  #this algorithm follows exactly from the elementary school addition algorithm.
-  #keep a "borrow" variable around and go from least significant to most significant
-  #bits.  Keep a guard digit around to borrow from at the end.
-  l = __cell_length(FSS)
-  @code :(borrow::UInt64 = 0)
-  for (idx = l:-1:1)
-    @code quote
-      @inbounds (b.a[$idx] = a.a[$idx] - b.a[$idx])  #perform the subtraction
-      @inbounds if (b.a[$idx] > a.a[$idx])  #check to see if we underflowed
-                  @inbounds b.a[$idx] -= borrow  #go ahead and subtract the previous digit's carry.
-                  borrow = o64#reset the current borrow to one
-                else
-                  @inbounds b.a[$idx] -= borrow
-                  @inbounds borrow = ((borrow != z64) && (b.a[$idx] == f64)) ? o64 : z64
-                end
-    end
-  end
-  @code :(vdigit - borrow)
-end
 
-function __add_ubit(a::UInt64, fsize::UInt16)
-  a += (t64 >> fsize)
-  promoted = (a == 0)
-  (promoted, a)
+function sub_ubit(value::UInt64, bit::UInt16)
+  result_value = value - (t64 >> bit)
+  (result_value, result_value < value)
 end
-
-@gen_code function __add_ubit!{FSS}(a::ArrayNum{FSS}, fsize::UInt16)
-  #basically the same as the addition alogrithm, except not adding in an array.
-  l = __cell_length(FSS)
-  #initialize the carry variable.
+@gen_code function sub_ubit!{FSS}(value::ArrayNum{FSS}, bit::UInt16)
   @code quote
-    middle_cell::UInt16 = (fsize >> 6) + 1
-    cellcarry::UInt64 = z64
-    ubitform::UInt64 = mask_top(fsize & 0x003F)
+    cell_index = div(bit, 0x0040) + o16
+    subbed_cell = t64 >> (bit % 0x0040)
+    borrowed = false
   end
-  for (idx = l:-1:1)
+
+  for (idx = __cell_length(FSS):-1:1)
     @code quote
-      #figure out what cellcarry should be.
-      cellcarry += ($idx == middle_cell) * ubitform
-      @inbounds (a.a[$idx] += cellcarry)     #perform the addition
-      @inbounds (cellcarry != 0) && (a.a[$idx] == 0) && (cellcarry = o64)
+      @inbounds begin
+        oldvalue = value.a[$idx]
+        value.a[$idx] -= ($idx == cell_index) * subbed_cell + borrowed * o64
+        borrowed = (value.a[$idx] > oldvalue)
+      end
     end
   end
-  #add in the carry from the most significant segment to the entire carry.
-  @code :(cellcarry != 0)
+  @code :(borrowed)
 end
+@universal function frac_sub_ubit!(u::Unum, bit::UInt16)
+  if (FSS < 7)
+    (u.fraction, borrowed) = sub_ubit(u.fraction, bit)
+  else
+    borrowed = sub_ubit!(u.fraction, bit)
+  end
+  return borrowed
+end
+
+doc"""
+  `Unums.i64sub(carry, a, b)` performs the calculation that is the result of
+  b - a (the reverse order is very important!)
+"""
+function i64sub(carry::UInt64, a::UInt64, b::UInt64)
+  #first do a direct substitution.
+  result = b - a
+  #then check to see if we lost a bit.
+  (carry - ((result > b) * o64), result)
+end
+
+doc"""
+  `Unums.i64sub!(carry, subtrahend, minuend)` performs the calculation that is
+  the result of minuend - subtrahend (the reverse passing order is very important!).
+  The reason why the order is reversed is because the minend is likely
+  to have to been bitshifted prior to subtraction and it's more sensible to do 
+  that the value that's going to be copied.
+"""
+@gen_code function i64sub!{FSS}(carry::UInt64, a::ArrayNum{FSS}, b::ArrayNum{FSS})
+  @code quote
+    borrowed::Bool = false
+    underflowed::Bool = false
+  end
+
+  for (idx = __cell_length(FSS):-1:1)
+    @code quote
+      @inbounds begin
+        #first do the subtraction of the two values.
+        a.a[$idx] = b.a[$idx] - a.a[$idx]
+        underflowed = a.a[$idx] > b.a[$idx]
+        a.a[$idx] -= borrowed * o64
+        borrowed = underflowed | ((a.a[$idx] == f64) & borrowed)
+      end
+    end
+  end
+
+  @code :(return carry - borrowed * o64)
+end
+
+#=
 
 @gen_code function __prev_val!{FSS}(a::ArrayNum{FSS})
   l = __cell_length(FSS)

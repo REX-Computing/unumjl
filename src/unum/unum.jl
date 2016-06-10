@@ -18,6 +18,6 @@ include("./unum-convert.jl")
 
 include("./math/unum-comparison.jl")
 include("./math/unum-addition.jl")
-#include("./unum-subtraction.jl")
+include("./math/unum-subtraction.jl")
 #include("./unum-multiplication.jl")
 #include("./unum-division.jl")

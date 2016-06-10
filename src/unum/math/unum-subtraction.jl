@@ -1,36 +1,137 @@
-#unit-subtraction.jl
-#implements addition primitives where the vectors of the two values point in
-#opposing directions.  This is organized into a separate file for convenience
-#purposes (these primitives can be very large.)
+#unum-subtraction.jl
+#Performs subtraction with unums.  Requires two unums to have the same
+#environment signature.
 
 doc"""
-  `sub!(::Unum{ESS,FSS}, ::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and
-  subtracts them, storing the result in the third, g-layer
-
-  `sub!(::Unum{ESS,FSS}, ::Gnum{ESS,FSS})` takes two unums and subtracts them, storing
-  the result and overwriting the second, g-layer
-
-  In both cases, a reference to the result gnum is returned.
+  `Unums.frac_sub!(carry, subtrahend::Unum, minuend, guardbit::UInt64)`
+  subtracts fraction from the fraction value of unum.
 """
-function sub!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
-  put_unum!(b, c)
-  sub!(a, c)
+function frac_sub!{ESS,FSS}(carry::UInt64, subtrahend::UnumSmall{ESS,FSS}, minuend::UInt64)
+  (carry, subtrahend.fraction) = i64sub(carry, subtrahend.fraction, minuend)
+  return carry
+end
+function frac_sub!{ESS,FSS}(carry::UInt64, subtrahend::UnumLarge{ESS,FSS}, minuend::ArrayNum{FSS})
+  i64sub!(carry, subtrahend, minuend)
 end
 
-function sub!{ESS,FSS}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS})
-  additive_inverse!(b)
 
-  add!{ESS,FSS}(a, b)
+doc"""
+  `Unums.sub(::Unum, ::Unum)` outputs a Unum OR Ubound corresponding to the difference
+  of two unums.  This is bound to the (-) operation if options[:usegnum] is not
+  set.  Note that in the case of degenerate unums, sub may change the bit values
+  of the individual unums, but the values will not be altered.
+"""
+@universal function sub(a::Unum, b::Unum)
+  #some basic checks out of the gate.
+  (is_nan(a) || is_nan(b)) && return nan(T)
+  is_zero(a) && return additiveinverse!(copy(b))
+  is_zero(b) && return copy(a)
 
-  clear_ignore_sides!(b)
-  b
+  #resolve degenerate conditions in both A and B before calculating the exponents.
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
+
+  #go ahead and decode the a and b exponents, these will be used, a lot.
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+
+  #check to see if the signs on a and b are mismatched.
+  if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
+    #kick it to the unum_difference function which calculates numeric difference
+    (a > b) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
+  else
+    #kick it to the unum_sum function which calculates numeric sum.
+    (a > b) ? unum_diff(a, b, _aexp, _bexp) : additiveinverse!(unum_diff(b, a, _bexp, _aexp))
+  end
 end
 
-function additive_inverse!{ESS,FSS}(b::Unum{ESS,FSS})
-  is_nan(b) && return #lazy eval
-  b.flags $= UNUM_SIGN_MASK
+#import the Base add operation and bind it to the add and add! functions
+import Base.-
+@bind_operation(-, sub)
+
+doc"""
+  `Unums.unum_diff(::Unum, ::Unum, _aexp, _bexp)` outputs a Unum OR Ubound
+  corresponding to the difference of two unums.  This function as a prerequisite
+  must have the exponent on a exceed the exponent on b.
+"""
+@universal function unum_diff(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
+  #basic secondary checks which eject early results.
+  is_inf(a) && return is_inf(b) ? nan(T) : inf(T, @signof a)
+  is_mmr(a) && throw(ArgumentError("Not implemented yet"))
+  #there is a corner case that b winds up being infinity (and a does not; same
+  #with mmr.)
+
+  if (is_exact(a) && is_exact(b))
+    diff_exact(a, b, _aexp, _bexp)
+  else
+    diff_inexact(a, b, _aexp, _bexp)
+  end
 end
 
+@universal function diff_exact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
+  #track once whether or not a and b are subnormal
+  _a_subnormal = is_exp_zero(a)
+  _b_subnormal = is_exp_zero(b)
+
+  #modify the exponent such that they are.
+  _aexp += _a_subnormal * 1
+  _bexp += _b_subnormal * 1
+
+  #calculate the shift between _aexp and _bexp.
+  _shift = to16(_aexp -_bexp)
+
+  if _shift > max_fsize(FSS)
+    #then go down one previous exact unum and decrement.
+    return inward_ulp!(copy(a))
+  end
+
+  #copy the b unum as the temporary result.
+  result = copy(b)
+  #set the sign to the sign of the dominant figure.
+  coerce_sign!(result, a)
+
+  if _shift == z16
+    carry::UInt64 = z64
+    guardbit::Bool = false
+  else
+    carry = (!_a_subnormal) * o64
+    guardbit = get_bit(result.fraction, (max_fsize(FSS) + o16) - _shift)
+    rsh_and_set_ubit!(result, _shift, true)
+    (_b_subnormal) || frac_set_bit!(result, _shift)
+  end
+
+  #subtract fractionals parts together, and reset the carry.
+  carry = frac_sub!(carry, result, a.fraction)
+
+  if (carry == z64)
+    #nb we only need to check the top bit.
+    is_frac_zero(result) && return zero!(result, (guardbit != z64) * UNUM_UBIT_MASK)
+
+    if (_aexp != min_exponent(ESS))
+      frac_lsh!(result, o16)
+      (result.esize, result.exponent) = encode_exp(_aexp - 1)
+    end
+  else
+    #check to see if we need to the guard bit to set ubit.
+    (guardbit != z64) && make_ulp!(result)
+    #set the exponent
+    (result.esize, result.exponent) = encode_exp(_aexp)
+  end
+
+  return result
+end
+
+@universal function diff_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
+  #first, do the inexact sum, to calculate the "base value" of the resulting sum.
+  base_value = diff_exact(a, b)
+  
+end
+
+################################################################################
+## here lies code that will be kept for later.
+
+
+#=
 @generated function __arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
   quote
     if is_ulp(a)
@@ -185,7 +286,7 @@ end
     copy_unum!(b.scratchpad, b.$side)
   end
 end
-
+=#
 #=
 ###############################################################################
 ## multistage carried difference engine for uint64s.

@@ -23,8 +23,8 @@ doc"""
 @universal function add(a::Unum, b::Unum)
   #some basic checks out of the gate.
   (is_nan(a) || is_nan(b)) && return nan(T)
-  is_zero(a) && return b
-  is_zero(b) && return a
+  is_zero(a) && return copy(b)
+  is_zero(b) && return copy(a)
 
   #resolve degenerate conditions in both A and B before calculating the exponents.
   resolve_degenerates!(a)
@@ -72,12 +72,12 @@ end
 @universal function sum_exact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #first, decide if we need to deviate either a or b on account of their being
   #subnormal numbers.
-  _a_dev = is_exp_zero(a) * one(Int64)
-  _b_dev = is_exp_zero(b) * one(Int64)
+  _a_subnormal = is_exp_zero(a)
+  _b_subnormal = is_exp_zero(b)
 
   #modify the exponent values on a and b to accomodate subnormality.
-  _aexp += _a_dev
-  _bexp += _b_dev
+  _aexp += _a_subnormal * 1
+  _bexp += _b_subnormal * 1
 
   shift = to16(_aexp - _bexp) #this is the a exponent minus the b exponent.
   #if the two numbers are very divergent in magnitude, only need to flip the ulp.
@@ -93,15 +93,15 @@ end
   #check to see if "shift" is zero.
   if (shift == 0x0000)
     #initialize carry to be one, if we're not subnormal
-    carry = (_b_dev == 0) * o64
+    carry = (!_a_subnormal) * o64
   else
     carry = z64
     rsh_and_set_ubit!(result, shift)
-    (_b_dev == 0) && frac_set_bit!(result, shift)
+    (_b_subnormal) || frac_set_bit!(result, shift)
   end
 
   #increment the carry if the left unum is not subnormal.
-  carry += (_a_dev == 0) * o64
+  carry += (!_a_subnormal) * o64
 
   #add the two fractionals parts together, and set the carry.
   carry = frac_add!(carry, result, a.fraction)

@@ -42,6 +42,13 @@ doc"""
 export additiveinverse!
 
 doc"""
+  `coerce_sign!` creates the additive inverse value of a unum, by flipping
+  the sign.  This can be better than the `-` operator because it doesn't copy
+  the unum.  A reference to the unum is returned.
+"""
+@universal coerce_sign!(a::Unum, b::Unum) = (a.flags = (a.flags & ~UNUM_SIGN_MASK) | (b.flags & UNUM_SIGN_MASK); return a)
+
+doc"""
   `abs!(::Unum)` forces the value of the unum to be positive.  Returns the
   unum for chaining purposes.
 """
@@ -126,8 +133,6 @@ doc"""
   return x
 end
 
-
-
 #=
 @gen_code function __inward_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
   @code quote
@@ -186,6 +191,44 @@ function lower_exact!{ESS,FSS}(x::Unum{ESS,FSS})
   return is_negative(x) ? __outward_exact!(x) : make_exact!(x)
 end
 =#
+
+################################################################################
+## sophisticated exactitude functions.
+
+doc"""
+  `Unums.outward_ulp!(::Unum)` returns the smallest-width ulp immediately above the
+  current unum.  If this is exact, it simply trips the ulp flag with the biggest fsize.
+  If it's inexact, it bumps to the outer-bound exact and moves the size of the ulp
+  far out.
+"""
+@universal function outward_ulp!(x::Unum)
+  resolve_degenerates!(x)
+  if is_exact(x)
+    x.fsize = max_fsize(FSS)
+    make_ulp!(x::Unum)
+  end
+  return add_bit_and_set_ulp!(x, x.fsize, max_fsize(FSS))
+end
+
+@universal function inward_ulp!(x::Unum)
+  resolve_degenerates!(x)
+  if is_frac_zero(x)
+    #then, we're zero or a zeroish ulp, so kill it with fire.
+    is_exp_zero(x) && return nan!(x)
+    #let's find out what's up here.
+    _exp = decode_exp(x)
+    if _exp == min_exponent(ESS)
+      x.esize = max_esize(ESS)
+      x.exponent = z64
+    else
+      (x.esize, x.exponent) = encode_exp(_exp - 1)
+    end
+    return make_ulp!(frac_all!(x))
+  end
+  frac_sub_ubit!(x, max_fsize(FSS))
+  return x
+end
+
 ################################################################################
 ## dumb exactitude functions.
 
@@ -195,6 +238,8 @@ doc"""`Unums.make_exact(::Unum)` forces the ubit of a unum to be 0."""
 doc"""`Unums.make_ulp(::Unum)` forces the ubit of a unum to be 1."""
 @universal make_ulp!(x::Unum) = (x.flags |= UNUM_UBIT_MASK; x)
 
+################################################################################
+## carry resolution
 
 doc"""
   `Unums.resolve_carry!(carry::UInt64, ::Unum, exponent::Int64)` resolves a
@@ -214,46 +259,3 @@ doc"""
   (exponent > max_exponent(ESS)) && mmr!(x)  #set it to mmr, if the exponent is too large.
   (x.esize, x.exponent) = encode_exp(exponent)
 end
-
-
-#=
-################################################################################
-## carry resolution
-
-doc"""
-  `Unums.__carry_resolve!(::UInt64, ::Unum, ::Val{::Bool})` resolves the calculation of a unum
-  with a hypothetical carry (invisible bit) value that may exceed one after
-  multiplication and/or addition events.  The passed boolean value indicates
-  whether or not a g-flag should be used for the mmr result.
-"""
-@generated function __carry_resolve!{ESS,FSS,use_gflag}(carry::UInt64, x::Unum{ESS,FSS}, ::Type{Val{use_gflag}})
-  _mexp = max_exponent(ESS)
-
-  #set the code for how to deal with mmr.
-  mmr_code = use_gflag ? :(set_g_mmr!(x)) : :(mmr!(x))
-
-  #set the code for the top unit in the fraction.
-  top_unit = ESS < 7 ? :(x.fraction) : :(x.fraction[1])
-
-  quote
-    #promote if exp was zero and there's a carry.
-    if (is_exp_zero(x) && (carry == 1))
-      (x.esize, x.exponent) = encode_exp(decode_exp(x) + 1)
-      return
-    end
-
-    #do nothing if the carry is less than or equal to one.
-    (carry <= 1) && return
-    exponent = decode_exp(x)
-    shift::Int64 = 63 - leading_zeros(carry)
-    (exponent > _mexp) && ($mmr_code; return)
-    #rightshift the fraction
-    __rightshift_frac_with_underflow_check!(x, shift)
-    #next copy the top bits over to the fraction.
-    $top_unit |= carry << (64 - shift)
-    #finally, update the exponent
-    (x.esize, x.exponent) = encode_exp(exponent)
-    nothing
-  end
-end
-=#

@@ -27,14 +27,14 @@ function __smallexpr(s::Symbol, p...)
   #build up the inner call mechanism
   inner_call = Expr(:call)
   inner_call.args = [s, :(x.fraction), p...]
-  :(x.fraction = $inner_call)
+  :(x.fraction = $inner_call; x)
 end
 
 function __largeexpr(s::Symbol, p...)
   bangsym = symbol(s, "!")
   inner_call = Expr(:call)
   inner_call.args = [bangsym, :(x.fraction), p...]
-  inner_call
+  :($inner_call; x)
 end
 
 doc"""

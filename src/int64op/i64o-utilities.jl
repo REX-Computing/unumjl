@@ -42,6 +42,19 @@ bits after shifting a non-subnormal value.
 @fracproc set_bit bit
 
 doc"""
+`Unums.get_bit(x, bit)` returns true if the (zero-indexed) bit of x is one, false
+if not.
+"""
+function get_bit(a::UInt64, bit::UInt16)
+  (a & (t64 >> bit)) != 0
+end
+function get_bit{FSS}(a::ArrayNum{FSS}, bit::UInt16)
+  a_index = ((bit - o16) >> 6) + o16
+  b_index = ((bit - o16) % 64)
+  @inbounds (a.a[a_index] & (t64 >> b_index)) != 0
+end
+
+doc"""
 `Unums.copy_top(x, val)` performs the logical or of the value with the fraction
 of x, or the first element in x fraction array.
 """

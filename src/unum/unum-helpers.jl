@@ -72,9 +72,9 @@ doc"""
   unum fraction to the right and sets the ubit if the fraction gets shifted past
   the right side of the unum.
 """
-@universal function rsh_and_set_ubit!(x::Unum, shift::UInt16)
+@universal function rsh_and_set_ubit!(x::Unum, shift::UInt16, needs_guard::Bool = false)
   mfsize::UInt16 = max_fsize(FSS)
-  x.flags |= (needs_ubit(x.fraction, mfsize - shift) * UNUM_UBIT_MASK)
+  x.flags |= (needs_ubit(x.fraction, mfsize - shift - (needs_guard * o16)) * UNUM_UBIT_MASK)
   x.fsize = min(x.fsize + shift, mfsize)
   frac_rsh!(x, shift)
   return x
