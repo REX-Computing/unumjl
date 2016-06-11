@@ -37,11 +37,9 @@ doc"""
 
   #check to see if the signs on a and b are mismatched.
   if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
-    #kick it to the unum_difference function which calculates numeric difference
-    (a > b) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
+    (_aexp >= _bexp) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
   else
-    #kick it to the unum_sum function which calculates numeric sum.
-    (a > b) ? unum_diff(a, b, _aexp, _bexp) : additiveinverse!(unum_diff(b, a, _bexp, _aexp))
+    is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : unum_diff(b, a, _bexp, _aexp)
   end
 end
 
@@ -122,14 +120,33 @@ end
 end
 
 @universal function diff_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
-  #one possibility is that the outward_exact value of b is greater than the
-  #base value of a.  We need to check that possibilty.
-  if outward_exact(b) > a
-    throw(ArgumentError("not supported yet"))
-  end
+  #do a second is_inward check.  If this is_inward check fails, then the result
+  #can have an opposite sign, because it's an ulp that goes wierdly.
+  is_inward(b, a) || throw(ArgumentError("currently unsupported"))
 
   #first, do the inexact sum, to calculate the "base value" of the resulting sum.
   base_value = diff_exact(a, b)
+  #the ulp status of a is not going to be altered by diff_exact, and that ulp
+  #will be pointing outwards.  Next, we have to figure out the "ulp influence" of b.
+  ulp_size = min(to16(b.fsize + decode_exp(base_value) - _bexp), max_fsize(FSS))
+
+  if is_exact(b)
+    #then we do nothing.
+    return base_value
+  elseif is_exact(a)
+    #check to see if the subtraction will cross the exponential barrier
+    if is_zeros_till(base_value.fraction, ulp_size)
+      inner_value = subtract_ubit!(base_value, ulp_size)
+      base_value = inward_ulp!(base_value)
+      is_positive(a) ? B(inner_value, base_value) : B(base_value, inner_value)
+    else
+      subtract_ubit!(base_value, ulp_size)
+    end
+  else
+    #just do the subtraction, then output the expected result.
+    inner_value = subtract_ubit!(copy(base_value), ulp_size)         #set me here.
+    is_positive(a) ? B(inner_value, base_value) : B(base_value, inner_value)
+  end
 end
 
 ################################################################################
@@ -382,8 +399,8 @@ function -{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
 end
 #unary subtraction creates a new unum and flips it.
 function -{ESS,FSS}(x::Unum{ESS,FSS})
-  additiveinverse!(Unum{ESS,FSS}(x))
+  additiveinverse!(copy(x))
 end
 function -{ESS,FSS}(x::Gnum{ESS,FSS})
-  additiveinverse!(Unum{ESS,FSS}(x))
+  additiveinverse!(copy(x))
 end

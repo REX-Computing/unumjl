@@ -37,7 +37,7 @@ doc"""
   #check to see if the signs on a and b are mismatched.
   if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
     #kick it to the unum_difference function which calculates numeric difference
-    (_aexp > _bexp) ? unum_diff(a, b, _aexp, _bexp) : unum_diff(b, a, _bexp, _aexp)
+    is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : unum_diff(b, a, _bexp, _aexp) 
   else
     #kick it to the unum_sum function which calculates numeric sum.
     (_aexp > _bexp) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)

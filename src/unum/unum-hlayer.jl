@@ -6,19 +6,22 @@
 #N.B. typeof() will correctly identify the Unums.UnumSmall and Unums.UnumLarge
 #types.
 @universal function Base.show(io::IO, x::Unum)
+
+  name = options[:longform] ? ((FSS < 6) ? "UnumLarge" : "UnumSmall") : "Unum"
+
   #we want to be able to represent having g-layer flags as part of this.
   gflags = (x.flags & (~UNUM_FLAG_MASK))
   #for nan, let's also show the noisy nan bit.
   isnan(x) && (gflags |= (x.flags & UNUM_SIGN_MASK))
   gflagstring = (gflags == 0) ? "" : @sprintf ", 0x%04X" gflags
-  is_pos_inf(x) && (print(io, "inf(Unum{$ESS,$FSS}$gflagstring)"); return)
-  is_pos_mmr(x) && (print(io, "mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
-  is_pos_sss(x) && (print(io, "sss(Unum{$ESS,$FSS}$gflagstring)"); return)
-  is_neg_inf(x) && (print(io, "-inf(Unum{$ESS,$FSS}$gflagstring)"); return)
-  is_neg_mmr(x) && (print(io, "-mmr(Unum{$ESS,$FSS}$gflagstring)"); return)
-  is_neg_sss(x) && (print(io, "-sss(Unum{$ESS,$FSS}$gflagstring)"); return)
-  is_zero(x)    && (print(io, "zero(Unum{$ESS,$FSS})"); return)
-  isnan(x)      && (print(io,"nan(Unum{$ESS,$FSS}$gflagstring)");return)
+  is_pos_inf(x) && (print(io, "inf($name{$ESS,$FSS}$gflagstring)"); return)
+  is_pos_mmr(x) && (print(io, "mmr($name{$ESS,$FSS}$gflagstring)"); return)
+  is_pos_sss(x) && (print(io, "sss($name{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_inf(x) && (print(io, "-inf($name{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_mmr(x) && (print(io, "-mmr($name{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_sss(x) && (print(io, "-sss($name{$ESS,$FSS}$gflagstring)"); return)
+  is_zero(x)    && (print(io, "zero($name{$ESS,$FSS})"); return)
+  isnan(x)      && (print(io,"nan($name{$ESS,$FSS}$gflagstring)");return)
 
   fsize_string = @sprintf "0x%04X" x.fsize
   esize_string = @sprintf "0x%04X" x.esize
@@ -26,12 +29,20 @@
 
   (FSS < 7) ? :(fraction_string = @sprintf "0x%016X" x.fraction) : :(fraction_string = string(x.fraction.a))
   exponent_string = @sprintf "0x%016X" x.exponent
-  print(io, "Unum{$ESS,$FSS}($fsize_string, $esize_string, $flags_string, $fraction_string, $exponent_string)")
+  print(io, "$name{$ESS,$FSS}($fsize_string, $esize_string, $flags_string, $fraction_string, $exponent_string)")
 end
 
-function Base.show{ESS,FSS}(io::IO, ::Type{Unum{ESS,FSS}})
+@universal function Base.show(io::IO, T::Type{Unum})
   #strips the Large or Small suffix when displaying this type.
-  print(io, "Unum{$ESS,$FSS}")
+  if options[:longform]
+    if FSS > 7
+      print(io, "UnumLarge{$ESS, $FSS}")
+    else
+      print(io, "UnumSmall{$ESS, $FSS}")
+    end
+  end
+    print(io, "Unum{$ESS,$FSS}")
+  end
 end
 
 @universal function Base.bits(x::Unum, space::ASCIIString = "")
@@ -43,7 +54,7 @@ end
   FSS > 0 && (res = string(res, space, bits(x.fsize)[17-FSS:16]))
   res
 end
-
+#=
 doc"""
 `prettyprint` prints out a Unum in a pretty fashion.  Copy/pasting the output
 will create something that is pretty-parseable.
@@ -224,3 +235,4 @@ function Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, s::AbstractString)
 
   #next pull out the exponent
 end
+=#

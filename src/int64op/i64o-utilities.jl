@@ -67,6 +67,27 @@ with the fraction of x, or the first element in x fraction array.
 """
 @fracproc copy_top pattern
 
+doc"""
+  `Unums.is_zeros_till(a::UInt64, fsize)`
+  `Unums.is_zeros_till(a::ArrayNum, fsize)`
+
+  tells if all digits till the position of fsize are zero.
+"""
+function is_zeros_till(a::UInt64, fsize::UInt16)
+  #the mask is generated using this formula:
+  mask = z64 - (o64 << (0x40 - fsize))
+  #check to make sure that everything is zeros
+  return ((a & mask) == z64)
+end
+function is_zeros_till(a::ArrayNum{FSS}, fsize::UInt16)
+  #compute the last cell we need to scan.
+  middle_spot = div(fsize, 0x0040) + 1
+  middle_mask = fsize % 0x0040
+  for idx = 1:(middle_spot - 1)
+    @inbounds a.a[idx] != 0 && return false
+  end
+  @inbounds is_zeros_till(a[middle_spot], middle_mask)
+end
 
 #__minimum_data_width
 #calculates the minimum data width to represent the passed superint.

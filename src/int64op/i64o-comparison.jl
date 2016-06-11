@@ -52,7 +52,7 @@ function lessthanwithubit(a::UInt64, b::UInt64, fsize::UInt16, orequal::Bool = f
   return true
 end
 
-function lessthanwithubit(a::ArrayNum{FSS}, b::ArrayNum{FSS}, fsize::UInt16, orequal::Bool = false)
+function lessthanwithubit{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, fsize::UInt16, orequal::Bool = false)
   #compute the last cell we need to scan.
     middle_spot = div(fsize, 0x0040) + 1
     middle_mask = fsize % 0x0040

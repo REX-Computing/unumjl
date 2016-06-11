@@ -4,10 +4,12 @@ doc"""
   *Unums.options* is the associative dictionary of options for this module.
   options can be acessed or set using the associated symbols.
 
-  * :devmode => true    sets developer mode protections on.
-  * :usegnum => false   sets it so that operands return gnums
-  * :env_ESS => 4       sets the default environment esizesize
-  * :env_FSS => 6       sets the default environment fsizesize
+  * :devmode => true          sets developer mode protections on.
+  * :usegnum => false         sets it so that operands return gnums
+  * :env_ESS => 4             sets the default environment esizesize
+  * :env_FSS => 6             sets the default environment fsizesize
+  * :longform => false        outputs unum types as their long form
+
   NB: usegnum will eventually be set to a default "true"
 
   *overriding using ~/.unums.jl*
@@ -32,7 +34,8 @@ const options = Dict{Symbol, Any}(
   :devmode => true,
   :usegnum => false,
   :env_ESS => 4,
-  :env_FSS => 6)
+  :env_FSS => 6,
+  :longform => false)
 
 #attempt to load defaults from a .unums.jl file
 @linux_only isfile("$(homedir)/.unums.jl") && include("$(homedir)/.unums.jl")

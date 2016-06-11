@@ -7,11 +7,10 @@ include("./unum-constants.jl")
 include("./unum-properties.jl")
 include("./unum-operations.jl")
 include("./unum-convert.jl")
-#include("./unum-fracops.jl")
 
 #h-layer stuff
 
-#include("./unum-hlayer.jl")
+include("./unum-hlayer.jl")
 
 #mathematical stuff
 
