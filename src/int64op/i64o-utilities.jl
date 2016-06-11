@@ -79,7 +79,7 @@ function is_zeros_till(a::UInt64, fsize::UInt16)
   #check to make sure that everything is zeros
   return ((a & mask) == z64)
 end
-function is_zeros_till(a::ArrayNum{FSS}, fsize::UInt16)
+function is_zeros_till{FSS}(a::ArrayNum{FSS}, fsize::UInt16)
   #compute the last cell we need to scan.
   middle_spot = div(fsize, 0x0040) + 1
   middle_mask = fsize % 0x0040

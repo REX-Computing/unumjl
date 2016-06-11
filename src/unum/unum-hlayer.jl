@@ -5,44 +5,39 @@
 #
 #N.B. typeof() will correctly identify the Unums.UnumSmall and Unums.UnumLarge
 #types.
+
 @universal function Base.show(io::IO, x::Unum)
 
-  name = options[:longform] ? ((FSS < 6) ? "UnumLarge" : "UnumSmall") : "Unum"
+  @typenames
 
   #we want to be able to represent having g-layer flags as part of this.
   gflags = (x.flags & (~UNUM_FLAG_MASK))
   #for nan, let's also show the noisy nan bit.
   isnan(x) && (gflags |= (x.flags & UNUM_SIGN_MASK))
   gflagstring = (gflags == 0) ? "" : @sprintf ", 0x%04X" gflags
-  is_pos_inf(x) && (print(io, "inf($name{$ESS,$FSS}$gflagstring)"); return)
-  is_pos_mmr(x) && (print(io, "mmr($name{$ESS,$FSS}$gflagstring)"); return)
-  is_pos_sss(x) && (print(io, "sss($name{$ESS,$FSS}$gflagstring)"); return)
-  is_neg_inf(x) && (print(io, "-inf($name{$ESS,$FSS}$gflagstring)"); return)
-  is_neg_mmr(x) && (print(io, "-mmr($name{$ESS,$FSS}$gflagstring)"); return)
-  is_neg_sss(x) && (print(io, "-sss($name{$ESS,$FSS}$gflagstring)"); return)
-  is_zero(x)    && (print(io, "zero($name{$ESS,$FSS})"); return)
-  isnan(x)      && (print(io,"nan($name{$ESS,$FSS}$gflagstring)");return)
+  is_pos_inf(x) && (print(io, "inf($uname{$ESS,$FSS}$gflagstring)"); return)
+  is_pos_mmr(x) && (print(io, "mmr($uname{$ESS,$FSS}$gflagstring)"); return)
+  is_pos_sss(x) && (print(io, "sss($uname{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_inf(x) && (print(io, "-inf($uname{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_mmr(x) && (print(io, "-mmr($uname{$ESS,$FSS}$gflagstring)"); return)
+  is_neg_sss(x) && (print(io, "-sss($uname{$ESS,$FSS}$gflagstring)"); return)
+  is_zero(x)    && (print(io, "zero($uname{$ESS,$FSS})"); return)
+  isnan(x)      && (print(io,"nan($uname{$ESS,$FSS}$gflagstring)");return)
 
   fsize_string = @sprintf "0x%04X" x.fsize
   esize_string = @sprintf "0x%04X" x.esize
   flags_string = @sprintf "0x%04X" x.flags
 
-  (FSS < 7) ? :(fraction_string = @sprintf "0x%016X" x.fraction) : :(fraction_string = string(x.fraction.a))
+  (FSS < 7) ? (fraction_string = @sprintf "0x%016X" x.fraction) : fraction_string = string(x.fraction.a)
   exponent_string = @sprintf "0x%016X" x.exponent
-  print(io, "$name{$ESS,$FSS}($fsize_string, $esize_string, $flags_string, $fraction_string, $exponent_string)")
+  print(io, "$uname{$ESS,$FSS}($exponent_string, $fraction_string, $flags_string, $esize_string, $fsize_string)")
 end
 
 @universal function Base.show(io::IO, T::Type{Unum})
   #strips the Large or Small suffix when displaying this type.
-  if options[:longform]
-    if FSS > 7
-      print(io, "UnumLarge{$ESS, $FSS}")
-    else
-      print(io, "UnumSmall{$ESS, $FSS}")
-    end
-  end
-    print(io, "Unum{$ESS,$FSS}")
-  end
+  @typenames
+
+  print(io, "$uname{$ESS, $FSS}")
 end
 
 @universal function Base.bits(x::Unum, space::ASCIIString = "")
