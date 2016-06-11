@@ -122,9 +122,14 @@ end
 end
 
 @universal function diff_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
+  #one possibility is that the outward_exact value of b is greater than the
+  #base value of a.  We need to check that possibilty.
+  if outward_exact(b) > a
+    throw(ArgumentError("not supported yet"))
+  end
+
   #first, do the inexact sum, to calculate the "base value" of the resulting sum.
   base_value = diff_exact(a, b)
-  
 end
 
 ################################################################################

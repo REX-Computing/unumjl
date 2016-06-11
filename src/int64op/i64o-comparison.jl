@@ -40,6 +40,30 @@ function >={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   end
   return true
 end
+
+doc"""
+  Unums.lessthanwithubit(a::UInt64, b::UInt64, fsize::UInt16)
+  checks to make sure that a is less than b, even if a has a ubit value of fsize.
+"""
+function lessthanwithubit(a::UInt64, b::UInt64, fsize::UInt16, orequal::Bool = false)
+  mask = mask_top(fsize) #first generate the mask corresponding to the int.
+  orequal && ((a & mask) > (b & mask)) && return false
+  ((a & mask) >= (b & mask)) && return false
+  return true
+end
+
+function lessthanwithubit(a::ArrayNum{FSS}, b::ArrayNum{FSS}, fsize::UInt16, orequal::Bool = false)
+  #compute the last cell we need to scan.
+    middle_spot = div(fsize, 0x0040) + 1
+    middle_mask = fsize % 0x0040
+    for idx = 1:(middle_spot - 1)
+      @inbounds begin
+        a.a[idx] > b.a[idx] && return false
+        a.a[idx] < b.a[idx] && return true
+      end
+    end
+    @inbounds lessthanwithubit(a.a[middle_spot], b.a[middle_spot], middle_mask, orequal)
+end
 #=
 function cmpplusubit(a::UInt64, b::UInt64, fsize)
   mask = mask_top(fsize)
