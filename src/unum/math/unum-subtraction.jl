@@ -54,7 +54,7 @@ doc"""
 """
 @universal function unum_diff(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #basic secondary checks which eject early results.
-  is_inf(a) && return is_inf(b) ? nan(T) : inf(T, @signof a)
+  is_inf(a) && return is_inf(b) ? nan(U) : inf(U, @signof a)
   is_mmr(a) && return mmr_sub(b, _bexp, a.flags & UNUM_SIGN_MASK)
   #there is a corner case that b winds up being infinity (and a does not; same
   #with mmr.)
@@ -150,7 +150,7 @@ end
 end
 
 @universal function mmr_sub(b::Unum, _bexp::Int64, sgn::UInt16)
-  is_mmr(b) && return B(neg_mmr(T), pos_mmr(T)) #all real numbers
+  is_mmr(b) && return B(neg_mmr(U), pos_mmr(U)) #all real numbers
   #calculate inner_value by doing an exact subtraction of b from big_exact.
   #ensure that it's an ulp.
   inner_value = make_ulp!(diff_exact(big_exact(T), b))

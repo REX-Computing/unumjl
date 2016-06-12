@@ -39,10 +39,12 @@ wcmp = Bool[
  false false false false false false false false false false false false false false false;
 ]
 
-
+testop(>, wcmp)
+#=
 for i=1:15
   for j=1:15
     ((warlpiris[i] > warlpiris[j]) != wcmp[i,j]) && println("problem comparing ", bits(warlpiris[i]), " > ", bits(warlpiris[j]))
     @test (warlpiris[i] > warlpiris[j]) == wcmp[i,j]
   end
 end
+=#

@@ -22,7 +22,7 @@ doc"""
 """
 @universal function add(a::Unum, b::Unum)
   #some basic checks out of the gate.
-  (is_nan(a) || is_nan(b)) && return nan(T)
+  (is_nan(a) || is_nan(b)) && return nan(U)
   is_zero(a) && return copy(b)
   is_zero(b) && return copy(a)
 
@@ -37,7 +37,7 @@ doc"""
   #check to see if the signs on a and b are mismatched.
   if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
     #kick it to the unum_difference function which calculates numeric difference
-    is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : unum_diff(b, a, _bexp, _aexp) 
+    is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : unum_diff(b, a, _bexp, _aexp)
   else
     #kick it to the unum_sum function which calculates numeric sum.
     (_aexp > _bexp) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
@@ -55,12 +55,12 @@ doc"""
 """
 @universal function unum_sum(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #basic secondary checks which eject early results.
-  is_inf(a) && return inf(T, @signof a)
-  is_mmr(a) && return mmr(T, @signof a)
+  is_inf(a) && return inf(U, @signof a)
+  is_mmr(a) && return mmr(U, @signof a)
   #there is a corner case that b winds up being infinity (and a does not; same
   #with mmr.)
-  is_inf(b) && return inf(T, @signof a)
-  is_mmr(b) && return mmr(T, @signof a)
+  is_inf(b) && return inf(U, @signof a)
+  is_mmr(b) && return mmr(U, @signof a)
 
   if (is_exact(a) && is_exact(b))
     sum_exact(a, b, _aexp, _bexp)
@@ -114,7 +114,7 @@ end
 
   #check to make sure we haven't done the inf hack, where the result exactly
   #equals inf.
-  is_inf(result) && return inf(T)
+  is_inf(result) && return inf(U)
 
   return result
 end

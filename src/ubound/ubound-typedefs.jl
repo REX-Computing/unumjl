@@ -61,7 +61,7 @@ the left hand must be strictly less than the right hand side.
 ################################################################################
 ## Ubound constructors that take other ubounds as arguments.
 if options[:devmode]
-  @universal Base.call(T::Type{Ubound{ESS,FSS}}, lower::Ubound, upper::Unum)   = __ub_check(lower.upper, upper)       && B(copy(lewer.lower), upper)
+  @universal Base.call(T::Type{Ubound{ESS,FSS}}, lower::Ubound, upper::Unum)   = __ub_check(lower.upper, upper)       && B(copy(lower.lower), upper)
   @universal Base.call(T::Type{Ubound{ESS,FSS}}, lower::Unum,   upper::Ubound) = __ub_check(lower,       upper.lower) && B(lower, copy(upper.upper))
   @universal Base.call(T::Type{Ubound{ESS,FSS}}, lower::Ubound, upper::Ubound) = __ub_check(lower.lower, upper.lower) && __ub_check(lower.upper, upper.upper) &&
     B(copy(lower.lower), copy(upper.upper))

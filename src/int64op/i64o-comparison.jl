@@ -47,7 +47,7 @@ doc"""
 """
 function lessthanwithubit(a::UInt64, b::UInt64, fsize::UInt16, orequal::Bool = false)
   mask = mask_top(fsize) #first generate the mask corresponding to the int.
-  orequal && ((a & mask) > (b & mask)) && return false
+  orequal && return ((a & mask) <= (b & mask)) 
   ((a & mask) >= (b & mask)) && return false
   return true
 end

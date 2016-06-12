@@ -67,7 +67,7 @@ doc"""
 
   #in the case that b is an ulp and a is exact, then exact equality means a is
   #less, otherwise exact equality does not.
-  orequal = is_ulp(b) && is_exact(a)
+  orequal = is_ulp(b) & is_exact(a)
 
   lessthanwithubit(a.fraction, b.fraction, a.fsize, orequal)
 end
@@ -80,14 +80,15 @@ end
   _a_zer::Bool = is_zero(a)
 
   (_b_pos) && (!_a_pos) && return false
-  (!_b_pos) && (_a_pos) && return (!_a_zer && _b_zer)
+  (!_b_pos) && (_a_pos) && return (!(_a_zer && _b_zer))
 
   #zero can cause problems down the line.
   _a_zer && return !(_b_pos || _b_zer)
   _b_zer && return _a_pos
 
   #use this as a trampoline for is_inward.
-  _a_pos $ is_inward(a, b)
+  _a_pos && return is_inward(b, a)
+  return is_inward(a, b)
 end
 #hopefully the julia compiler knows what to do here.
 @universal <(a::Unum, b::Unum) = (b > a)

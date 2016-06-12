@@ -8,23 +8,23 @@
 #create the warlpiri type.  This is a 0/0 unum.
 Warlpiri = Unum{0,0}
 #an external constructor will make things a bit easier, sadly we have to lower case this.
-warlpiri(flags::UInt16, frac::UInt64, exp::UInt64) = Warlpiri(z16, z16, flags, frac, exp)
+warlpiri(exp::UInt64, frac::UInt64, flags::UInt16) = Warlpiri(exp, frac, flags, z16, z16)
 
 #create english words for each of the warlpiri unums
 stop_ = nan(Warlpiri, Unums.UNUM_SIGN_MASK)
 n_all = neg_inf(Warlpiri)
-nmany = warlpiri(0x0003, z64, o64)
-n_two = warlpiri(0x0002, z64, o64)
-nsome = warlpiri(0x0003, t64, z64)
+nmany = warlpiri(o64, z64, 0x0003)
+n_two = warlpiri(o64, z64, 0x0002)
+nsome = warlpiri(z64, t64, 0x0003)
 n_one = Unums.additiveinverse!(one(Warlpiri))
-n_few = warlpiri(0x0003, z64, z64)
+n_few = warlpiri(z64, z64, 0x0003)
 nnone = Unums.additiveinverse!(zero(Warlpiri))
 none_ = zero(Warlpiri)
-pfew_ = warlpiri(0x0001,  z64, z64)
+pfew_ = warlpiri(z64, z64, 0x0001)
 pone_ = one(Warlpiri)
-psome = warlpiri(0x0001,  t64, z64)
-ptwo_ = warlpiri(0x0000,  z64, o64)
-pmany = warlpiri(0x0001,  z64, o64)
+psome = warlpiri(z64, t64, 0x0001)
+ptwo_ = warlpiri(o64, z64, 0x0000)
+pmany = warlpiri(o64, z64, 0x0001)
 pall_ = pos_inf(Warlpiri)
 junk_ = nan(Warlpiri)
 #check the bits on all of the warpiri unums
@@ -167,5 +167,5 @@ end
 
 include("./warlpiri/test-warlpiri-ordering.jl")
 include("./warlpiri/test-warlpiri-addition.jl")
-include("./warlpiri/test-warlpiri-multiplication.jl")
-include("./warlpiri/test-warlpiri-division.jl")
+#include("./warlpiri/test-warlpiri-multiplication.jl")
+#include("./warlpiri/test-warlpiri-division.jl")
