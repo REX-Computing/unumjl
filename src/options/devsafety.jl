@@ -82,13 +82,14 @@ macro dev_check(expr)
   if (expr.head == :function)
     #prepend a __check_ prefix to the function name.
     #do a little bit of syntactic sugar to fix functions that already start with __
-    fnstring = __extract_function_string(expr.args[1].args[1])
+    fnstring = string("__check_", __extract_function_string(expr.args[1].args[1]))
     fparams = join(map(getvariable, expr.args[1].args[2:end]), ", ")
     #generate the line of code to be executed, pass it to parse.
-    b2 = parse("$checkcall($params)")
+    b2 = parse("$fnstring($fparams)")
     #inject the faux line number and the generated code into the ast.
     unshift!(expr.args[2].args, b2)
     #return the escaped function to the parser so that it generates the new function.
+
     return esc(expr)
   elseif (expr.head == :type)
     #what to do if dev_check is appied to a type statement.

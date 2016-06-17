@@ -5,7 +5,8 @@
 ## UNIT TESTING
 
 #integer operations and helpers for the type constructor
-#include("./unit/unit-int64op.jl")
+include("./unit/unit-int64-op.jl")
+include("./unit/unit-int64-cmp.jl")
 
 #functions which directly participate in construction and validation of unums
 #include("./unit/unit-helpers.jl")

@@ -1,5 +1,3 @@
-#unum-test-int64op.jl
-
 #some useful variables
 msb1    = UInt64(0x8000_0000_0000_0000)
 lsb1    = UInt64(0x0000_0000_0000_0001)
@@ -8,13 +6,6 @@ msb6    = UInt64(0xFC00_0000_0000_0000)
 lsb6    = UInt64(0x0000_0000_0000_003F)
 allbits = UInt64(0xFFFF_FFFF_FFFF_FFFF)
 nobits  = UInt64(0x0000_0000_0000_0000)
-
-z16 = zero(UInt16)
-o16 = one(UInt16)
-z64 = zero(UInt64)
-o64 = one(UInt64)
-f64 = 0xFFFF_FFFF_FFFF_FFFF
-t64 = 0x8000_0000_0000_0000
 
 @test_throws ArgumentError Unums.__check_ArrayNum(0, [z64])
 @test_throws ArgumentError Unums.__check_ArrayNum(6, [z64])
@@ -115,6 +106,33 @@ bigger_array = Unums.ArrayNum{7}([z64, z64, z64, z64])
 @test Unums.is_not_top(Unums.ArrayNum{7}([msb1, lsb1]))
 @test Unums.is_not_top(Unums.ArrayNum{7}([nobits, msb1]))
 @test Unums.is_not_top(Unums.ArrayNum{8}([msb1, nobits, nobits, msb1]))
+
+#inward_ubit_crosses_zero
+@test !Unums.inward_ubit_crosses_zero(t64, z16)                  #doesn't happen.
+@test  Unums.inward_ubit_crosses_zero(0x4000_0000_0000_0000, z16)
+@test !Unums.inward_ubit_crosses_zero(0x4000_0000_0000_0000, o16)
+@test  Unums.inward_ubit_crosses_zero(0x0000_0000_0000_0001, o16)
+@test !Unums.inward_ubit_crosses_zero(0x0000_0000_0000_0001, 0x003F)
+@test  Unums.inward_ubit_crosses_zero(0x0000_0000_0000_0000, z16)
+@test  Unums.inward_ubit_crosses_zero(0x0000_0000_0000_0000, o16)
+@test  Unums.inward_ubit_crosses_zero(0x0000_0000_0000_0000, 0x003F)
+@test  Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([o64,z64]), 0x0000)
+@test !Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([o64,z64]), 0x003F)
+@test  Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([z64,t64]), 0x003F)
+@test !Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([z64,t64]), 0x0040)
+@test  Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([z64,o64]), 0x003F)
+@test  Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([z64,o64]), 0x0040)
+@test !Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([z64,o64]), 0x007F)
+@test  Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([z64,z64]), 0x003F)
+@test  Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([z64,z64]), 0x0040)
+@test  Unums.inward_ubit_crosses_zero(Unums.ArrayNum{7}([z64,z64]), 0x007F)
+
+################################################################################
+## Int64 ubit contraction tests.
+
+@test Unums.contract_upper_unum(0xFFFF_0000_0000_0000, 0x000F) == 0x0000
+@test Unums.contract_upper_unum(0xFFFF_0000_0000_0000, 0x0010) == 0x0000
+@test Unums.contract_upper_unum(0xFFFF_0000_0000_0000, 0x0011) == 0x0011
 
 
 ################################################################################
@@ -250,15 +268,6 @@ Unums.rsh!(fourcellint, 4)
 fourcellint.a = copy(texture)
 Unums.rsh!(fourcellint, 68)
 @test fourcellint.a == [nobits, 0x0123_4567_89AB_CDEF, 0x1234_5678_9ABC_DEF1, 0x2345_6789_ABCD_EF12]
-
-################################################################################
-## COMPARISON
-
-@test Unums.ArrayNum{7}([allbits, 0x0000_0000_0000_0001]) > Unums.ArrayNum{7}([allbits, nobits])
-@test Unums.ArrayNum{7}([0x0000_0000_0000_0001, nobits]) > Unums.ArrayNum{7}([nobits, allbits])
-@test Unums.ArrayNum{7}([allbits, nobits]) < Unums.ArrayNum{7}([allbits, 0x0000_0000_0000_0001])
-@test Unums.ArrayNum{7}([nobits, allbits]) < Unums.ArrayNum{7}([0x0000_0000_0000_0001, nobits])
-
 
 ################################################################################
 ## UTILITIES

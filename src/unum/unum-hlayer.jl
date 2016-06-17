@@ -36,8 +36,14 @@ end
 @universal function Base.show(io::IO, T::Type{Unum})
   #strips the Large or Small suffix when displaying this type.
   @typenames
-
-  print(io, "$uname{$ESS, $FSS}")
+  print(io, "$uname{$ESS,$FSS}")
+end
+function Base.show{ESS,FSS}(io::IO, T::Type{Unum{ESS,FSS}})
+  @typenames
+  print(io, "$uname{$ESS,$FSS}")
+end
+function Base.show(io::IO, T::Type{Unum})
+  print(io, "Unum")
 end
 
 @universal function Base.bits(x::Unum, space::ASCIIString = "")

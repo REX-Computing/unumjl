@@ -21,6 +21,21 @@ macro gen_code(f)
   esc(:(@generated $f))
 end
 
+doc"""
+  `@unumbers` imports a series of useful int64 and int16 constants:
+ * o64:  one(UInt64)
+ * z64:  zero(UInt64)
+ * t64:  0x8000_0000_0000_0000
+ * f64:  0xFFFF_FFFF_FFFF_FFFF
+ * o16:  one(UInt16)
+ * z16:  zero(UInt16)
+"""
+macro unumbers()
+  :(import Unums: o64, t64, z64, f64, o16, z16)
+end
+export @unumbers
+
+
 #a helper function that makes the parsing process much cleaner.
 function __append_code(a, b)
   return :($a; $b)

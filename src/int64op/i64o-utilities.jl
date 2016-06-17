@@ -68,25 +68,25 @@ with the fraction of x, or the first element in x fraction array.
 @fracproc copy_top pattern
 
 doc"""
-  `Unums.is_zeros_till(a::UInt64, fsize)`
-  `Unums.is_zeros_till(a::ArrayNum, fsize)`
+  `Unums.inward_ubit_crosses_zero(a::UInt64, fsize)`
+  `Unums.inward_ubit_crosses_zero(a::ArrayNum, fsize)`
 
-  tells if all digits till the position of fsize are zero.
+  tells if an inward ubit from this number would cross zero (into the next exponential range)
 """
-function is_zeros_till(a::UInt64, fsize::UInt16)
+function inward_ubit_crosses_zero(a::UInt64, fsize::UInt16)
   #the mask is generated using this formula:
-  mask = z64 - (o64 << (0x40 - fsize))
+  mask = z64 - (o64 << (0x40 - fsize - o16))
   #check to make sure that everything is zeros
   return ((a & mask) == z64)
 end
-function is_zeros_till{FSS}(a::ArrayNum{FSS}, fsize::UInt16)
+function inward_ubit_crosses_zero{FSS}(a::ArrayNum{FSS}, fsize::UInt16)
   #compute the last cell we need to scan.
   middle_spot = div(fsize, 0x0040) + 1
   middle_mask = fsize % 0x0040
   for idx = 1:(middle_spot - 1)
-    @inbounds a.a[idx] != 0 && return false
+    @inbounds (a.a[idx] != z64) && return false
   end
-  @inbounds is_zeros_till(a[middle_spot], middle_mask)
+  @inbounds return inward_ubit_crosses_zero(a.a[middle_spot], middle_mask)
 end
 
 #__minimum_data_width
@@ -108,3 +108,34 @@ __minimum_data_width(n::UInt64) = (res = max(z16, 0x003F - ctz(n)); res == 0xFFF
 
 #simply assign this to a hash of the array itself.
 Base.hash{FSS}(n::ArrayNum{FSS}, h::UInt) = hash(n.a, h)
+
+
+function contract_upper_unum(n::UInt64, s::UInt16)
+  (0x0040 - ctz(~n & mask_top(s - o16))) * (s != 0)
+end
+
+function contract_lower_unum(n::UInt64, s::UInt16)
+  (0x0040 - ctz(n & mask_top(s - o16))) * (s != 0)
+end
+
+function contract_upper_unum{FSS}(n::ArrayNum{FSS}, s::UInt16)
+  middle_cell = div(s, 0x0040) + o16
+  middle_size = s % 0x0040
+
+  #do our middle cell thing.
+  @inbounds terminal_zero_delta::UInt16 = contract_upper_unum(n.a[middle_cell], middle_size) - middle_size
+
+  for idx = middle_cell-1 : -1 : 1
+    @inbounds begin
+      if (n.a[middle_cell] == z64)
+        terminal_zero_delta += 0x0040
+      else
+        terminal_zero_delta += contract_upper_unum(n.a[idx], 0x003F)
+      end
+    end
+  end
+  s + terminal_zero_delta
+end
+
+function contract_lower_unum{FSS}(n::ArrayNum{FSS}, s::UInt16)
+end

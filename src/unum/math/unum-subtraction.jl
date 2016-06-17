@@ -55,7 +55,7 @@ doc"""
 @universal function unum_diff(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #basic secondary checks which eject early results.
   is_inf(a) && return is_inf(b) ? nan(U) : inf(U, @signof a)
-  is_mmr(a) && return mmr_sub(b, _bexp, a.flags & UNUM_SIGN_MASK)
+  is_mmr(a) && return mmr_sub(a, b)
   #there is a corner case that b winds up being infinity (and a does not; same
   #with mmr.)
 
@@ -83,13 +83,14 @@ end
     return inward_ulp!(copy(a))
   end
 
-  #copy the b unum as the temporary result.
-  result = copy(b)
+  #copy the b unum as the temporary result, nuke its ubit just to be sure
+  #(we might be calling this function from diff_inexact)
+  result = make_exact!(copy(b))
   #set the sign to the sign of the dominant figure.
   coerce_sign!(result, a)
 
   if _shift == z16
-    carry::UInt64 = z64
+    carry::UInt64 = ((!_a_subnormal) & _b_subnormal) * o64
     guardbit::Bool = false
   else
     carry = (!_a_subnormal) * o64
@@ -123,286 +124,56 @@ end
   #do a second is_inward check.  If this is_inward check fails, then the result
   #can have an opposite sign, because it's an ulp that goes wierdly.
   is_inward(b, a) || throw(ArgumentError("currently unsupported"))
-
-  #first, do the inexact sum, to calculate the "base value" of the resulting sum.
-  base_value = diff_exact(a, b)
-  #the ulp status of a is not going to be altered by diff_exact, and that ulp
-  #will be pointing outwards.  Next, we have to figure out the "ulp influence" of b.
-  ulp_size = min(to16(b.fsize + decode_exp(base_value) - _bexp), max_fsize(FSS))
-
+  base_value = diff_exact(a, b, _aexp, _bexp)
   if is_exact(b)
-    #then we do nothing.
+    #then we do the simplest subtraction.
     return base_value
   elseif is_exact(a)
     #check to see if the subtraction will cross the exponential barrier
-    if is_zeros_till(base_value.fraction, ulp_size)
-      inner_value = subtract_ubit!(base_value, ulp_size)
-      base_value = inward_ulp!(base_value)
-      is_positive(a) ? B(inner_value, base_value) : B(base_value, inner_value)
-    else
-      subtract_ubit!(base_value, ulp_size)
+    if is_not_zero(base_value.fraction) && inward_ubit_crosses_zero(base_value.fraction, b.fsize)
+      inner_value = subtract_ubit!(copy(base_value), b.fsize)
+      outer_value = inward_ulp!(base_value)
+
+      #use b instead of "resolve_as_utype" because they can't be contiguous unums.
+      return is_positive(a) ? B(inner_value, outer_value) : B(outer_value, inner_value)
     end
+    return subtract_ubit!(base_value, b.fsize)
   else
     #just do the subtraction, then output the expected result.
-    inner_value = subtract_ubit!(copy(base_value), ulp_size)         #set me here.
-    is_positive(a) ? B(inner_value, base_value) : B(base_value, inner_value)
+    inner_value = subtract_ubit!(copy(base_value), b.fsize)         #set me here.
+    is_positive(a) ? resolve_as_utype(inner_value, base_value) : resolve_as_utype(base_value, inner_value)
   end
 end
 
-@universal function mmr_sub(b::Unum, _bexp::Int64, sgn::UInt16)
+@universal function mmr_sub(a::Unum, b::Unum)
   is_mmr(b) && return B(neg_mmr(U), pos_mmr(U)) #all real numbers
   #calculate inner_value by doing an exact subtraction of b from big_exact.
   #ensure that it's an ulp.
-  inner_value = make_ulp!(diff_exact(big_exact(T), b))
+  diff_bound = is_ulp(b) ? outward_exact(b) : b
+  inner_value = diff_exact(a, diff_bound, max_exponent(ESS), decode_exp(diff_bound))
 
   #check for the dominant sign.  If a was positive make it (inner_value -> mmr)
   #if a was negative, make it (-mmr -> inner_value )
-  if (sgn == z16)
-    B(inner_value, pos_mmr(T))
+  if ((@signof a) == z16)
+    B(inner_value, pos_mmr(U))
   else
-    B(neg_mmr(T), inner_value)
+    B(neg_mmr(U), inner_value)
   end
 end
 
-################################################################################
-## here lies code that will be kept for later.
-
-
-#=
-@generated function __arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-  quote
-    if is_ulp(a)
-      if is_exact(b.$side)
-        #we're going to swap operation order.  Is there maybe a better way to do this?
-        copy_unum!(b.$side, b.buffer)
-        copy_unum!(a, b.$side)
-        __exact_arithmetic_subtraction!(b.buffer, b, Val{side})
-      else
-        __inexact_arithmetic_subtraction!(a, b, Val{side})
-      end
+@universal function subtract_ubit!(x::Unum, s::UInt16)
+  borrowed = frac_sub_ubit!(x, s)
+  if borrowed
+    exponent = decode_exp(x)
+    if exponent <= min_exponent(ESS)
+      x.exponent = z64
     else
-      __exact_arithmetic_subtraction!(a, b, Val{side})
+      (x.esize, x.exponent) = encode_exp(exponent - 1)
+      frac_rsh!(x, 1)
     end
   end
+  return x
 end
-
-@generated function __inexact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})
-  if (side == :lower)
-    quote
-      copy_unum!(a, b.buffer)
-      if (is_positive(a))
-        is_onesided(b) && copy_unum!(b.lower, b.upper)
-        #the upper_exact function mutates the buffer contents so we use the lower first.
-        __exact_arithmetic_subtraction!(b.buffer, b, LOWER_UNUM)
-        if (is_onesided(b))
-          upper_exact!(b.buffer)
-          __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
-
-          ignore_side!(b, UPPER_UNUM)
-          set_twosided!(b)
-        end
-      else
-        #the lower_exact function mutates the buffer contents so we do the upper first.
-        if (is_onesided(b))
-          copy_unum!(b.lower, b.upper)
-          __exact_arithmetic_subtraction!(b.buffer, b, UPPER_UNUM)
-
-          ignore_side!(b, UPPER_UNUM)
-          set_twosided!(b)
-        end
-        lower_exact!(b.buffer)
-        __exact_arithmetic_subtraction!(b.buffer, b, LOWER_UNUM)
-      end
-    end
-  else
-    :(nan!(b))
-  end
-end
-
-#performs an exact arithmetic subtraction algorithm.  The assumption here is
-#that a and b have opposite signs and are to be summed as such.  The value in
-#b will be exact, but the value in a may or may not have an ulp.
-@gen_code function __exact_arithmetic_subtraction!{ESS,FSS,side}(a::Unum{ESS,FSS}, b::Gnum{ESS,FSS}, ::Type{Val{side}})#for subtraction, resolving strange subnormal numbers as a first step is critical.
-  mesize::UInt16 = max_esize(ESS)
-
-  @code quote
-    is_strange_subnormal(a) && (resolve_subnormal!(a))
-    is_strange_subnormal(b.$side) && (resolve_subnormal!(b.$side))
-
-    was_ubit::Bool = is_ulp(b.$side)
-
-    b_exp::Int64 = decode_exp(b.$side)
-    b_dev::UInt64 = is_exp_zero(b.$side) * o64
-    b_ctx::Int64 = b_exp + b_dev
-
-    #set the exp and dev values.
-    a_exp::Int64 = decode_exp(a)
-    #set the deviations due to subnormality.
-    a_dev::UInt64 = is_exp_zero(a) * o64
-    #set the exponential contexts for both variables.
-    a_ctx::Int64 = a_exp + a_dev
-
-    #set up a placeholder for the minuend.
-    shift::Int64
-    vbit::UInt64
-    minuend::Unum{ESS,FSS}
-    scratchpad_exp::Int64
-    @init_sflags()
-
-    #is a bigger?  For subtraction, we must do more intricate testing.
-    a_bigger = (a_exp > b_exp)
-    if (a_exp == b_exp)
-      a_bigger = a_bigger || ((a_dev == 0) && (b_dev != 0))
-      a_bigger = a_bigger || (a_dev == b_dev) && ((a.fraction > b.$side.fraction))
-    end
-
-    if a_bigger
-      minuend = a
-      @preserve_sflags b begin
-        copy_unum!(b.$side, b.scratchpad)
-        b.scratchpad.flags = a.flags & UNUM_SIGN_MASK
-      end
-      #set the scratchpad exponents to the a settings.
-      b.scratchpad.esize = a.esize
-      b.scratchpad.exponent = a.exponent
-      #calculate shift as the difference between a and b
-      shift = a_ctx - b_ctx
-      #set up the virtual bit.
-      vbit = (o64 - a_dev) - ((shift == z64) * (o64 - b_dev))
-      scratchpad_exp = a_exp
-    else
-      minuend = b.$side
-      #move the unum value to the scratchpad.
-      @preserve_sflags b begin
-        put_unum!(a, b, SCRATCHPAD)
-        b.scratchpad.flags = b.$side.flags & UNUM_SIGN_MASK
-      end
-      #set the scratchpad exponents to the b settings.
-      b.scratchpad.esize = b.$side.esize
-      b.scratchpad.exponent = b.$side.exponent
-      #calculate the shift as the difference between a and b.
-      shift = b_ctx - a_ctx
-      #set up the carry bit.
-      vbit = (o64 - b_dev) - ((shift == z64) * (o64 - a_dev))
-      scratchpad_exp = b_exp
-    end
-
-    #rightshift the scratchpad.
-    (shift != 0) && __rightshift_frac_with_underflow_check!(b.scratchpad, shift)
-
-    #do the actual subtraction.
-    vbit = __carried_diff_frac!(vbit, minuend, b.scratchpad)
-
-    #we only need to adjust things if we're not subnormal.
-    if (vbit == 0) && (b.scratchpad.exponent > 0)
-      if (scratchpad_exp >= min_exponent(ESS))
-        #shift, only if we're not transitioning into subnormal.
-        b.scratchpad.exponent > 1 && __leftshift_frac!(b.scratchpad, 1)
-        #Put in the guard bit.
-        scratchpad_exp -= 1
-      end
-
-      if (scratchpad_exp >= min_exponent(ESS))
-        (b.scratchpad.esize, b.scratchpad.exponent) = encode_exp(scratchpad_exp)
-      else
-        b.scratchpad.esize = $mesize
-        b.scratchpad.exponent = z64
-      end
-    end
-
-    ############################################################################
-    #now, deal with ubits.
-    if (was_ubit)
-      if is_positive(b.scratchpad) == is_positive(b.$side)
-        b.scratchpad.flags |= UNUM_UBIT_MASK
-      else
-        __inward_ulp!(b.scratchpad)
-      end
-    end
-
-    copy_unum!(b.scratchpad, b.$side)
-  end
-end
-=#
-#=
-###############################################################################
-## multistage carried difference engine for uint64s.
-
-
-################################################################################
-## DIFFERENCE ALGORITHM
-
-function __diff_ordered{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
-  #add two values, where a has a greater magnitude than b.  Both operands have
-  #matching signs, either positive or negative.  At this stage, they may both
-  #be ULPs.
-  if (is_ulp(a) || is_ulp(b))
-    __diff_ulp(a, b, _aexp, _bexp)
-  else
-    __diff_exact(a, b, _aexp, _bexp)
-  end
-end
-
-function __diff_ulp{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, _aexp::Int64, _bexp::Int64)
-  #a and b are ordered by magnitude and have opposing signs.
-
-  #assign "exact" and "bound" a's
-  (exact_a, bound_a) = is_ulp(a) ? (unum_unsafe(a, a.flags & ~UNUM_UBIT_MASK), __outward_exact(a)) : (a, a)
-  (exact_b, bound_b) = is_ulp(b) ? (unum_unsafe(b, b.flags & ~UNUM_UBIT_MASK), __outward_exact(b)) : (b, b)
-  #recalculate these values if necessary.
-  _baexp::Int64 = is_ulp(a) ? decode_exp(bound_a) : _aexp
-  _bbexp::Int64 = is_ulp(b) ? decode_exp(bound_b) : _bexp
-
-  if (_aexp - _bbexp > max_fsize(FSS))
-    if is_ulp(a)
-      is_negative(a) && return ubound_resolve(ubound_unsafe(a, inward_ulp(exact_a)))
-      return ubound_resolve(ubound_unsafe(inward_ulp(exact_a), a))
-    end
-    return inward_ulp(a)
-  end
-
-  #do a check to see if a is almost infinite.
-  if (is_mmr(a))
-    #a ubound ending in infinity can't result in an ulp unless the lower subtracted
-    #value is zero, which is already tested for.
-    is_mmr(b) && return open_ubound(neg_mmr(Unum{ESS,FSS}), pos_mmr(Unum{ESS,FSS}))
-
-    if (is_negative(a))
-      #exploit the fact that __exact_subtraction ignores ubits.
-      return open_ubound(a, __diff_exact(a, bound_b, _aexp, _bbexp))
-    else
-      return open_ubound(__diff_exact(a, bound_b, _aexp, _bbexp), a)
-    end
-  end
-
-  far_result = __diff_exact(magsort(bound_a, exact_b)...)
-  near_result = __diff_exact(magsort(exact_a, bound_b)...)
-
-  if is_negative(a)
-    ubound_resolve(open_ubound(far_result, near_result))
-  else
-    ubound_resolve(open_ubound(near_result, far_result))
-  end
-end
-
-#attempts to shift the fraction as far as allowed.  Returns appropriate esize
-#and exponent, and the new fraction.
-function __shift_many_zeros(fraction, _aexp, ESS, lastbit::UInt64 = z64)
-  maxshift::Int64 = _aexp - min_exponent(ESS)
-  tryshift::Int64 = leading_zeros(fraction) + 1
-  leftshift::Int64 = tryshift > maxshift ? maxshift : tryshift
-  fraction = lsh(fraction, leftshift)
-
-  #tack on that last bit, if necessary.
-  (lastbit != 0) && (fraction |= lsh(superone(length(fraction)),(leftshift - 1)))
-
-  (esize, exponent) = tryshift > maxshift ? (max_esize(ESS), z64) : encode_exp(_aexp - leftshift)
-
-  (esize, exponent, fraction)
-end
-
-#a subtraction operation where a and b are ordered such that mag(a) > mag(b)
-=#
 
 import Base.-
 #binary subtraction creates a temoporary g-layer number to be destroyed immediately.

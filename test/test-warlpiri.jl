@@ -153,8 +153,8 @@ function testop(op, expected)
           println("$i, $j: $(bits(warlpiris[i])) $op $(bits(warlpiris[j])) failed as $(bits(res)); should be $(bits(expected[i,j]))")
           fails += 1
         end
-      catch
-        println("$i, $j: $(bits(warlpiris[i])) $op $(bits(warlpiris[j])) failed due to thrown error:")
+      catch e
+        println("$i, $j: $(bits(warlpiris[i])) $op $(bits(warlpiris[j])) failed due to thrown error: $e")
         bt = catch_backtrace()
         s = sprint(io->Base.show_backtrace(io, bt))
         println("$s")

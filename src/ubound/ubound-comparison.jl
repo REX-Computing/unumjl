@@ -4,6 +4,41 @@
 
 import Base: ==, <, >
 
+if options[:devmode]
+  macro matchsign_devmode(a, b)
+    esc(quote
+      if options[:devmode]
+        (@signof a) == (@signof b) || throw(ArgumentError("sign of arguments is mismatched"))
+      end
+    end)
+  end
+else
+  macro matchsign_devmode(a, b); nothing; end
+end
+
+@universal function cmp_inner_bound(a::Unum, b::Unum)
+  @matchsign_devmode a b
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
+  decode_exp(a) == decode_exp(b) || return false
+  return a.fraction == b.fraction
+end
+
+@universal function cmp_outer_bound(a::Unum, b::Unum)
+  @matchsign_devmode a b
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
+  decode_exp(a) == decode_exp(b) || return false
+end
+
+@universal function cmp_lower_bound(a::Unum, b::Unum)
+  @matchsign_devmode a b
+  is_positive(a) ? cmp_inner_bound(a, b) : cmp_outer_bound(a, b)
+end
+@universal function cmp_upper_bound(a::Unum, b::Unum)
+  @matchsign_devmode a b
+  is_positive(a) ? cmp_outer_bound(a, b) : cmp_inner_bound(a, b)
+end
 #==============================================================================#
 #equality comparison
 @universal function ==(a::Ubound, b::Ubound)
@@ -13,6 +48,9 @@ import Base: ==, <, >
   high_exact = is_exact(a.upper)
   (low_exact != is_exact(b.lower)) && return false
   (high_exact != is_exact(b.upper)) && return false
+  #also check signs.
+  (@signof(a.lower) != @signof(b.lower)) && (!is_zero(a.lower)) && (!is_zero(b.lower)) && return false
+  (@signof(a.upper) != @signof(b.upper)) && (!is_zero(a.upper)) && (!is_zero(b.upper)) && return false
 
   #in the case they're exact then checking the end bounds is straightforward equality.
   if low_exact

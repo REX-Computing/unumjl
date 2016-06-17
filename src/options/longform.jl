@@ -1,7 +1,7 @@
 macro typenames()
   esc(quote
-    uname = options[:longform] ? ((FSS < 6) ? "UnumLarge" : "UnumSmall") : "Unum"
-    gname = options[:longform] ? ((FSS < 6) ? "GnumLarge" : "GnumSmall") : "Gnum"
-    bname = options[:longform] ? ((FSS < 6) ? "UboundLarge" : "UboundSmall") : "Ubound"
+    uname = options[:longform] ? ((FSS < 7) ? "UnumSmall" : "UnumLarge") : "Unum"
+    gname = options[:longform] ? ((FSS < 7) ? "GnumSmall" : "GnumLarge") : "Gnum"
+    bname = options[:longform] ? ((FSS < 7) ? "UboundSmall" : "UboundLarge") : "Ubound"
   end)
 end

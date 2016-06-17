@@ -56,10 +56,9 @@ doc"""
 @universal function unum_sum(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #basic secondary checks which eject early results.
   is_inf(a) && return inf(U, @signof a)
-  is_mmr(a) && return mmr(U, @signof a)
-  #there is a corner case that b winds up being infinity (and a does not; same
-  #with mmr.)
   is_inf(b) && return inf(U, @signof a)
+
+  is_mmr(a) && return mmr(U, @signof a)
   is_mmr(b) && return mmr(U, @signof a)
 
   if (is_exact(a) && is_exact(b))
@@ -125,7 +124,7 @@ doc"""
   be converted into an fsize.
 """
 @universal function add_bit_and_set_ulp!(a::Unum, big_ulp::UInt16, little_ulp::UInt16)
-  carried = frac_add_bit!(a, big_ulp)
+  carried = frac_add_ubit!(a, big_ulp)
   if (carried)
     #rightshift by one.
     frac_rsh!(a, o16)
@@ -143,7 +142,7 @@ end
 
 @universal function sum_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #first, do the exact sum, to calculate the "base value" of the resulting sum.
-  base_value = sum_exact(a, b)
+  base_value = sum_exact(a, b, _aexp, _bexp)
 
   _rexp = decode_exp(base_value)
   _shift_a = to16(_rexp - _aexp) + a.fsize
@@ -161,7 +160,7 @@ end
     augmented_value = add_bit_and_set_ulp!(copy(base_value), max(_shift_a, _shift_b), min(_shift_a, _shift_b))
 
     #create a ubound (of the correct type) with the base_value and augmented_value.
-    return B(base_value, augmented_value)
+    return is_positive(a) ? B(base_value, augmented_value) : B(augmented_value, base_value)
   else
     ulp_shift = is_ulp(a) * _shift_a + is_ulp(b) * _shift_b
     base_value.fsize = min(ulp_shift, max_fsize(FSS))

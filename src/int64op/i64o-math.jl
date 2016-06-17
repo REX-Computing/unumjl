@@ -78,7 +78,7 @@ end
 
 function sub_ubit(value::UInt64, bit::UInt16)
   result_value = value - (t64 >> bit)
-  (result_value, result_value < value)
+  (result_value, result_value > value)
 end
 @gen_code function sub_ubit!{FSS}(value::ArrayNum{FSS}, bit::UInt16)
   @code quote
@@ -122,7 +122,7 @@ doc"""
   `Unums.i64sub!(carry, subtrahend, minuend)` performs the calculation that is
   the result of minuend - subtrahend (the reverse passing order is very important!).
   The reason why the order is reversed is because the minend is likely
-  to have to been bitshifted prior to subtraction and it's more sensible to do 
+  to have to been bitshifted prior to subtraction and it's more sensible to do
   that the value that's going to be copied.
 """
 @gen_code function i64sub!{FSS}(carry::UInt64, a::ArrayNum{FSS}, b::ArrayNum{FSS})

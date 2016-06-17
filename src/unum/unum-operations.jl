@@ -42,11 +42,11 @@ doc"""
 export additiveinverse!
 
 doc"""
-  `coerce_sign!` creates the additive inverse value of a unum, by flipping
-  the sign.  This can be better than the `-` operator because it doesn't copy
-  the unum.  A reference to the unum is returned.
+  `coerce_sign!(a::Unum, b)` maps the sign bit from b onto a.  b can either be a
+  UInt16 or a Unum.
 """
-@universal coerce_sign!(a::Unum, b::Unum) = (a.flags = (a.flags & ~UNUM_SIGN_MASK) | (b.flags & UNUM_SIGN_MASK); return a)
+@universal coerce_sign!(a::Unum, b::Unum) = coerce_sign!(a, b.flags)
+@universal coerce_sign!(a::Unum, sgn::UInt16) = (a.flags = (a.flags & ~UNUM_SIGN_MASK) | sgn; return a)
 
 doc"""
   `abs!(::Unum)` forces the value of the unum to be positive.  Returns the
@@ -193,41 +193,93 @@ end
 =#
 
 ################################################################################
+## variadic macros that trigger exactitude checking.
+
+if options[:devmode]
+  macro ensure_exact(x)
+    esc(options[:devmode] ? :(is_exact($x) || throw(ArgumentError("passed parameter must be exact"))) : :())
+  end
+else
+  macro ensure_exact(x); :(); end
+end
+
+if options[:devmode]
+  macro ensure_ulp(x)
+    esc(options[:devmode] ? :(is_ulp($x) || throw(ArgumentError("passed parameter must be an ulp"))) : :())
+  end
+else
+  macro ensure_ulp(x); :(); end
+end
+
+################################################################################
 ## sophisticated exactitude functions.
 
 doc"""
   `Unums.outward_ulp!(::Unum)` returns the smallest-width ulp immediately above the
-  current unum.  If this is exact, it simply trips the ulp flag with the biggest fsize.
-  If it's inexact, it bumps to the outer-bound exact and moves the size of the ulp
-  far out.
+  current (exact) unum.
 """
 @universal function outward_ulp!(x::Unum)
-  resolve_degenerates!(x)
-  if is_exact(x)
-    x.fsize = max_fsize(FSS)
-    make_ulp!(x::Unum)
-  end
-  return add_bit_and_set_ulp!(x, x.fsize, max_fsize(FSS))
-end
+  @ensure_exact(x)
 
-@universal function inward_ulp!(x::Unum)
   resolve_degenerates!(x)
-  if is_frac_zero(x)
-    #then, we're zero or a zeroish ulp, so kill it with fire.
-    is_exp_zero(x) && return nan!(x)
-    #let's find out what's up here.
-    _exp = decode_exp(x)
-    if _exp == min_exponent(ESS)
-      x.esize = max_esize(ESS)
-      x.exponent = z64
-    else
-      (x.esize, x.exponent) = encode_exp(_exp - 1)
-    end
-    return make_ulp!(frac_all!(x))
+
+  x.fsize = max_fsize(FSS)
+  make_ulp!(x)
+end
+@universal outward_ulp(x::Unum) = outward_ulp!(copy(x))
+
+doc"""
+  `Unums.inward_ulp!(::Unum)` returns the smallest-width ulp immediately below the
+  current unum.
+"""
+@universal function inward_ulp!(x::Unum)
+  @ensure_exact(x)
+  resolve_degenerates!(x)
+  make_ulp!(x)
+
+  borrowed = frac_sub_ubit!(x, max_fsize(FSS))
+
+  #if we borrowed, then fraction must have been zero.
+  if borrowed
+    #there is no ulp inward of x.  Consider replacing this with "Throw an error"
+    (x.exponent == 0) && return nan!(x)
+    _xexp = decode_exp(x)
+    (_xexp == min_exponent(ESS)) && (x.exponent = 0; return x)
+    (x.esize, x.exponent) = encode_exp(_xexp - 1)
   end
-  frac_sub_ubit!(x, max_fsize(FSS))
+  x.fsize = max_fsize(FSS)
+
   return x
 end
+@universal inward_ulp(x::Unum) = inward_ulp!(copy(x))
+
+doc"""
+"""
+@universal function outward_exact!(x::Unum)
+  @ensure_ulp(x)
+  resolve_degenerates!(x)
+  carry = frac_add_ubit!(x, x.fsize)
+  if carry
+    if (is_subnormal(x))
+      (x.exponent = o64)
+    else
+      exp = decode_exp(x) + 1
+      if exp > max_exponent(ESS)
+        inf!(x)
+      else
+        (x.esize, x.exponent) = encode_exp(exp)
+      end
+    end
+  end
+  exact_trim!(x)
+end
+@universal outward_exact(x::Unum) = outward_exact!(copy(x))
+
+@universal function inward_exact!(x::Unum)
+  @ensure_ulp(x)
+  make_exact!(x)
+end
+@universal inward_exact(x::Unum) = inward_exact!(copy(x))
 
 ################################################################################
 ## dumb exactitude functions.

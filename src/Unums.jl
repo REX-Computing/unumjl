@@ -34,7 +34,7 @@ include("./int64op/int64ops.jl")
 #implementation of unums.
 include("./unum/unum.jl")
 #ubound-related code
-#include("./ubound/ubound.jl")
+include("./ubound/ubound.jl")
 #gnums-related code
 #include("./gnum/gnum.jl")
 
