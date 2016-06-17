@@ -271,7 +271,7 @@ doc"""
       end
     end
   end
-  exact_trim!(x)
+  exact_trim!(make_exact!(x))
 end
 @universal outward_exact(x::Unum) = outward_exact!(copy(x))
 
@@ -280,6 +280,19 @@ end
   make_exact!(x)
 end
 @universal inward_exact(x::Unum) = inward_exact!(copy(x))
+
+################################################################################
+## recast as upper and lower versions.
+
+@universal upper_exact!(x::Unum) = is_positive(x) ? outward_exact!(x) : inward_exact!(x)
+@universal lower_exact!(x::Unum) = is_positive(x) ? inward_exact!(x) : outward_exact!(x)
+@universal upper_ulp!(x::Unum) = is_positive(x) ? outward_ulp!(x) : inward_ulp!(x)
+@universal lower_ulp!(x::Unum) = is_positive(x) ? inward_ulp!(x) : outward_ulp!(x)
+
+@universal upper_exact(x::Unum) = upper_exact!(copy(x))
+@universal lower_exact(x::Unum) = lower_exact!(copy(x))
+@universal upper_ulp(x::Unum) = upper_ulp!(copy(x))
+@universal lower_ulp(x::Unum) = lower_ulp!(copy(x))
 
 ################################################################################
 ## dumb exactitude functions.

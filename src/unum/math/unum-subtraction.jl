@@ -76,7 +76,7 @@ end
   _bexp += _b_subnormal * 1
 
   #calculate the shift between _aexp and _bexp.
-  _shift = to16(_aexp -_bexp)
+  _shift = to16(_aexp - _bexp)
 
   if _shift > max_fsize(FSS)
     #then go down one previous exact unum and decrement.
@@ -123,11 +123,12 @@ end
 @universal function diff_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #do a second is_inward check.  If this is_inward check fails, then the result
   #can have an opposite sign, because it's an ulp that goes wierdly.
-  is_inward(b, a) || throw(ArgumentError("currently unsupported"))
+  is_inward(b, a) || return diff_overlap(a, b, _aexp, _bexp)
   base_value = diff_exact(a, b, _aexp, _bexp)
+
   if is_exact(b)
     #then we do the simplest subtraction.
-    return base_value
+    return make_ulp!(coerce_sign!(base_value, a))
   elseif is_exact(a)
     #check to see if the subtraction will cross the exponential barrier
     if is_not_zero(base_value.fraction) && inward_ubit_crosses_zero(base_value.fraction, b.fsize)
@@ -137,6 +138,7 @@ end
       #use b instead of "resolve_as_utype" because they can't be contiguous unums.
       return is_positive(a) ? B(inner_value, outer_value) : B(outer_value, inner_value)
     end
+
     return subtract_ubit!(base_value, b.fsize)
   else
     #just do the subtraction, then output the expected result.
@@ -151,6 +153,8 @@ end
   #ensure that it's an ulp.
   diff_bound = is_ulp(b) ? outward_exact(b) : b
   inner_value = diff_exact(a, diff_bound, max_exponent(ESS), decode_exp(diff_bound))
+  #coerce sign and ulp to cover zero and exact cases.
+  make_ulp!(coerce_sign!(inner_value, a))
 
   #check for the dominant sign.  If a was positive make it (inner_value -> mmr)
   #if a was negative, make it (-mmr -> inner_value )
@@ -172,7 +176,24 @@ end
       frac_rsh!(x, 1)
     end
   end
-  return x
+  return make_ulp!(x)
+end
+
+doc"""
+  `Unums.diff_overlap(::Unum, ::Unum, ::Int64, ::Int64)`
+  calculates the ubound that results when two unums have overlapping ulps.
+"""
+@universal function diff_overlap(a::Unum, b::Unum, _aexp, _bexp)
+  #it's possible there is a smarter algorithm than this.  For now, though, it'll do.
+
+  #first, decide which ulp unum is dominant.
+  (d, e, _dexp, _eexp) = (a.fsize < b.fsize) ? (a, b, _aexp, _bexp) : (b, a, _bexp, _aexp)
+
+  d_shell = coerce_sign!(outward_exact(d), a)
+  e_shell = coerce_sign!(outward_exact(e), a)
+  top = inward_ulp!(make_exact!(diff_exact(d_shell, e, decode_exp(d_shell), _eexp)))
+  bot = inward_ulp!(additiveinverse!(make_exact!(diff_exact(e_shell, d, decode_exp(e_shell), _dexp))))
+  return is_positive(a) ? B(bot, top) : B(top, bot)
 end
 
 import Base.-

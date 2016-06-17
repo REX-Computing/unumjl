@@ -36,6 +36,7 @@ end
 @universal function Base.hash(a::Unum, h::UInt)
   #use the full_decode function to extract
   resolve_degenerates!(a)
+  is_zero(a) && is_negative(a) && (a.flags &= ~UNUM_SIGN_MASK)
 
   #now generate the hash.
   h = hash(a.esize << 32 | a.fsize << 16 | a.flags, h)

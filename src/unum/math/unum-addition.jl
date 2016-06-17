@@ -61,6 +61,8 @@ doc"""
   is_mmr(a) && return mmr(U, @signof a)
   is_mmr(b) && return mmr(U, @signof a)
 
+  (_aexp + _bexp > max_exponent(ESS)) && return mmr(U, @signof a)
+
   if (is_exact(a) && is_exact(b))
     sum_exact(a, b, _aexp, _bexp)
   else
@@ -111,9 +113,11 @@ end
   #if we wound up still subnormal, then re-subnormalize the exponent. (exp - 1)
   result.exponent &= f64 * (carry != 0)
 
+  #check to see if we're getting too big.
+  result.exponent > max_exponent(ESS) && return mmr(U, @signof a)
   #check to make sure we haven't done the inf hack, where the result exactly
   #equals inf.
-  is_inf(result) && return inf(U)
+  is_inf(result) && return mmr(U, @signof a)
 
   return result
 end

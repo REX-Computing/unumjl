@@ -8,12 +8,11 @@ include("./test-infrastructure.jl")
 include("./test-operations.jl")
 include("./test-warlpiri.jl")
 
-
 #=
 W = Unum{0,0}
 
-x = W(-2)
+x = sss(W)
 y = sss(W)
 
-println(x + y)
+println(x - y)
 =#
