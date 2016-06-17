@@ -130,9 +130,9 @@ bigger_array = Unums.ArrayNum{7}([z64, z64, z64, z64])
 ################################################################################
 ## Int64 ubit contraction tests.
 
-@test Unums.contract_upper_unum(0xFFFF_0000_0000_0000, 0x000F) == 0x0000
-@test Unums.contract_upper_unum(0xFFFF_0000_0000_0000, 0x0010) == 0x0000
-@test Unums.contract_upper_unum(0xFFFF_0000_0000_0000, 0x0011) == 0x0011
+@test Unums.contract_outer_fsize(0xFFFF_0000_0000_0000, 0x000F) == 0x0000
+@test Unums.contract_outer_fsize(0xFFFF_0000_0000_0000, 0x0010) == 0x0000
+@test Unums.contract_outer_fsize(0xFFFF_0000_0000_0000, 0x0011) == 0x0011
 
 
 ################################################################################

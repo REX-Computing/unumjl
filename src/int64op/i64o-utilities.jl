@@ -110,15 +110,15 @@ __minimum_data_width(n::UInt64) = (res = max(z16, 0x003F - ctz(n)); res == 0xFFF
 Base.hash{FSS}(n::ArrayNum{FSS}, h::UInt) = hash(n.a, h)
 
 
-function contract_upper_unum(n::UInt64, s::UInt16)
+function contract_outer_fsize(n::UInt64, s::UInt16)
   (0x0040 - ctz(~n & mask_top(s - o16))) * (s != 0)
 end
 
-function contract_lower_unum(n::UInt64, s::UInt16)
+function contract_inner_fsize(n::UInt64, s::UInt16)
   (0x0040 - ctz(n & mask_top(s - o16))) * (s != 0)
 end
 
-function contract_upper_unum{FSS}(n::ArrayNum{FSS}, s::UInt16)
+function contract_outer_fsize{FSS}(n::ArrayNum{FSS}, s::UInt16)
   middle_cell = div(s, 0x0040) + o16
   middle_size = s % 0x0040
 
@@ -137,5 +137,6 @@ function contract_upper_unum{FSS}(n::ArrayNum{FSS}, s::UInt16)
   s + terminal_zero_delta
 end
 
-function contract_lower_unum{FSS}(n::ArrayNum{FSS}, s::UInt16)
+function contract_inner_fsize{FSS}(n::ArrayNum{FSS}, s::UInt16)
+  throw(ArgumentError("not implemented yet"))
 end

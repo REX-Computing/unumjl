@@ -141,7 +141,7 @@ end
   else
     #just do the subtraction, then output the expected result.
     inner_value = subtract_ubit!(copy(base_value), b.fsize)         #set me here.
-    is_positive(a) ? resolve_as_utype(inner_value, base_value) : resolve_as_utype(base_value, inner_value)
+    is_positive(a) ? resolve_as_utype!(inner_value, base_value) : resolve_as_utype!(base_value, inner_value)
   end
 end
 

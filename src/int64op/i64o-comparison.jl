@@ -189,3 +189,17 @@ function =={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   end
   return true
 end
+
+
+function same_till_fsize(n1::UInt64, n2::UInt64, s::UInt16)
+  fsize_mask = mask_top(s)
+  (n1 & fsize_mask) == (n2 & fsize_mask)
+end
+function same_till_fsize{FSS}(n1::ArrayNum{FSS}, n2::ArrayNum{FSS}, s::UInt16)
+  middle_cell = div(s, 0x0040) + o16
+  middle_size = s % 0x0040
+  for idx = 1:middle_cell - 1
+    @inbounds (n1.a[idx] != n2.a[idx]) && return false
+  end
+  @inbounds return same_till_fsize(n1.a[middle_cell], n2.a[middle_cell], middle_size)
+end

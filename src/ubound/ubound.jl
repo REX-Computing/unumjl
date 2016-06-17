@@ -3,4 +3,5 @@
 #type definition itself, that must be forwarded separately.)
 
 include("ubound-comparison.jl")
+include("ubound-resolve.jl")
 include("ubound-hlayer.jl")
