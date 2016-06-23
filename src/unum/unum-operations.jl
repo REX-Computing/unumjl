@@ -107,6 +107,8 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
 end
 =#
 
+
+
 doc"""
   `Unums.resolve_degenerates!(::Unum)` checks for degeneracy in unum values,
   and resolves to "canonical" form - which means all nonzero subnormals are
@@ -126,8 +128,8 @@ doc"""
   leftshift = clz(x.fraction) + o16
   #next, shift the shadow fraction to the left appropriately.
   frac_lsh!(x, leftshift)
-  true_exponent -= leftshift - o16
   exact_trim!(x)
+  true_exponent -= leftshift - o16
   (x.esize, x.exponent) = encode_exp(true_exponent)
 
   return x

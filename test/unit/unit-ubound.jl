@@ -1,7 +1,7 @@
 #unit-ubound.jl
 #test that ubound constructors work
 
-@devmode_on
+@devmode_on begin
 
 #check to see that the safe ubound constructor fails on various invalid constructions.
 @test_throws ArgumentError Ubound{0,0}(one(Unum{0,0}), zero(Unum{0,0}))
@@ -17,6 +17,7 @@ wtwo = Unum{0,0}(o64, z64, z16, z16, z16)
 wnsome = Unum{0,0}(UInt64(0), UInt64(0), UInt16(3), z16, z16)
 @test_throws ArgumentError Ubound{0,0}(Ubound{0,0}(wnsome, zero(Unum{0,0})), Ubound{0,0}(neg_one(Unum{0,0}), wtwo))
 
+end
 ################################################################################
 ## open-ubound-helper:  A short function which returns the open interval version
 ## of a bounding unum for a ubound.
@@ -65,8 +66,3 @@ println(olu_a)
 println(Unums.ubound_resolve(Ubound(olu_a, olu_b)))
 @test open_ubound(olu_a, olu_b) == olu_b
 =#
-
-#testing throwing the development-safety flag.
-@devmode_off
-
-@restore_devmode

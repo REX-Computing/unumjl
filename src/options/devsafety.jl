@@ -1,44 +1,57 @@
 #devsafety.jl - options and related macros that deal with developer mode safety
 #checks.
 
+const __LOADTIME_DEVMODE = options[:devmode]
+
 doc"""
-  `@devmode_on` initiates a section of code where developer checking is guaranteed to
-  "on", caching the value of options[:devmode].  The value is restored using the
-  macro `@restore_devmode`.
+  `@devmode_on` initiates a section of code where developer checking is guaranteed to be "on".
+  This code is not executed if developer mode was off at loadtime.
 """
-macro devmode_on()
-  quote
-    haskey(options, :devcache) || (options[:devcache] = options[:devmode])
-    options[:devmode] = true
+macro devmode_on(expr)
+  if __LOADTIME_DEVMODE
+
+    #add this to the front
+    unshift!(expr.args, quote
+      cache = Unums.options[:devmode]
+      Unums.options[:devmode] = true
+    end)
+
+    #add this to the end
+    push!(expr.args, quote
+      Unums.options[:devmode] = cache
+    end)
+
+    esc(expr)
+  else
+    :()
   end
 end
 
 doc"""
   `@devmode_off` initiates a section of code where developer checking is guaranteed to
-  "off", caching the value of options[:devmode].  The value is restored using the
-  macro `@restore_devmode`.
+  "off".
 """
-macro devmode_off()
-  quote
-    haskey(options, :devcache) || (options[:devcache] = options[:devmode])
-    options[:devmode] = false
+macro devmode_off(expr)
+  if __LOADTIME_DEVMODE
+
+    #add this to the front
+    unshift!(expr.args, quote
+      cache = Unums.options[:devmode]
+      Unums.options[:devmode] = false
+    end)
+
+    #add this to the end
+    push!(expr.args, quote
+      Unums.options[:devmode] = cache
+    end)
+
+    esc(expr)
+  else
+    :()
   end
 end
 
-doc"""
-`@restore_devmode` returns the state of the options[:devmode] variable, to
-what it was before it was cached.
-"""
-macro restore_devmode()
-  quote
-    if haskey(options, :devcache)
-      options[:devmode] = options[:devcache]
-      delete!(options,:devcache)
-    end
-  end
-end
-
-export @devmode_on, @devmode_off, @restore_devmode
+export @devmode_on, @devmode_off
 
 ################################################################################
 # @dev_check macro which uses reflection to automatically execute a function
@@ -148,5 +161,16 @@ macro dev_check(expr)
     return esc(expr)
   else
     ArgumentError("checkable macro must precede a function or type definition")
+  end
+end
+
+doc"""
+  `Unums.@devmode(expr)` makes the expression disappear if we're not in developer mode.
+"""
+macro devmode(expr)
+  if options[:devmode]
+    expr
+  else
+    :()
   end
 end

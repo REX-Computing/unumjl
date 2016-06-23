@@ -146,66 +146,130 @@ doc"""
   @code :(return carry - borrowed * o64)
 end
 
-#=
+doc"""
+  `Unums.i64mul(a::UInt64, b::UInt64)` returns the 64-bit value that
+  is the top 32 bits of both numbers.
+"""
+function i64mul(a::UInt64, b::UInt64)
+  UInt64(UInt128(a) * UInt128(b) >> 64)
+end
 
-@gen_code function __prev_val!{FSS}(a::ArrayNum{FSS})
+doc"""
+  `Unums.i64mul_extended(a::UInt64, b::UInt64)` returns the 128-bit value
+  that is the product of both 64-bit numbers.  This is useful for the FSS = 6 case,
+  as well as for breaking apart vaules in the higher FSS case.
+"""
+function i64mul_extended(a::UInt64, b::UInt64)
+  UInt128(a) * UInt128(b)
+end
+
+#these two functions get inlined by handling a quad load as the individual register.
+top_part(n::UInt128) = UInt64((n & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) >> 64)
+bottom_part(n::UInt128) = UInt64(n & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF)
+
+#=
+how extended multiplication works.
+
+1) chunk into 64-bit words (already done)
+2) multiply as 128-bit numbers
+3) stack 128-bit numbers
+
+EG.  2-word x 2-word multiply
+
+A1 A2
+B1 B2
+      [A2 B2] * CALCULATE TOP (IDX == 4 == N + 2)
+   [A1 B2] * CALCULATE FULL, USE TOP (IDX == 5 == N + 1)
+   [A2 B1] * CALCULATE FULL, USE TOP
+[A1 B1]
+[R1 R2]
+
+4-word x 4-word multiply
+
+[A1 A2 A3 A4]
+[B1 B2 B3 B4]
+
+                  [A4 B4]
+               [A3 B4]
+               [A4 B3]
+            [A2 B4] * CALCULATE TOP (IDX == 6 == N+2)
+            [A3 B3] * CALCULATE TOP
+            [A4 B2] * CALCULATE TOP
+         [A1 B4] * CALCULATE FULL, USE TOP (IDX == 5 == N + 2)
+         [A2 B3] * CALCULATE FULL, USE TOP
+         [A3 B2] * CALCULATE FULL, USE TOP
+         [A4 B1] * CALCULATE FULL, USE TOP
+      [A1 B3]
+      [A2 B2]
+      [A3 B1]
+   [A1 B2]
+   [A2 B1]
+[A1 B1]
+[R1 R2 R3 R4]
+=#
+
+doc"""
+ `Unums.i64mul!(::ArrayNum, ::ArrayNum)` multiplies two arraynums of equal FSS.
+ The result will be the most significant digits of the resulting multiplication.
+ Algorithm used is the most basic triangular multiplication, omitting as many
+ 64-bit integer multiplications as is reasonable to achieve the result (~half)
+
+ This function unrolls itself by being a generated function.
+"""
+@gen_code function i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   l = __cell_length(FSS)
+  #set up some internal function variables.
   @code quote
-    borrow::Bool = true
+    prev_sum::UInt128 = zero(UInt128)
+    accum_sum::UInt128 = zero(UInt128)
+    carry::UInt64 = zero(UInt64)
   end
-  for (idx = l:-1:1)
+
+  #PHASE 1.  CALCULATE top only...  Note the A indices always start at 2
+  idx_sum = l + 2
+  for idx = 2:l
+    jdx = idx_sum - idx #calculate the index for the b arraynum.
+    @code :(@inbounds accum_sum += i64mul(a.a[$idx], b.a[$jdx]))
+  end
+
+  #PHASE 2.  CALCULATE FULL, USE TOP
+  idx_sum = l + 1
+  for idx = 1:l
+    jdx = idx_sum - idx
     @code quote
-      a.a[$l] -= borrow * o64
-      borrow &= (a.a[$l] == f64)
+      prev_sum = accum_sum  #cache the previous value
+      @inbounds accum_sum += i64mul_extended(a.a[$idx], b.a[$jdx])
+      carry += (prev_sum < accum_sum) * o64
     end
   end
-  @code :(a)
+
+  #PHASE 3.  CALCULATE FULL, USE ALL.
+  for idx_sum = l:-1:2
+    #at the beginning of this group, we need to shift everything over 64 bits,
+    #then add in the carry value, then clear it.
+    @code quote
+      accum_sum >>= 64
+      accum_sum += (UInt128(carry) << 64)
+      carry = z64
+    end
+    for idx = 1:(idx_sum - 1)
+      jdx = idx_sum - idx
+      @code quote
+        prev_sum = accum_sum  #cache the previous value
+        @inbounds accum_sum += i64mul_extended(a.a[$idx], b.a[$jdx])
+        carry += (prev_sum < accum_sum) * o64
+      end
+    end
+    #at the end of each loop, be sure to copy over the lower 64 bits to our
+    #destination array.  Magically, we won't need A[idx_sum] anymore, so this is a
+    #good place to stash the result.
+    @code :(@inbounds a.a[$idx_sum] = bottom_part(accum_sum))
+  end
+
+  #PHASE 4.  Transfer the last part of the accumulated sum to the first index in
+  #in the arraynum.
+  @code quote
+    @inbounds a.a[1] = top_part(accum_sum)
+    return a
+  end
 end
-
-doc"""
-`__chunk_mult_small(::UInt64, ::UInt64)` performs a left-aligned multiplication
-on two 64-bit integers, discarding the rightmost 32 bits of the starting value.
-this is useful for multiplication of unums with FSS < 6.  The result will be
-left-shifted, and all bits will be passed on and *not* masked out - the remaining
-bits at the bottom of the number should be used to analyze for whether or not
-the result is an ulp.
-"""
-function __chunk_mult_small(a::UInt64, b::UInt64)
-  (a >> 32) * (b >> 32)
-end
-
-doc"""
-`__chunk_mult(::UInt64, ::UInt64)` performs a left-aligned multiplication on two
-64-bit integers by breaking them down into 32-bit integers and doing standard
-'two-digit' multiplication on these.  The right-most digits of the result are
-discarded.  The ordered pair (result, trash) is returned, where trash contains
-trailing digits that might be useful for a fused-multiply-add.
-"""
-#                AH       AL
-#             *  BH       BL
-#             ---------------
-#                     (AL BL)
-#                  (AH BL)
-#                  (AL BH)
-#               (AH BH)
-#             ---------------
-#               RESULT TRASH
-#
-function __chunk_mult(a::UInt64, b::UInt64)
-  ah = a >> 32
-  bh = b >> 32
-  al = a & 0x0000_0000_FFFF_FFFF
-  bl = b & 0x0000_0000_FFFF_FFFF
-
-  #this formula recapitulates the diagram shown above
-  result = ((al * bl >> 32) + (ah * bl) + (al * bh)) >> 32 + (ah * bh)
-  trash = (al * bl) + ((ah * bl) << 32) + ((al * bh) << 32)
-
-  (result, trash)
-end
-
-# chunk_mult handles simply the chunked multiply of two superints
-@gen_code function __chunk_mult!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, c::ArrayNum{FSS})
-end
-
-=#

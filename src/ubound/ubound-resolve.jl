@@ -21,7 +21,6 @@ doc"""
   numbers.
 """
 @universal function resolve_as_utype!(lower::Unum, upper::Unum)
-  @check_resolve
   @ensure_ulp(lower)
   @ensure_ulp(upper)
 

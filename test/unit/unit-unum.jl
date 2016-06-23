@@ -69,7 +69,7 @@ easy_warlpiri_two = unum(Unum{0,0}, 1, z64, z16)
 @test easy_warlpiri_two.fsize == z16
 @test easy_warlpiri_two.flags == z16
 
-@devmode_on
+@devmode_on begin
   #test to see that these unsafe constructors fail.
   @test_throws ArgumentError Unums.UnumSmall{0,0}(      z64, z64, z16, z16, o16)
   @test_throws ArgumentError Unums.UnumSmall{0,0}(      z64, z64, z16, o16, z16)
@@ -81,8 +81,9 @@ easy_warlpiri_two = unum(Unum{0,0}, 1, z64, z16)
   @test_throws ArgumentError Unums.UnumLarge{4,8}(      z64, Unums.ArrayNum{8}([z64, z64, z64, z64]), z16, z16, UInt16(256))
   @test_throws ArgumentError Unums.UnumLarge{4,8}(      z64, Unums.ArrayNum{8}([z64, z64, z64, z64]), z16, UInt16(16), z16)
   @test_throws ArgumentError Unums.UnumLarge{4,8}(UInt64(2), Unums.ArrayNum{8}([z64, z64, z64, z64]), z16, z16, z16)
+end
 
-@devmode_off
+@devmode_off begin
   #unsafe unums can be created using the unsafe constructor.
   unsafe_fsize = Unums.UnumSmall{0,0}(z64, z64, z16, z16, o16)
   @test unsafe_fsize.fsize == o16
@@ -115,5 +116,4 @@ easy_warlpiri_two = unum(Unum{0,0}, 1, z64, z16)
   @test_throws MethodError   unum(unsafe_fraction)
   @test_throws ArgumentError unum(unsafe_exponent)
   @test_throws MethodError   unum(unsafe_type)
-
-@restore_devmode
+end

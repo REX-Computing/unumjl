@@ -192,15 +192,16 @@ export sss, sss!, pos_sss, neg_sss, pos_sss!, neg_sss!
   return x
 end
 
-function small_exact{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask = z16)
-  x = zero(Unum{ESS,FSS})
-  __set_small_exact!(x, signmask)
-end
-small_exact!{ESS,FSS}(x::Unum{ESS,FSS}, flags::UInt16) = __set_small_exact!(x, flags)
+@universal small_exact!(x::Unum, flags::UInt16 = z16) = __set_small_exact!(x, flags)
+
+small_exact{ESS,FSS}(T::Type{Unum{ESS,FSS}}, signmask = z16) = (x = zero(T); __set_small_exact!(x, signmask))
+@universal small_exact(T::Type{Unum}, signmask = z16) = (x = zero(U); __set_small_exact!(x, signmask))
 
 pos_small_exact{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = small_exact(T)
 neg_small_exact{ESS,FSS}(T::Type{Unum{ESS,FSS}}) = small_exact(T, UNUM_SIGN_MASK)
+@universal pos_small_exact(T::Type{Unum}) = small_exact(T)
+@universal neg_small_exact(T::Type{Unum}) = small_exact(T, UNUM_SIGN_MASK)
 
-pos_small_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = small_exact!(x)
-neg_small_exact!{ESS,FSS}(x::Unum{ESS,FSS}) = small_exact!(x, UNUM_SIGN_MASK)
+@universal pos_small_exact!(x::Unum) = small_exact!(x)
+@universal neg_small_exact!(x::Unum) = small_exact!(x, UNUM_SIGN_MASK)
 export small_exact, small_exact!, pos_small_exact, neg_small_exact, pos_small_exact!, neg_small_exact!

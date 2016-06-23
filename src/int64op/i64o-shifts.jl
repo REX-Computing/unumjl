@@ -59,7 +59,7 @@ function rsh!{FSS}(a::ArrayNum{FSS}, b::UInt16)
   shift::UInt16 = b & 0x003F
   shift == 0 && @goto cellmove          #skip it, if it's more efficient.
   c_shift::UInt16 = 0x0040 - shift
-  
+
   #go ahead and shift all blocks.
   for idx = l:-1:2
     @inbounds a.a[idx] = (a.a[idx] >> shift) | a.a[idx - 1] << c_shift
@@ -80,30 +80,51 @@ function rsh!{FSS}(a::ArrayNum{FSS}, b::UInt16)
 end
 
 @fracproc rsh shft
-#=
+
 ################################################################################
-## a common operation is to rightshift with an underflow check.  Note that this
-## doesn't check at the FSS boundaries, and only checks for underflows at the
-## ends of integers or integer arrays.
-function __rightshift_with_underflow_check(f::UInt64, s::Int64, flags::UInt16)
-  #first generate the mask.
-  mask::UInt64 = (o64 << s) - o64
-  ((f & mask) != z64) && (flags |= UNUM_UBIT_MASK)
-  f >>= s
-  (f,  flags)
+## rightshift with underflow check.
+
+@generated function rsh_underflow_check{FSS}(num::UInt64, shift::UInt16, ::Type{Val{FSS}})
+  mfsize = Unums.max_fsize(FSS)
+  quote
+    mask = ((shift > $mfsize) * f64) | mask_bot($mfsize - shift)
+    ubit_needed = ((num & mask) != z64) * UNUM_UBIT_MASK
+    num = rsh(num, shift)
+    (num, ubit_needed)
+  end
 end
 
-function __rightshift_with_underflow_check!{FSS}(f::ArrayNum{FSS}, s::Int64, flags::UInt16)
-  #generate the mask holder.
-  mask = zero(ArrayNum{FSS})
-  #actually generate the mask.
-  (s > max_fsize(FSS)) && (s == max_fsize(FSS))
-  mask_bot!(mask, UInt16(max_fsize(FSS) - s))  #double check that this is correct.
-  #compare the mask with the target.
-  fill_mask!(mask, f)
-  is_not_zero(mask) && (flags |= UNUM_UBIT_MASK)
-  #right shift.
-  rsh!(f, s)
-  (f, flags)
+@generated function underflow_check{FSS}(num::ArrayNum{FSS}, shift::UInt16)
+  l = __cell_length(FSS)
+  mfsize = Unums.max_fsize(FSS)
+  quote
+    shift = (shift > $mfsize) ? ($mfsize + o16) : shift
+    middle_cell = $l - div(shift, 0x0040)
+    middle_mask = 0x0040 - shift % 0x0040
+    for idx = __cell_length(FSS):-1:(middle_cell + 1)
+      @inbounds (num.a[idx] == 0) || return UNUM_UBIT_MASK
+    end
+    return @inbounds ((num.a[middle_cell] & mask_bot(middle_mask)) != z64) * UNUM_UBIT_MASK
+  end
 end
-=#
+
+function rsh_underflow_check!{FSS}(num::ArrayNum{FSS}, shift::UInt16)
+  ubit_needed = underflow_check(num, shift)
+  rsh!(num, shift)
+  ubit_needed
+end
+
+################################################################################
+## frac versions of this function
+
+function frac_rsh_underflow_check!{ESS, FSS}(x::UnumSmall{ESS,FSS}, shift::UInt16)
+  (x.fraction, ubit_needed) = rsh_underflow_check(x.fraction, shift, Val{FSS})
+  x.flags |= ubit_needed
+  return x
+end
+
+function frac_rsh_underflow_check!{ESS, FSS}(x::UnumLarge{ESS,FSS}, shift::UInt16)
+  ubit_needed = rsh_underflow_check!(x.fraction, shift)
+  x.flags |= ubit_needed
+  return x
+end

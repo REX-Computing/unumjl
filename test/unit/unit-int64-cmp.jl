@@ -10,13 +10,13 @@ AN7 = Unums.ArrayNum{7}
 @test AN7([nobits, allbits]) < AN7([0x0000_0000_0000_0001, nobits])
 
 #test developer safety on the cmplusubit_ordered function.
-@devmode_on
+@devmode_on begin
   #if the two fsizes are in the same fsize region
   @test_throws ArgumentError Unums.cmpplusubit_ordered(zero(AN7), zero(AN7), z16, o16) #problem because they're in the same cell.
   @test_throws ArgumentError Unums.cmpplusubit_ordered(zero(AN7), zero(AN7), 0x0041, z16) #problem because cell b is before cell a.
   @test_throws ArgumentError Unums.cmpplusubit_matched(zero(AN7), zero(AN7), 0x0041, z16)
   @test_throws ArgumentError Unums.cmpplusubit_matched(zero(AN7), zero(AN7), z16, 0x0041)
-@restore_devmode
+end
 
 #=
 function __check_cmpplusubit_ordered(FSS, a, b, a_fsize::UInt16, b_fsize::UInt16)

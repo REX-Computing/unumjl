@@ -196,14 +196,6 @@ doc"""
   return is_positive(a) ? B(bot, top) : B(top, bot)
 end
 
-import Base.-
-#binary subtraction creates a temoporary g-layer number to be destroyed immediately.
-function -{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
-  temp = zero(Gnum{ESS,FSS})
-  sub!(x, y, temp)
-  #return the result as the appropriate data type.
-  emit_data(temp)
-end
 #unary subtraction creates a new unum and flips it.
 function -{ESS,FSS}(x::Unum{ESS,FSS})
   additiveinverse!(copy(x))

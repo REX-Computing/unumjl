@@ -14,8 +14,7 @@ nobits  = UInt64(0x0000_0000_0000_0000)
 
 #test developer safety being disabled on ArrayNum type
 
-@devmode_on
-
+@devmode_on begin
   #ArrayNums of size < 7 are disallowed.
   @test_throws ArgumentError Unums.ArrayNum{0}([z64])
   @test_throws ArgumentError Unums.ArrayNum{1}([z64])
@@ -28,15 +27,15 @@ nobits  = UInt64(0x0000_0000_0000_0000)
   #ArrayNums must have the minimum number of elements.
   @test_throws ArgumentError Unums.ArrayNum{7}([z64])
   @test_throws ArgumentError Unums.ArrayNum{8}([z64, z64])
+end
 
-@devmode_off
+@devmode_off begin
 
   #these are OK now.
   Unums.ArrayNum{0}([z64])
   Unums.ArrayNum{6}([z64])
   Unums.ArrayNum{7}([z64])
-
-@restore_devmode
+end
 
 
 #but it's ok if we pass an ArrayNum an array with more elements than necessary.

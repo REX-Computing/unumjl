@@ -114,8 +114,8 @@ for a given ESS.  Passing a UInt16 instead to `max_biased_exponent(::UInt16)`
 signals that your are passing an esize value, instead of a ESS value.  Note that
 there is no correspoding min_biased_exponent, because that is always 0.
 """
-max_biased_exponent(ESS::Int64) = UInt64((1 << (1 << ESS))) - one(UInt64)
-max_biased_exponent(esize::UInt16) = UInt64(1 << (esize + 1)) - one(UInt64)
+max_biased_exponent(ESS::Int64) = (o64 << (1 << ESS)) - o64
+max_biased_exponent(esize::UInt16) = (o64 << (esize + 1)) - o64
 
 doc"""
 `Unums.max_exponent(::Int64)` retrieves the maximum possible unbiased exponent for a given ESS.
