@@ -114,7 +114,7 @@ end
   result.exponent &= f64 * (carry != 0)
 
   #check to see if we're getting too big.
-  result.exponent > max_exponent(ESS) && return mmr(U, @signof a)
+  (result.exponent > max_biased_exponent(ESS)) && return mmr(U, @signof a)
   #check to make sure we haven't done the inf hack, where the result exactly
   #equals inf.
   is_inf(result) && return mmr(U, @signof a)

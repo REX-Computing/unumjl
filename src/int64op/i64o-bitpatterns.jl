@@ -66,6 +66,13 @@ function is_top{FSS}(n::ArrayNum{FSS})
 end
 
 doc"""
+`top_bit` outputs whether or not the top bit is one.
+"""
+top_bit(a::UInt64) = (a & t64) != z64
+top_bit{FSS}(a::ArrayNum{FSS}) = @inbounds top_bit(a.a[1])
+@universal frac_top_bit(a::Unum) = top_bit(a.fraction)
+
+doc"""
 `is_not_top` outputs if the most significant bit of an UInt64 or an
 `ArrayNum` isn't one, or if any of the other bits are one.  Used for checking
 the subnormal one at the Unum level.

@@ -6,10 +6,12 @@ doc"""
   multiplies fraction into the the fraction value of unum.
 """
 function frac_mul!{ESS,FSS}(a::UnumSmall{ESS,FSS}, multiplier::UInt64)
-  a.fraction = i64mul(a.fraction, multiplier)
+  (carry, a.fraction, ubit) = i64mul(a.fraction, multiplier, Val{FSS})
+  return carry
 end
 function frac_mul!{ESS,FSS}(a::UnumLarge{ESS,FSS}, multiplier::ArrayNum{FSS})
-  i64mul!(a.fraction, multiplier)
+  carry = i64mul!(a.fraction, multiplier)
+  return carry
 end
 
 doc"""
@@ -69,9 +71,23 @@ end
     #next, shift the shadow fraction to the left appropriately.
     frac_lsh!(result, leftshift)
     exponent -= leftshift
+
+    #this code is only necessary when ESS == 0, because you can have subnormal 1's
+    #which don't exponent-degrade.
+    if (ESS == 0)
+      if _bsubnormal
+        multiplicand = copy(b)
+        #normalize b (regardless of exponent)
+        leftshift = clz(multiplicand.fraction) + o16
+        #next, shift the shadow fraction to the left appropriately.
+        frac_lsh!(multiplicand, leftshift)
+        exponent -= leftshift
+      end
+    end
   else
     result = copy(b)
     multiplicand = a
+
 
     if _bsubnormal
       #normalize b (regardless of exponent)
@@ -91,8 +107,11 @@ end
 
   if (exponent < min_exponent(ESS))
     #in the case that we need to make this subnormal.
-    right_shift = exponent - min_exponent(ESS)
-    rightshift_with_underflow_check!(result, right_shift)
+    right_shift = to16(min_exponent(ESS) - exponent)
+    frac_rsh_underflow_check!(result, right_shift)
+    frac_set_bit!(result, right_shift)
+    result.esize = max_esize(ESS)
+    result.exponent = z64
   end
 
   return result
@@ -101,16 +120,53 @@ end
 @universal function mul_inexact(a::Unum, b::Unum, result_sign::UInt16)
   is_mmr(a) && (return mmr_mult(b, result_sign))
   is_mmr(b) && (return mmr_mult(a, result_sign))
+
   is_sss(a) && (return sss_mult(b, result_sign))
   is_sss(b) && (return sss_mult(a, result_sign))
 
-  return nan(U)
+  inner_result = mul_exact(a, b, result_sign)
+  make_ulp!(inner_result)
+  result_exponent = decode_exp(inner_result)
+
+  if is_exact(a)
+    outer_result = sum_exact(inner_result, a, result_exponent, result_exponent - b.fsize - 1)
+  elseif is_exact(b)
+    outer_result = sum_exact(inner_result, b, result_exponent, result_exponent - a.fsize - 1)
+  else
+    (_precise, _fuzzy) = (a.fsize < b.fsize) ? (b , a) : (a, b)
+
+    outer_result = copy(_precise)
+    shift = _precise.fsize - _fuzzy.fsize
+    frac_rsh!(outer_result, shift)
+    (issubnormal(_precise)) || frac_set_bit!(outer_result, shift)
+    #add the two fractionals parts together, and set the carry.
+    carry = frac_add!((!issubnormal(_precise)) * o64, outer_result, _fuzzy.fraction)
+    frac_rsh!(outer_result, _fuzzy.fsize)
+
+    ((carry & o64) != z64) && frac_set_bit!(outer_result, shift)
+    ((carry & 0x0000_0000_0000_0002) != z64) && frac_set_bit!(outer_result, (shift - o16))
+    carry = frac_add!((!issubnormal(outer_result)) * o64, outer_result, inner_result.fraction)
+    resolve_carry!(carry, outer_result, result_exponent)
+
+    #if we wound up still subnormal, then re-subnormalize the exponent. (exp - 1)
+    outer_result.exponent &= f64 * (carry != 0)
+
+    #check to see if we're getting too big.
+    (outer_result.exponent > max_biased_exponent(ESS)) && mmr!(outer_result, result_sign)
+    #check to make sure we haven't done the inf hack, where the result exactly
+    #equals inf.
+    is_inf(outer_result) && mmr!(outer_result, result_sign)
+  end
+
+  return (result_sign == z16) ? resolve_as_utype!(outer_result, inner_result) : resolve_as_utype!(inner_result, outer_result)
 end
 
+
 @universal function mmr_mult(a::Unum, result_sign::UInt16)
-  if decode_exp(a) >= 0
+  if mag_greater_than_one(a)
     return mmr(U, result_sign)
   else
+    is_sss(a) && return (result_sign == 0) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
     return nan(U)
   end
 end

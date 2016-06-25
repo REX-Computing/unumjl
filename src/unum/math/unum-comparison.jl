@@ -150,3 +150,11 @@ end
   (is_ulp(a) != is_negative(a)) && return b
   return a
 end
+
+doc"""
+  `Unums.mag_greater_than_one(a::Unum)`
+  outputs true if the magnitude of the passed unum is greater than one.
+"""
+@universal mag_greater_than_one(a::Unum) = decode_exp(a) >= 0
+mag_greater_than_one{FSS}(a::UnumSmall{0,FSS}) = (a.exponent != z64) | frac_top_bit(a)
+mag_greater_than_one{FSS}(a::UnumLarge{0,FSS}) = (a.exponent != z64) | frac_top_bit(a)

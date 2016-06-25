@@ -154,6 +154,35 @@ function i64mul(a::UInt64, b::UInt64)
   UInt64(UInt128(a) * UInt128(b) >> 64)
 end
 
+@generated function i64mul{FSS}(a::UInt64, b::UInt64, ::Type{Val{FSS}})
+  if FSS < 6
+    tmask = mask_top(FSS)
+    bmask = mask_bot(FSS)
+    quote
+      carry = z64
+      old_res = i64mul(a, b)
+      new_res = old_res + a
+      carry += (new_res < old_res) * o64
+      old_res = new_res
+      new_res = old_res + b
+      carry += (new_res < old_res) * o64
+      return (carry, (new_res & $tmask), (new_res & $bmask != 0) * UNUM_UBIT_MASK)
+    end
+  else
+    quote
+      res = i64mul_extended(a, b)
+      old_res = top_part(res)
+      ubit = (bottom_part(res) != z64) * UNUM_UBIT_MASK
+      new_res = old_res + a
+      carry += (new_res < old_res) * o64
+      old_res = new_res
+      new_res = old_res + b
+      carry += (new_res < old_res) * o64
+      return (carry, new_res, ubit)
+    end
+  end
+end
+
 doc"""
   `Unums.i64mul_extended(a::UInt64, b::UInt64)` returns the 128-bit value
   that is the product of both 64-bit numbers.  This is useful for the FSS = 6 case,
@@ -202,9 +231,17 @@ B1 B2
       [A1 B3]
       [A2 B2]
       [A3 B1]
+         [B4] * ADD ADDITIVE PART
+         [A4] * ADD ADDITIVE PART
    [A1 B2]
    [A2 B1]
+      [B3] * ADD ADDITIVE PART
+      [A3] * ADD ADDITIVE PART
 [A1 B1]
+   [B2] * ADD ADDITIVE PART
+   [A2] * ADD ADDITIVE PART
+[B1] * ADD ADDITIVE PART
+[A1] * ADD ADDITIVE PART
 [R1 R2 R3 R4]
 =#
 
@@ -260,6 +297,15 @@ doc"""
         carry += (prev_sum < accum_sum) * o64
       end
     end
+    #PHASE 3.5 ADDITIVE PARTS
+    @code quote
+      prev_sum = accum_sum
+      @inbounds accum_sum += a.a[$idx_sum]
+      carry += (prev_sum < accum_sum) * o64
+      prev_sum = accum_sum
+      @inbounds accum_sum += b.a[$idx_sum]
+      carry += (prev_sum < accum_sum) * o64
+    end
     #at the end of each loop, be sure to copy over the lower 64 bits to our
     #destination array.  Magically, we won't need A[idx_sum] anymore, so this is a
     #good place to stash the result.
@@ -269,7 +315,14 @@ doc"""
   #PHASE 4.  Transfer the last part of the accumulated sum to the first index in
   #in the arraynum.
   @code quote
-    @inbounds a.a[1] = top_part(accum_sum)
-    return a
+    carry = o64
+    old_top = new_top = top_part(accum_sum)
+    @inbounds new_top += a.a[1]
+    carry += (old_top < new_top) * o64
+    old_top = new_top
+    @inbounds new_top += b.a[1]
+    carry += (old_top < new_top) * o64
+    @inbounds a.a[1] = new_top
+    return (carry, inbounds, UNUM_UBIT_MASK)
   end
 end
