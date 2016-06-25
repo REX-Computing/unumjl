@@ -65,6 +65,7 @@ end
   if _asubnormal
     result = copy(a)
     multiplicand = b
+    is_ulp(b) && make_ulp!(result)
 
     #normalize a (regardless of exponent)
     leftshift = clz(result.fraction) + o16
@@ -87,7 +88,7 @@ end
   else
     result = copy(b)
     multiplicand = a
-
+    is_ulp(a) && make_ulp!(result)
 
     if _bsubnormal
       #normalize b (regardless of exponent)
@@ -113,6 +114,8 @@ end
     result.esize = max_esize(ESS)
     result.exponent = z64
   end
+
+  is_exact(result) && exact_trim!(result)
 
   return coerce_sign!(result, result_sign)
 end

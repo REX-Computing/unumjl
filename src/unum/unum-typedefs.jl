@@ -165,6 +165,11 @@ end
 
 export unum
 
+#a blank constructor uses the default environment setting
+function Base.call(::Type{Unum}, args...)
+  environment()(args...)
+end
+
 
 #masks for the unum flags variable.
 const UNUM_SIGN_MASK = UInt16(0x0002)

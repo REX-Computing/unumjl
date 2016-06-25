@@ -170,6 +170,7 @@ end
     end
   else
     quote
+      carry = z64
       res = i64mul_extended(a, b)
       old_res = top_part(res)
       ubit = (bottom_part(res) != z64) * UNUM_UBIT_MASK

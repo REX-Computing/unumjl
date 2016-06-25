@@ -117,6 +117,8 @@ end
     (result.esize, result.exponent) = encode_exp(_aexp)
   end
 
+  is_exact(result) && exact_trim!(result)
+
   return result
 end
 
