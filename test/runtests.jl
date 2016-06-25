@@ -11,8 +11,11 @@ include("./test-warlpiri.jl")
 #=
 W = Unum{0,0}
 
-x = one(W)
-y = one(W)
+x = Unums.make_ulp!(one(W))
+y = Unums.make_ulp!(one(W))
+
+println(bits(x))
+println(bits(y))
 
 println(Unums.mul_exact(x, y, z16))
 
@@ -20,4 +23,5 @@ x = mmr(W)
 y = sss(W)
 
 println(x * y)
+println(bits(x * y))
 =#

@@ -114,7 +114,7 @@ end
     result.exponent = z64
   end
 
-  return result
+  return coerce_sign!(result, result_sign)
 end
 
 @universal function mul_inexact(a::Unum, b::Unum, result_sign::UInt16)
@@ -126,7 +126,7 @@ end
 
   inner_result = mul_exact(a, b, result_sign)
   make_ulp!(inner_result)
-  result_exponent = decode_exp(inner_result)
+  result_exponent = decode_exp(inner_result) + is_subnormal(inner_result) * 1
 
   if is_exact(a)
     outer_result = sum_exact(inner_result, a, result_exponent, result_exponent - b.fsize - 1)
@@ -137,28 +137,33 @@ end
 
     outer_result = copy(_precise)
     shift = _precise.fsize - _fuzzy.fsize
+
     frac_rsh!(outer_result, shift)
-    (issubnormal(_precise)) || frac_set_bit!(outer_result, shift)
+
+    carry = z64
+    (issubnormal(_precise)) || ((shift == z16) ? (carry = o64) : (frac_set_bit!(outer_result, shift)))
     #add the two fractionals parts together, and set the carry.
-    carry = frac_add!((!issubnormal(_precise)) * o64, outer_result, _fuzzy.fraction)
+    carry = frac_add!(carry, outer_result, _fuzzy.fraction)
     frac_rsh!(outer_result, _fuzzy.fsize)
 
-    ((carry & o64) != z64) && frac_set_bit!(outer_result, shift)
-    ((carry & 0x0000_0000_0000_0002) != z64) && frac_set_bit!(outer_result, (shift - o16))
-    carry = frac_add!((!issubnormal(outer_result)) * o64, outer_result, inner_result.fraction)
-    resolve_carry!(carry, outer_result, result_exponent)
+    carry2 = z64
+    ((carry & o64) != z64) && ((shift == z16) ? (carry2 = o64) : frac_set_bit!(outer_result, shift))
+    ((carry & 0x0000_0000_0000_0002) != z64) && ((shift == o16) ? (carry2 = o64) : frac_set_bit!(outer_result, (shift - o16)))
+    carry2 = frac_add!(carry2, outer_result, inner_result.fraction)
+
+    resolve_carry!(carry2, outer_result, result_exponent)
 
     #if we wound up still subnormal, then re-subnormalize the exponent. (exp - 1)
-    outer_result.exponent &= f64 * (carry != 0)
+    outer_result.exponent &= f64 * (carry2 != 0)
 
     #check to see if we're getting too big.
     (outer_result.exponent > max_biased_exponent(ESS)) && mmr!(outer_result, result_sign)
     #check to make sure we haven't done the inf hack, where the result exactly
     #equals inf.
-    is_inf(outer_result) && mmr!(outer_result, result_sign)
+    __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
   end
 
-  return (result_sign == z16) ? resolve_as_utype!(outer_result, inner_result) : resolve_as_utype!(inner_result, outer_result)
+  return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)
 end
 
 
