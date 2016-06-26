@@ -146,27 +146,50 @@ doc"""
   @code :(return carry - borrowed * o64)
 end
 
+#these two functions get inlined by handling a quad load as the individual register.
+top_part(n::UInt128) = UInt64((n & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) >> 64)
+bottom_part(n::UInt128) = UInt64(n & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF)
+
 doc"""
-  `Unums.i64mul(a::UInt64, b::UInt64)` returns the 64-bit value that
-  is the top 32 bits of both numbers.
+  `Unums.i64mul_simple(a::UInt64, b::UInt64)` returns the 64-bit value that
+  is the product of the top 32 bits of both numbers.
 """
-function i64mul(a::UInt64, b::UInt64)
-  UInt64(UInt128(a) * UInt128(b) >> 64)
+function i64mul_simple(a::UInt64, b::UInt64)
+  top_part(UInt128(a) * UInt128(b))
 end
 
+doc"""
+  `Unums.i64mul_extended(a::UInt64, b::UInt64)` returns the 128-bit value
+  that is the product of both 64-bit numbers.  This is useful for the FSS = 6 case,
+  as well as for breaking apart vaules in the higher FSS case.
+"""
+function i64mul_extended(a::UInt64, b::UInt64)
+  UInt128(a) * UInt128(b)
+end
+
+doc"""
+  `Unums.i64mul(a::UInt64, b::UInt64, ::Type{Val{FSS}})` performs a fraction-
+  multiplication, incorporating addition of both a and b as part of the process.
+  This requires knowledge of FSS, as the reporting requiremnets for FSS == 6 are
+  distinct from the reporting requirements of FSS < 6.
+
+  Outputs a triple:
+
+  `(carry, fraction, ubit)`
+"""
 @generated function i64mul{FSS}(a::UInt64, b::UInt64, ::Type{Val{FSS}})
   if FSS < 6
     tmask = mask_top(FSS)
     bmask = mask_bot(FSS)
     quote
       carry = z64
-      old_res = i64mul(a, b)
+      old_res = i64mul_simple(a, b)
       new_res = old_res + a
       carry += (new_res < old_res) * o64
       old_res = new_res
       new_res = old_res + b
       carry += (new_res < old_res) * o64
-      return (carry, (new_res & $tmask), (new_res & $bmask != 0) * UNUM_UBIT_MASK)
+      return (carry, new_res, (new_res & $bmask != 0) * UNUM_UBIT_MASK)
     end
   else
     quote
@@ -183,19 +206,6 @@ end
     end
   end
 end
-
-doc"""
-  `Unums.i64mul_extended(a::UInt64, b::UInt64)` returns the 128-bit value
-  that is the product of both 64-bit numbers.  This is useful for the FSS = 6 case,
-  as well as for breaking apart vaules in the higher FSS case.
-"""
-function i64mul_extended(a::UInt64, b::UInt64)
-  UInt128(a) * UInt128(b)
-end
-
-#these two functions get inlined by handling a quad load as the individual register.
-top_part(n::UInt128) = UInt64((n & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) >> 64)
-bottom_part(n::UInt128) = UInt64(n & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF)
 
 #=
 how extended multiplication works.
@@ -267,7 +277,7 @@ doc"""
   idx_sum = l + 2
   for idx = 2:l
     jdx = idx_sum - idx #calculate the index for the b arraynum.
-    @code :(@inbounds accum_sum += i64mul(a.a[$idx], b.a[$jdx]))
+    @code :(@inbounds accum_sum += i64mul_simple(a.a[$idx], b.a[$jdx]))
   end
 
   #PHASE 2.  CALCULATE FULL, USE TOP
@@ -318,12 +328,48 @@ doc"""
   @code quote
     carry = o64
     old_top = new_top = top_part(accum_sum)
+
+    #additive part for last segment.
     @inbounds new_top += a.a[1]
     carry += (old_top < new_top) * o64
     old_top = new_top
     @inbounds new_top += b.a[1]
     carry += (old_top < new_top) * o64
+
+    #store the last word.
     @inbounds a.a[1] = new_top
-    return (carry, inbounds, UNUM_UBIT_MASK)
+    return (carry, UNUM_UBIT_MASK)
+  end
+end
+
+doc"""
+  `Unums.i64sqr(::UInt64, ::UInt64)`
+  "squares" an fraction integer, an operation used for binomial goldschmidt division
+  operation.
+"""
+function i64sqr(a::UInt64)
+  i64mul_simple(a, a)
+end
+function i64sqr(a::UInt64, o::UInt64)
+  result = i64mul_extended(a, a)
+  result += i64mul_simple(a, o) << 1
+  (top_part(result), bottom_part(result))
+end
+
+doc"""
+ `Unums.i64sqr!(::ArrayNum{FSS})` "squares" an arraynum.  This is used for
+ binomial goldschmidt division operations.  The passed arraynum MUST have
+ in its array an extra cell, which will contain overflow data.  returns overflow.
+"""
+function i64sqr!{FSS}(a::ArrayNum{FSS}, o::UInt64)
+end
+
+@gen_code function frac_sqr!{ESS,FSS}(a::Unum{ESS,FSS}, o::UInt64)
+  if (FSS < 6)
+    @code :(a.fraction = i64sqr(a.fraction); return z64)
+  elseif (FSS == 6)
+    @code :((a.fraction, o) = i64sqr(a.fraction, o); return o)
+  else
+    @code :(return i64sqr!(a.fraction, o))
   end
 end

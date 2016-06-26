@@ -1,61 +1,172 @@
 #unum-division.jl - currently uses the goldschmidt method, but will also
 #implement other division algorithms.
 
+
 doc"""
-  `div!(::Unum, ::Unum, ::Gnum)` takes two unums and
-  divides them, storing the result in the third, g-layer.  A reference to
-  the result gnum is returned.
+  `Unums.div(::Unum, ::Unum)` outputs a Unum OR Ubound corresponding to the quotient
+  of two unums.  This is bound to the (\/) operation if options[:usegnum] is not
+  set.  Note that in the case of degenerate unums, div may change the bit values
+  of the individual unums, but the values will not be altered.
 """
-function div!{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS}, c::Gnum{ESS,FSS})
-  put_unum!(b, c)
-  set_g_flags!(a)
-  div!(a, c)
+@universal function udiv(a::Unum, b::Unum)
+  #some basic test cases.
+  (isnan(a) || isnan(b)) && return nan(U)
+  #division by zero is always a NaN, for unums.
+  is_zero(b) && return nan(U)
+  #division from zero is always zero.
+  is_zero(a) && return zero(U)
+
+  #figure out the result sign.
+  result_sign = (a.flags $ b.flags) & UNUM_SIGN_MASK
+
+  #division from inf is always inf, except inf/inf = NaN.
+  if is_inf(a)
+    is_inf(b) && return nan(U)
+    return inf(U, result_sign)
+  end
+
+  #division by inf is always zero.
+  is_inf(b) && return zero(U)
+  #division by a unit value is always the same value, with a possible sign change.
+  is_unit(b) && return coerce_sign!(copy(a), result_sign)
+
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
+
+  if is_exact(a) && is_exact(b)
+    div_exact(a, b, result_sign)
+  else
+    div_inexact(a, b, result_sign)
+  end
 end
 
+@universal function div_exact(a::Unum, b::Unum, result_sign::UInt16)
+  #first, calculate the exponents.
+  _asubnormal = is_subnormal(a)
+  _bsubnormal = is_subnormal(b)
+
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+
+  #solve the exponent.
+  exponent = _aexp - _bexp
+
+  (exponent > max_exponent(ESS)) && return mmr(U, result_sign)
+  (exponent < min_exponent(ESS,FSS)) && return sss(U, result_sign)
+
+  exponent += _asubnormal * 1 + _bsubnormal * 1
+
+
+  dividend = copy(a)
+  _asubnormal && (exponent -= normalize!(dividend))
+  divisor = copy(b)
+  _bsubnormal && (exponent -= normalize!(divisor))
+
+  frac_div!(dividend, divisor)
+
+  return nan(U)
+end
+
+doc"""
+  `Unums.frac_div!(dividend::Unum, divisor::Unum)` performs the binomial
+  goldschmidt division algorithm.  Algorithm is as follows:
+
+  For X/Y, where X in [1,2) and Y in (0.5, 1]:  pick Z s.t. Y = 1 - Z.  Observe:
+
+  * (1 - Z)(1 + Z)     == (1 - Z^2)
+  * (1 - Z^2)(1 + Z^2) == (1 - Z^4)
+  * (1 - Z^4)(1 + Z^4) == (1 - Z^8), etc, so:
+
+  (1 - Z)(1 + Z)(1 + Z^2)(1 + Z^4) -> 1 + Z^2N -> 1 as N -> ∞
+
+  ∴ X(1 + Z)(1 + Z^2)(1 + Z^4) -> (X / Y) as N -> ∞.
+"""
+@universal function frac_div!(dividend::Unum, divisor::Unum)
+  #first prepare the divisor.
+  overflow = prep_square_params!(divisor)
+  #replace the fraction of "divisor" with the actual value of Z, not considering
+  #the normal fraction invisible one.
+
+  carry = frac_mul!(dividend, divisor.fraction)
+  #because frac_mul expects the presence of the "invisible one", we don't need
+  #to supply it.
+
+  for idx = 1:FSS
+    (carry != z64) && begin
+      println("carry! ($carry)")
+      println("precarry: $dividend")
+      frac_rsh!(dividend, 0x0001)
+      println("postcarry: $dividend")
+    end
+    println("----")
+    println("idx: $idx")
+    println("dividend: $dividend")
+    println("divisor: $divisor")
+    #square the fraction part of the result.
+    overflow = frac_sqr!(divisor, overflow)
+    #multply the dividend to be that expected result.
+    carry = frac_mul!(dividend, divisor.fraction)
+
+  end
+
+  return dividend
+end
+
+function prep_square_params!{ESS,FSS}(a::UnumSmall{ESS,FSS})
+  a.fraction = (z64 - ((a.fraction >> 1) | t64))
+  return z64
+end
+function prep_square_params!{ESS}(a::UnumSmall{ESS, 6})
+  lbit = ((a.fraction & o64) != z64)
+  a.fraction = (lbit * f64) - ((a.fraction >> 1) | t64)
+  return lbit * t64
+end
+function prep_square_params!{ESS,FSS}(a::UnumLarge{ESS, FSS})
+  @inbounds lbit = ((a.fraction.a[__cell_length(FSS)] & o64) != z64)
+  #then do something here
+end
+
+@universal function div_inexact(a::Unum, b::Unum, result_sign::UInt16)
+  is_mmr(a) && (return mmr_div(b, result_sign))
+  is_sss(a) && (return sss_div(b, result_sign))
+
+  is_mmr(b) && (return mmr_div_left(a, result_sign))
+  is_sss(b) && (return sss_div_left(a, result_sign))
+
+  return nan(U)
+end
+
+@universal function mmr_div(b::Unum, result_sign::UInt16)
+  if mag_greater_than_one(b)
+    is_mmr(b) && return (result_sign == z16) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
+    return nan(U)
+  else
+    return mmr(U, result_sign)
+  end
+end
+
+@universal function sss_div(b::Unum, result_sign::UInt16)
+  if mag_greater_than_one(b)
+    return sss(U, result_sign)
+  else
+    is_sss(b) && return (result_sign == z16) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
+    return nan(U, result_sign)
+  end
+end
+
+@universal function mmr_div_left(a::Unum, result_sign::UInt16)
+  return nan(U)
+end
+
+@universal function sss_div_left(a::Unum, result_sign::UInt16)
+  return nan(U)
+end
+
+#import the Base divide operation and bind it to the udiv and udiv! functions
 import Base./
-doc"""
-  `/(x::Unum, y::Unum)` divides two unums, by creating a temporary gnum
-  and returning the output form.  This is not performant.  For performance
-  optimized code, use the `@unum` macro.
-"""
-function /{ESS,FSS}(x::Unum{ESS,FSS}, y::Unum{ESS,FSS})
-  temp = zero(Gnum{ESS,FSS})
-  div!(x, y, temp)
-  #return the result as the appropriate data type.
-  emit_data(temp)
-end
-export /
-
-
+@bind_operation(/, udiv)
 
 #=
-function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Unum{ESS,FSS})
-  #some basic test cases.
-
-  #check NaNs
-  (isnan(a) || isnan(b)) && return nan(Unum{ESS,FSS})
-
-  #division by zero is ALWAYS a NaN in unums.
-  is_zero(b) && return nan(Unum{ESS,FSS})
-
-  div_sign::UInt16 = ((a.flags & UNUM_SIGN_MASK) $ (b.flags & UNUM_SIGN_MASK))
-  #division from inf is always inf (except inf/inf), with a possible sign change
-  if is_inf(a)
-    is_inf(b) && return nan(Unum{ESS,FSS})
-    return inf(Unum{ESS,FSS}, div_sign)
-  end
-  #division by inf is always zero.
-  is_inf(b) && return zero(Unum{ESS,FSS})
-
-  is_unit(b) && return unum_unsafe(a, (a.flags & UNUM_UBIT_MASK) | div_sign)
-
-  if (is_ulp(a) || is_ulp(b))
-    __div_ulp(a, b, div_sign)
-  else
-    __div_exact(a, b, div_sign)
-  end
-end
-
 #dividing by smaller than small subnormal yields the entire number line beyond
 #number / small_exact.
 function __div_sss{ESS,FSS}(a::Unum{ESS,FSS}, div_sign::UInt16)

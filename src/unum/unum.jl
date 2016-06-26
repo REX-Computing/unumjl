@@ -14,9 +14,8 @@ include("./unum-hlayer.jl")
 
 #mathematical stuff
 
-
 include("./math/unum-comparison.jl")
 include("./math/unum-addition.jl")
 include("./math/unum-subtraction.jl")
 include("./math/unum-multiplication.jl")
-#include("./unum-division.jl")
+include("./math/unum-division.jl")

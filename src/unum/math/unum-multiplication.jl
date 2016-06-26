@@ -5,19 +5,27 @@ doc"""
   `Unums.frac_mul!(carry, ::Unum, fraction)`
   multiplies fraction into the the fraction value of unum.
 """
-function frac_mul!{ESS,FSS}(a::UnumSmall{ESS,FSS}, multiplier::UInt64)
-  (carry, a.fraction, ubit) = i64mul(a.fraction, multiplier, Val{FSS})
-  return carry
+@gen_code function frac_mul!{ESS,FSS}(a::UnumSmall{ESS,FSS}, multiplier::UInt64)
+  @code quote
+    (carry, a.fraction, ubit) = i64mul(a.fraction, multiplier, Val{FSS})
+    a.flags |= ubit
+  end
+  if FSS < 6
+    tmask = mask_top(FSS)
+    @code :(a.fraction &= $tmask)
+  end
+  @code :(return carry)
 end
 function frac_mul!{ESS,FSS}(a::UnumLarge{ESS,FSS}, multiplier::ArrayNum{FSS})
-  carry = i64mul!(a.fraction, multiplier)
+  (carry, ubit) = i64mul!(a.fraction, multiplier)
+  a.flags |= ubit
   return carry
 end
 
 doc"""
   `Unums.mul(::Unum, ::Unum)` outputs a Unum OR Ubound corresponding to the product
   of two unums.  This is bound to the (\*) operation if options[:usegnum] is not
-  set.  Note that in the case of degenerate unums, add may change the bit values
+  set.  Note that in the case of degenerate unums, mul may change the bit values
   of the individual unums, but the values will not be altered.
 """
 @universal function mul(a::Unum, b::Unum)
@@ -61,28 +69,22 @@ end
 
   exponent += _asubnormal * 1 + _bsubnormal * 1
 
+  #TODO: convert this into "supranormal form"
+
   #solve the fractional product.
   if _asubnormal
     result = copy(a)
     multiplicand = b
     is_ulp(b) && make_ulp!(result)
 
-    #normalize a (regardless of exponent)
-    leftshift = clz(result.fraction) + o16
-    #next, shift the shadow fraction to the left appropriately.
-    frac_lsh!(result, leftshift)
-    exponent -= leftshift
+    exponent -= normalize!(result)
 
     #this code is only necessary when ESS == 0, because you can have subnormal 1's
     #which don't exponent-degrade.
     if (ESS == 0)
       if _bsubnormal
         multiplicand = copy(b)
-        #normalize b (regardless of exponent)
-        leftshift = clz(multiplicand.fraction) + o16
-        #next, shift the shadow fraction to the left appropriately.
-        frac_lsh!(multiplicand, leftshift)
-        exponent -= leftshift
+        exponent -= normalize!(multiplicand)
       end
     end
   else
@@ -92,10 +94,7 @@ end
 
     if _bsubnormal
       #normalize b (regardless of exponent)
-      leftshift = clz(result.fraction) + o16
-      #next, shift the shadow fraction to the left appropriately.
-      frac_lsh!(result, leftshift)
-      exponent -= leftshift
+      exponent -= normalize!(result)
     end
   end
 
@@ -180,9 +179,7 @@ end
 end
 
 @universal function sss_mult(a::Unum, result_sign::UInt16)
-  if decode_exp(a) < 0
-    return sss(U, result_sign)
-  else
+  if mag_greater_than_one(a)
     temp1 = small_exact(U, result_sign)
     temp2 = is_exact(a) ? a : outward_exact(a)
 
@@ -191,6 +188,8 @@ end
     is_exact(outer_value) && inward_ulp!(outer_value)
 
     (result_sign == z16) ? resolve_as_utype!(sss(U, result_sign), outer_value) : resolve_as_utype!(outer_value, sss(U, result_sign))
+  else
+    return sss(U, result_sign)
   end
 end
 

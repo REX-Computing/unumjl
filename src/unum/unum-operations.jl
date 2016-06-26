@@ -107,7 +107,20 @@ function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
 end
 =#
 
+doc"""
+  `Unums.normalize!(::Unum)` takes a unum that is purportedly subnormal form and
+  normalizes it.  This entails shifting just past the top bit.  this function
+  returns the number of places shifted.
 
+  This function should not be run on a fraction that is all zero, nor on a
+  function which is not subnormal.
+"""
+@universal function normalize!(x::Unum)
+  leftshift = clz(x.fraction) + o16
+  frac_lsh!(x, leftshift)
+  x.fsize -= leftshift
+  return leftshift
+end
 
 doc"""
   `Unums.resolve_degenerates!(::Unum)` checks for degeneracy in unum values,
@@ -125,10 +138,7 @@ doc"""
 
   true_exponent = decode_exp(x)
   #now, count leading zeros, be prepared to shift left.
-  leftshift = clz(x.fraction) + o16
-  #next, shift the shadow fraction to the left appropriately.
-  frac_lsh!(x, leftshift)
-  exact_trim!(x)
+  leftshift = normalize!(x)
   true_exponent -= leftshift - o16
   (x.esize, x.exponent) = encode_exp(true_exponent)
 
