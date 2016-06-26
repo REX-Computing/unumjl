@@ -189,6 +189,9 @@ doc"""
       old_res = new_res
       new_res = old_res + b
       carry += (new_res < old_res) * o64
+      #NB: We don't filter out extraneous bits in the new result here because
+      #this function will be used by the division algorithm to store extra bits.
+      #filtering must take place on calling i64mul.
       return (carry, new_res, (new_res & $bmask != 0) * UNUM_UBIT_MASK)
     end
   else

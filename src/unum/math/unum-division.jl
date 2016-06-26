@@ -49,22 +49,35 @@ end
   _bexp = decode_exp(b)
 
   #solve the exponent.
-  exponent = _aexp - _bexp
+  exponent = _aexp - _bexp - 1
 
   (exponent > max_exponent(ESS)) && return mmr(U, result_sign)
   (exponent < min_exponent(ESS,FSS)) && return sss(U, result_sign)
 
-  exponent += _asubnormal * 1 + _bsubnormal * 1
-
+  exponent += _asubnormal * 1 - _bsubnormal * 1
 
   dividend = copy(a)
   _asubnormal && (exponent -= normalize!(dividend))
   divisor = copy(b)
   _bsubnormal && (exponent -= normalize!(divisor))
 
-  frac_div!(dividend, divisor)
+  exponent += Int64(frac_div!(dividend, divisor))
 
-  return nan(U)
+  if exponent < min_exponent(ESS)
+    #do something wierd
+    return nan(U)
+  end
+
+  (dividend.esize, dividend.exponent) = encode_exp(exponent)
+  dividend.fsize = max_fsize(FSS)
+  #create a tentative result.
+  make_exact!(dividend)
+  tentative_result = next_unum(dividend)
+  check_value = tentative_result * b
+  (check_value < a) && return make_ulp!(tentative_result)
+  (check_value > a) && return make_ulp!(dividend)
+  exact_trim!(tentative_result)
+  return tentative_result
 end
 
 doc"""
@@ -91,25 +104,20 @@ doc"""
   #because frac_mul expects the presence of the "invisible one", we don't need
   #to supply it.
 
-  for idx = 1:FSS
+  traversals = 0  #how many times have we traversed a boundary?
+
+  for idx = 1:(FSS + 1)
     (carry != z64) && begin
-      println("carry! ($carry)")
-      println("precarry: $dividend")
       frac_rsh!(dividend, 0x0001)
-      println("postcarry: $dividend")
+      traversals = 1
     end
-    println("----")
-    println("idx: $idx")
-    println("dividend: $dividend")
-    println("divisor: $divisor")
     #square the fraction part of the result.
     overflow = frac_sqr!(divisor, overflow)
     #multply the dividend to be that expected result.
     carry = frac_mul!(dividend, divisor.fraction)
-
   end
 
-  return dividend
+  return traversals  #report whether or not the exponent was altered.
 end
 
 function prep_square_params!{ESS,FSS}(a::UnumSmall{ESS,FSS})

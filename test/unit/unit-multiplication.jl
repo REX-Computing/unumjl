@@ -6,11 +6,12 @@ b = 0xFFFFFFFFFFFFFFFF
 
 #unit test mult_exact.
 
-#testing problems with carry operations in chunk_mult
-#random value testing identified problematic fraction values.
-f64_frac_mask = 0xFFFF_FFFF_FFFE_0000
-frac1 = 0x7c26c92fea77e000
-frac2 = 0x997d76a4e016d000
+################################################################################
+# found errors
+x = Unum{4,5}(0x0000000000000003, 0x5555555600000000, 0x0000, 0x0001, 0x001F)
+y = Unum{4,5}(3)
+#should be approximately 16, but usually gets 8.
+@test x * y > Unum{4,5}(16)
 
 #=
 uft1 = unum_easy(Unum{4,6}, zero(UInt16), frac1, 1)

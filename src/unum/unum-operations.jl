@@ -141,68 +141,10 @@ doc"""
   leftshift = normalize!(x)
   true_exponent -= leftshift - o16
   (x.esize, x.exponent) = encode_exp(true_exponent)
+  exact_trim!(x)
 
   return x
 end
-
-#=
-@gen_code function __inward_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
-  @code quote
-    is_strange_subnormal(x) && __resolve_subnormal!(x)
-    if is_frac_zero(x)
-      #deal with subnormal.
-      is_exp_zero(x) && (sss!(x, x.flags & UNUM_SIGN_MASK); return x)
-      current_exponent = decode_exp(x)
-      (x.esize, x.exponent) = ((current_exponent == min_exponent(ESS)) ? (z16, z64) : encode_exp(decode_exp(x) - 1))
-    end
-    x.flags |= UNUM_UBIT_MASK
-  end
-  if (FSS < 7)
-    @code :(x.fraction -= bottom_bit(max_fsize(FSS)); x)
-  else
-    @code :(prev_val!(x.fraction); x)
-  end
-end
-
-function make_min_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
-  x.fsize = max_fsize(FSS)
-  x.flags |= UNUM_UBIT_MASK
-  x
-end
-
-function __outward_exact!{ESS,FSS}(x::Unum{ESS,FSS})
-  promoted::Bool = __add_ubit_frac!(x)
-  promoted && ((x.esize, x.exponent) = (encode_exp(decode_exp(x) + 1)))
-  x.flags &= ~UNUM_UBIT_MASK
-  x
-end
-
-doc"""`upper_ulp!(::Unum)` converts to the unum which is the ulp immediatel above itit."""
-function upper_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
-  is_zero(x) && return pos_sss!(x)
-  return is_positive(x) ? make_min_ulp!(x) : __inward_ulp!(x)
-end
-
-doc"""`lower_ulp!(::Unum)` converts to the unum which is the ulp immediately below it."""
-function lower_ulp!{ESS,FSS}(x::Unum{ESS,FSS})
-  is_zero(x) && return neg_sss!(x)
-  return is_positive(x) ? __inward_ulp!(x) : make_min_ulp!(x)
-end
-
-doc"""`upper_exact!(::Unum)` converts to the unum which is the exact number that upper bounds it."""
-function upper_exact!{ESS,FSS}(x::Unum{ESS,FSS})
-  __is_nan_or_inf(x) && (nan!(x); return)
-  is_exact(x) && return x
-  return is_negative(x) ? make_exact!(x) : __outward_exact!(x)
-end
-
-doc"""`lower_exact!(::Unum)` converts to the unum which is the exact number that upper bounds it."""
-function lower_exact!{ESS,FSS}(x::Unum{ESS,FSS})
-  __is_nan_or_inf(x) && (nan!(x); return)
-  is_exact(x) && return x
-  return is_negative(x) ? __outward_exact!(x) : make_exact!(x)
-end
-=#
 
 ################################################################################
 ## variadic macros that trigger exactitude checking.
@@ -306,6 +248,22 @@ end
 @universal upper_ulp(x::Unum) = upper_ulp!(copy(x))
 @universal lower_ulp(x::Unum) = lower_ulp!(copy(x))
 
+################################################################################
+
+@universal function next_unum!(x::Unum)
+  @ensure_exact(x)
+  resolve_degenerates!(x)
+  carried = frac_add_ubit!(x, max_fsize(FSS))
+  if carried
+    exponent = decode_exp(x)
+    (exponent > max_exponent(ESS)) && return inf(x)
+    (x.esize, x.exponent) = encode_exp(exponent + 1)
+  end
+  exact_trim!(x)
+  return x
+end
+
+@universal next_unum(x::Unum) = next_unum!(copy(x))
 ################################################################################
 ## dumb exactitude functions.
 

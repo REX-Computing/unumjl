@@ -9,8 +9,7 @@ include("./test-operations.jl")
 include("./test-warlpiri.jl")
 =#
 
-x = Unum{3,5}(2.7)
+x = Unum{4,5}(0x0000000000000003, 0x5555555600000000, 0x0000, 0x0001, 0x001F)
+y = Unum{4,5}(3)
 
-y = Unum{3,5}(0.6)
-
-Unums.frac_div!(x, y)
+println(calculate(x / y))
