@@ -355,7 +355,7 @@ function i64sqr(a::UInt64)
 end
 function i64sqr(a::UInt64, o::UInt64)
   result = i64mul_extended(a, a)
-  result += i64mul_simple(a, o) << 1
+  result += i64mul_simple(a, o)
   (top_part(result), bottom_part(result))
 end
 
@@ -370,8 +370,6 @@ end
 @gen_code function frac_sqr!{ESS,FSS}(a::Unum{ESS,FSS}, o::UInt64)
   if (FSS < 6)
     @code :(a.fraction = i64sqr(a.fraction); return z64)
-  elseif (FSS == 6)
-    @code :((a.fraction, o) = i64sqr(a.fraction, o); return o)
   else
     @code :(return i64sqr!(a.fraction, o))
   end

@@ -5,21 +5,15 @@ doc"""
   `Unums.frac_mul!(carry, ::Unum, fraction)`
   multiplies fraction into the the fraction value of unum.
 """
-@gen_code function frac_mul!{ESS,FSS}(a::UnumSmall{ESS,FSS}, multiplier::UInt64)
-  @code quote
-    (carry, a.fraction, ubit) = i64mul(a.fraction, multiplier, Val{FSS})
-    a.flags |= ubit
-  end
-  if FSS < 6
-    tmask = mask_top(FSS)
-    @code :(a.fraction &= $tmask)
-  end
-  @code :(return carry)
+function frac_mul!{ESS,FSS}(a::UnumSmall{ESS,FSS}, multiplier::UInt64)
+  (carry, a.fraction, ubit) = i64mul(a.fraction, multiplier, Val{FSS})
+  a.flags |= ubit
+  return carry + o64
 end
 function frac_mul!{ESS,FSS}(a::UnumLarge{ESS,FSS}, multiplier::ArrayNum{FSS})
   (carry, ubit) = i64mul!(a.fraction, multiplier)
   a.flags |= ubit
-  return carry
+  return carry + o64
 end
 
 doc"""
@@ -102,6 +96,10 @@ end
   (exponent < min_exponent(ESS,FSS) && return sss(U, result_sign))
 
   carry = frac_mul!(result, multiplicand.fraction)
+
+  if (FSS < 6)
+    result.fraction &= mask_top(FSS)
+  end
 
   resolve_carry!(carry, result, exponent)
 
