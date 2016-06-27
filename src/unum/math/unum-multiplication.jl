@@ -113,6 +113,7 @@ end
   end
 
   is_exact(result) && exact_trim!(result)
+  result.fsize = min(result.fsize, max_fsize(FSS))
 
   return coerce_sign!(result, result_sign)
 end
@@ -125,6 +126,7 @@ end
   is_sss(b) && (return sss_mult(a, result_sign))
 
   inner_result = mul_exact(a, b, result_sign)
+
   make_ulp!(inner_result)
   result_exponent = decode_exp(inner_result) + is_subnormal(inner_result) * 1
 

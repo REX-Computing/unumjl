@@ -267,8 +267,10 @@ doc"""
 
  This function unrolls itself by being a generated function.
 """
-@gen_code function i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
-  l = __cell_length(FSS)
+i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}) = i64mul!(a, b, Val{__cell_length(FSS)}, Val{true})
+#generic version.
+@gen_code function i64mul!{FSS, cells, addin}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, ::Type{Val{cells}}, ::Type{Val{addin}})
+  (cells >= __cell_length(FSS)) || throw(ArgumentError("multiplication should use "))
   #set up some internal function variables.
   @code quote
     prev_sum::UInt128 = zero(UInt128)
@@ -277,15 +279,15 @@ doc"""
   end
 
   #PHASE 1.  CALCULATE top only...  Note the A indices always start at 2
-  idx_sum = l + 2
-  for idx = 2:l
+  idx_sum = cells + 2
+  for idx = 2:cells
     jdx = idx_sum - idx #calculate the index for the b arraynum.
     @code :(@inbounds accum_sum += i64mul_simple(a.a[$idx], b.a[$jdx]))
   end
 
   #PHASE 2.  CALCULATE FULL, USE TOP
-  idx_sum = l + 1
-  for idx = 1:l
+  idx_sum = cells + 1
+  for idx = 1:cells
     jdx = idx_sum - idx
     @code quote
       prev_sum = accum_sum  #cache the previous value
@@ -295,7 +297,7 @@ doc"""
   end
 
   #PHASE 3.  CALCULATE FULL, USE ALL.
-  for idx_sum = l:-1:2
+  for idx_sum = cells:-1:2
     #at the beginning of this group, we need to shift everything over 64 bits,
     #then add in the carry value, then clear it.
     @code quote
@@ -312,13 +314,15 @@ doc"""
       end
     end
     #PHASE 3.5 ADDITIVE PARTS
-    @code quote
-      prev_sum = accum_sum
-      @inbounds accum_sum += a.a[$idx_sum]
-      carry += (prev_sum < accum_sum) * o64
-      prev_sum = accum_sum
-      @inbounds accum_sum += b.a[$idx_sum]
-      carry += (prev_sum < accum_sum) * o64
+    if (addin)
+      @code quote
+        prev_sum = accum_sum
+        @inbounds accum_sum += a.a[$idx_sum]
+        carry += (prev_sum < accum_sum) * o64
+        prev_sum = accum_sum
+        @inbounds accum_sum += b.a[$idx_sum]
+        carry += (prev_sum < accum_sum) * o64
+      end
     end
     #at the end of each loop, be sure to copy over the lower 64 bits to our
     #destination array.  Magically, we won't need A[idx_sum] anymore, so this is a
@@ -331,46 +335,22 @@ doc"""
   @code quote
     carry = o64
     old_top = new_top = top_part(accum_sum)
+  end
 
-    #additive part for last segment.
-    @inbounds new_top += a.a[1]
-    carry += (old_top < new_top) * o64
-    old_top = new_top
-    @inbounds new_top += b.a[1]
-    carry += (old_top < new_top) * o64
+  if (addin)
+    @code quote
+      #additive part for last segment.
+      @inbounds new_top += a.a[1]
+      carry += (old_top < new_top) * o64
+      old_top = new_top
+      @inbounds new_top += b.a[1]
+      carry += (old_top < new_top) * o64
+    end
+  end
 
+  @code quote
     #store the last word.
     @inbounds a.a[1] = new_top
     return (carry, UNUM_UBIT_MASK)
-  end
-end
-
-doc"""
-  `Unums.i64sqr(::UInt64, ::UInt64)`
-  "squares" an fraction integer, an operation used for binomial goldschmidt division
-  operation.
-"""
-function i64sqr(a::UInt64)
-  i64mul_simple(a, a)
-end
-function i64sqr(a::UInt64, o::UInt64)
-  result = i64mul_extended(a, a)
-  result += i64mul_simple(a, o)
-  (top_part(result), bottom_part(result))
-end
-
-doc"""
- `Unums.i64sqr!(::ArrayNum{FSS})` "squares" an arraynum.  This is used for
- binomial goldschmidt division operations.  The passed arraynum MUST have
- in its array an extra cell, which will contain overflow data.  returns overflow.
-"""
-function i64sqr!{FSS}(a::ArrayNum{FSS}, o::UInt64)
-end
-
-@gen_code function frac_sqr!{ESS,FSS}(a::Unum{ESS,FSS}, o::UInt64)
-  if (FSS < 6)
-    @code :(a.fraction = i64sqr(a.fraction); return z64)
-  else
-    @code :(return i64sqr!(a.fraction, o))
   end
 end

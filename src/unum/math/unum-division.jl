@@ -77,11 +77,7 @@ end
   #create a tentative result.
   make_exact!(dividend)
 
-  println("d:", dividend)
-
   tentative_result = next_unum(dividend)
-
-  println("t:", tentative_result)
 
   check_value = tentative_result * b
   (check_value < a) && return make_ulp!(tentative_result)
@@ -105,12 +101,13 @@ doc"""
   ∴ X(1 + Z)(1 + Z^2)(1 + Z^4) -> (X / Y) as N -> ∞.
 """
 @universal function frac_div!(dividend::Unum, divisor::Unum)
+  d_result = prep_result!(dividend)
   #first prepare the divisor.
-  overflow = prep_square_params!(divisor)
+  d_multiple = prep_multiple!(divisor)
   #replace the fraction of "divisor" with the actual value of Z, not considering
   #the normal fraction invisible one.
 
-  carry = frac_mul!(dividend, divisor.fraction)
+  carry = frac_dmul!(d_result, d_multiple)
   #because frac_mul expects the presence of the "invisible one", we don't need
   #to supply it.
 
@@ -118,61 +115,38 @@ doc"""
 
   for idx = 1:(FSS + 1)
     (carry != o64) && begin
-      frac_rsh!(dividend, 0x0001)
+      d_result = frac_rsh!(d_result, 0x0001)
       traversals = 1
     end
     #square the fraction part of the result.
-    overflow = frac_sqr!(divisor, overflow)
+    d_multiple = frac_sqr!(d_multiple)
     #multply the dividend to be that expected result.
-    carry = frac_mul!(dividend, divisor.fraction)
+    carry = frac_dmul!(d_result, d_multiple)
   end
+
+  store_result!(dividend, d_result)
 
   return traversals  #report whether or not the exponent was altered.
 end
 
-function frac_div!{ESS}(dividend::UnumSmall{ESS,6}, divisor::UnumSmall{ESS,6})
-  #for FSS == 6, requires a fundamentally different approach to division, since
-  #extra bits need to be tracked to make this algorithm work.
+frac_rsh!(x::UInt128, sh::UInt16) = (x >> sh)
 
-  #create a "divisor tuple" and a "dividend tuple"
-  t_multiplier::UInt128 = prep_square_params!(divisor)
-  t_dividend::UInt128 = UInt128(dividend.fraction) << 64
-  carry::UInt64 = o64
-
-  (carry, t_dividend) = frac_mul(t_dividend, t_multiplier)
-
-  #because frac_mul expects the presence of the "invisible one", we don't need
-  #to supply it.
-
-  traversals = 0  #how many times have we traversed a boundary?
-
-  for idx = 1:6
-    if (carry != o64)
-      t_dividend >> 1
-      traversals = 1
-    end
-    #square the fraction part of the result.
-    t_multiplier = frac_sqr!(t_multiplier)
-    #multply the dividend to be that expected result.
-
-    (carry, t_dividend) = frac_mul(t_dividend, t_multiplier)
-
-  end
-
-  dividend.fraction = top_part(t_dividend)
-
-  return traversals
+function frac_sqr!{ESS,FSS}(a::UnumSmall{ESS,FSS})
+  a.fraction = i64mul_simple(a.fraction, a.fraction)
+  return a
 end
-
 function frac_sqr!(number::UInt128)
   top_word = (number >> 64)
   bottom_word = (number & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF)
   result = top_word * bottom_word
-  result >>= 63
+  result >>= 63                      #63 because there's a *2 in there.
   result += top_word * top_word
 end
+frac_sqr!{ESS,FSS}(multiplier::UnumLarge{ESS,FSS}) = frac_mul!(multiplier, multiplier.fraction, Val{__cell_length(FSS) + 1}, Val{false})
 
-function frac_mul(dividend::UInt128, multiplier::UInt128)
+frac_dmul!{ESS,FSS}(dividend::UnumSmall{ESS,FSS}, multiplier::UnumSmall{ESS,FSS}) = frac_mul!(dividend, multiplier.fraction)
+frac_dmul!{ESS,FSS}(dividend::UnumLarge{ESS,FSS}, multiplier::UnumLarge{ESS,FSS}) = frac_mul!(dividend.fraction, multiplier.fraction, Val{__cell_length(FSS) + 1}, Val{true})
+function frac_dmul!(dividend::UInt128, multiplier::UInt128)
   carry = o64
   top_d = (dividend >> 64)
   top_m = (multiplier >> 64)
@@ -200,21 +174,29 @@ function frac_mul(dividend::UInt128, multiplier::UInt128)
   (carry, result)
 end
 
-function prep_square_params!{ESS,FSS}(a::UnumSmall{ESS,FSS})
-  a.fraction = (z64 - ((a.fraction >> 1) | t64))
-  return z64
-end
-function prep_square_params!{ESS}(a::UnumSmall{ESS, 6})
+@universal prep_result!(a::Unum) = a
+prep_result!{ESS}(a::UnumSmall{ESS,6}) = UInt128(dividend.fraction) << 64
+
+prep_multiple!{ESS,FSS}(a::UnumSmall{ESS,FSS}) = (z64 - ((a.fraction >> 1) | t64); a)
+function prep_multiple!{ESS}(a::UnumSmall{ESS, 6})
   lbit = ((a.fraction & o64) != z64)
-  (UInt128((lbit * f64) - ((a.fraction >> 1) | t64)) << 64) | (lbit * t64)
+  return (UInt128((lbit * f64) - ((a.fraction >> 1) | t64)) << 64) | (lbit * t64)
 end
-function prep_square_params!{ESS,FSS}(a::UnumLarge{ESS, FSS})
-  @inbounds lbit = ((a.fraction.a[__cell_length(FSS)] & o64) != z64)
-  #then do something here
+function prep_multiple!{ESS,FSS}(a::UnumLarge{ESS,FSS})
+  @inbounds begin
+    lbit = ((a.fraction[__cell_length(FSS)] & o64))
+    frac_rsh!(a, 0x0001)
+    a.fraction[1] |= t64
+  end
+
+  #TODO:  Decide on this question (not now!)
+  #hack-ey.  Should we be doing this or checking to see if we have the right size??
+  push!(a.fraction, lbit * t64)
+  return a.fraction
 end
 
-function frac_mul!(dividend::UInt128, divisor::UInt128)
-end
+@universal store_result!(a::Unum, b::Unum) = nothing
+store_result!{ESS}(a::UnumSmall{ESS,6}, b::UInt128) = (a.fraction = top_part(b))
 
 @universal function div_inexact(a::Unum, b::Unum, result_sign::UInt16)
   is_mmr(a) && (return mmr_div(b, result_sign))
