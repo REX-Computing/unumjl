@@ -10,8 +10,10 @@ function frac_mul!{ESS,FSS}(a::UnumSmall{ESS,FSS}, multiplier::UInt64)
   a.flags |= ubit
   return carry + o64
 end
-function frac_mul!{ESS,FSS}(a::UnumLarge{ESS,FSS}, multiplier::ArrayNum{FSS})
-  (carry, ubit) = i64mul!(a.fraction, multiplier)
+
+frac_mul!{ESS,FSS}(a::UnumLarge{ESS,FSS}, multiplier::ArrayNum{FSS}) = frac_mul!(a, multiplier, Val{__cell_length(FSS)}, Val{true})
+function frac_mul!{ESS,FSS, cells, addin}(a::UnumLarge{ESS,FSS}, multiplier::ArrayNum{FSS}, ::Type{Val{cells}}, ::Type{Val{addin}})
+  (carry, ubit) = i64mul!(a.fraction, multiplier, Val{cells}, Val{addin})
   a.flags |= ubit
   return carry + o64
 end

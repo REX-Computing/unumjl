@@ -159,7 +159,12 @@ const __unsupported_int_types = [BigInt, Int128, UInt128]
 
   #find the msb of x, this will tell us how much to move things
   msbx = 63 - leading_zeros(i64val)
-  frac = i64val << (64 - msbx)
+  if (FSS < 7)
+    frac = i64val << (64 - msbx)
+  else
+    frac = zero(ArrayNum{FSS})
+    frac[1] = i64val << (64 - msbx)
+  end
   fsize = 0x003f  #set it to 63
 
   r = buildunum(U, msbx, frac, flags, fsize)

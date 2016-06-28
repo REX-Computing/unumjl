@@ -10,10 +10,10 @@ doc"""
 """
 frac_val(x::UInt64) = x
 function frac_val{FSS}(v::ArrayNum{FSS})
-  (typeof(v) == UInt64) && return big(v)
   sum = big(0)
   for i = 1:length(v.a)
-    sum += big(v.a[i]) * (big(1) << ((i - 1) * 64))
+    sum <<= 64
+    sum += v.a[i]
   end
   sum
 end
@@ -24,12 +24,15 @@ currently doesn't work so well for FSS > 9"""
   sign = (x.flags & UNUM_SIGN_MASK != 0) ? -1 : 1
   #the sub`normal case
   if (x.exponent == 0)
-    2.0^(decode_exp(x) + 1) * sign * (frac_val(x.fraction)) / 2.0^(64 * length(x.fraction))
+    2.0^(decode_exp(x) + 1) * sign * (frac_val(x.fraction)) / big(2.0)^(64 * __ulength(x.fraction))
   else #the normalcase
-    2.0^(decode_exp(x)) * sign * (1 + frac_val(x.fraction) / 2.0^(64 * length(x.fraction)))
+    2.0^(decode_exp(x)) * sign * (1 + frac_val(x.fraction) / big(2.0)^(64 * __ulength(x.fraction)))
   end
 end
 export calculate
+
+__ulength(::UInt64) = 1
+__ulength{FSS}(::ArrayNum{FSS}) = __cell_length(FSS)
 
 ################################################################################
 
@@ -262,6 +265,12 @@ end
   exact_trim!(x)
   return x
 end
+
+frac_ctz{ESS,FSS}(x::UnumSmall{ESS,FSS}) = ctz(x.fraction >> (64 - 1 << FSS))
+frac_ctz{ESS,FSS}(x::UnumLarge{ESS,FSS}) = ctz(x.fraction)
+
+frac_cto{ESS,FSS}(x::UnumSmall{ESS,FSS}) = cto(x.fraction >> (64 - 1 << FSS))
+frac_cto{ESS,FSS}(x::UnumLarge{ESS,FSS}) = cto(x.fraction)
 
 @universal next_unum(x::Unum) = next_unum!(copy(x))
 ################################################################################

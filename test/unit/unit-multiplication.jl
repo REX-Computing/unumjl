@@ -13,6 +13,16 @@ y = Unum{4,5}(3)
 #should be approximately 16, but usually gets 8.
 @test x * y > Unum{4,5}(16)
 
+x = Unum{4,7}(o64, Unums.ArrayNum{7}([0x3fff_ffff_ffff_fffe, 0xc000_0000_0000_0000]), z16, z16, 0x004F)
+y = Unums.ArrayNum{7}([o64, z64])
+Unums.frac_mul!(x, y, Val{2}, Val{true})
+@test x.fraction == Unums.ArrayNum{7}([0x3fff_ffff_ffff_ffff, 0xffff_ffff_ffff_fffe])
+
+#bizzare ubit setting.
+p = Unum{4,7}(0x0000000000000001, UInt64[0x8000000000000000,0x0000000000000000], 0x0000, 0x0001, 0x0001)
+q = Unum{4,7}(0x0000000000000007, UInt64[0x4000000000000000,0x0000000000000000], 0x0000, 0x0002, 0x0002)
+@test Unums.is_exact(p * q)
+
 #=
 uft1 = unum_easy(Unum{4,6}, zero(UInt16), frac1, 1)
 uft2 = unum_easy(Unum{4,6}, zero(UInt16), frac2, 1)

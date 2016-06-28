@@ -158,6 +158,7 @@ doc"""
     (esize, exponent) = encode_exp(true_exponent)
     result = U(exponent, fraction, flags, esize, min(fsize, mfsize))
   end
+
   trim_and_set_ubit!(result, min(fsize + shiftvalue, mfsize))
   exact_trim!(result)
   result

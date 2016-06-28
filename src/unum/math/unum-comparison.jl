@@ -89,6 +89,7 @@ end
 
   #use this as a trampoline for is_inward.
   _a_pos && return is_inward(b, a)
+
   return is_inward(a, b)
 end
 #hopefully the julia compiler knows what to do here.

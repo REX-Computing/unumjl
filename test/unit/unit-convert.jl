@@ -4,6 +4,9 @@
 #integer to unum
 
 @test [calculate(convert(Unum{3,6},i)) for i=-50:50] == [BigFloat(i) for i = -50:50]
+#discovered an fsize error:
+@test calculate(Unum{4,7}(30.0)) == 30.0
+
 @test is_mmr(convert(Unum{0,0}, 3))
 
 #test to make sure that accidentally hacking the infinity value instead produces mmr.
@@ -130,3 +133,5 @@ tinyfloat = reinterpret(Float64, o64)
 #test that subnormals convert correctly
 @test 1.0 == convert(Float64, Unum{0,0}(z64, t64, z16, z16, z16))
 #test converting *to* a subnormal float.
+
+@test one(Unum{4,7}) == Unum{4,7}(1)

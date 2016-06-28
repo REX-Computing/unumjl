@@ -39,4 +39,23 @@ function ctz{FSS}(n::ArrayNum{FSS})
   res
 end
 
-export clz, ctz
+doc"""
+  `cto(::UInt64)` and 'cto(::ArrayNum)' count the trailing ones and return a
+  UInt16 value (instead of the Int64 standard value for trailing_zeros.)
+"""
+cto(n::UInt64) = to16(trailing_ones(n))
+#for when it's a superint (that's not a straight Uint64)
+function cto{FSS}(n::ArrayNum{FSS})
+  res::UInt16 = z16
+  should_continue::Bool = true
+  cellvalue::UInt64 = z64
+  #iterate down the array starting from the least significant cell (highest index)
+  for idx = __cell_length(FSS):-1:1
+    @inbounds (cellvalue = n.a[idx])
+    res += cto(cellvalue)
+    (cellvalue != f64) && return res
+  end
+  res
+end
+
+export clz, ctz, cto

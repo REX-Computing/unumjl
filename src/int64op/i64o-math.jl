@@ -146,6 +146,19 @@ doc"""
   @code :(return carry - borrowed * o64)
 end
 
+@gen_code function invert!{FSS}(a::ArrayNum{FSS})
+  @code :(borrow = z64)
+  for idx = __cell_length(FSS):-1:1
+    @code quote
+      @inbounds begin
+        a.a[$idx] = - a.a[$idx] - borrow
+        borrow = ((a.a[$idx] | borrow) != z64) * o64
+      end
+    end
+  end
+  @code :(a)
+end
+
 #these two functions get inlined by handling a quad load as the individual register.
 top_part(n::UInt128) = UInt64((n & 0xFFFF_FFFF_FFFF_FFFF_0000_0000_0000_0000) >> 64)
 bottom_part(n::UInt128) = UInt64(n & 0x0000_0000_0000_0000_FFFF_FFFF_FFFF_FFFF)
@@ -270,19 +283,23 @@ doc"""
 i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}) = i64mul!(a, b, Val{__cell_length(FSS)}, Val{true})
 #generic version.
 @gen_code function i64mul!{FSS, cells, addin}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, ::Type{Val{cells}}, ::Type{Val{addin}})
-  (cells >= __cell_length(FSS)) || throw(ArgumentError("multiplication should use "))
+  (cells >= __cell_length(FSS)) || throw(ArgumentError("multiplication should be calculated on at least as many cells as the arraynum."))
   #set up some internal function variables.
   @code quote
     prev_sum::UInt128 = zero(UInt128)
     accum_sum::UInt128 = zero(UInt128)
     carry::UInt64 = zero(UInt64)
+
+    ubit = (ctz(a) + ctz(b) <= max_fsize(FSS)) * UNUM_UBIT_MASK
   end
 
   #PHASE 1.  CALCULATE top only...  Note the A indices always start at 2
   idx_sum = cells + 2
   for idx = 2:cells
     jdx = idx_sum - idx #calculate the index for the b arraynum.
-    @code :(@inbounds accum_sum += i64mul_simple(a.a[$idx], b.a[$jdx]))
+    @code quote
+      @inbounds accum_sum += i64mul_simple(a.a[$idx], b.a[$jdx])
+    end
   end
 
   #PHASE 2.  CALCULATE FULL, USE TOP
@@ -292,7 +309,6 @@ i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}) = i64mul!(a, b, Val{__cell_leng
     @code quote
       prev_sum = accum_sum  #cache the previous value
       @inbounds accum_sum += i64mul_extended(a.a[$idx], b.a[$jdx])
-      carry += (prev_sum < accum_sum) * o64
     end
   end
 
@@ -302,15 +318,13 @@ i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}) = i64mul!(a, b, Val{__cell_leng
     #then add in the carry value, then clear it.
     @code quote
       accum_sum >>= 64
-      accum_sum += (UInt128(carry) << 64)
-      carry = z64
+      #accum_sum += carry
     end
     for idx = 1:(idx_sum - 1)
       jdx = idx_sum - idx
       @code quote
         prev_sum = accum_sum  #cache the previous value
         @inbounds accum_sum += i64mul_extended(a.a[$idx], b.a[$jdx])
-        carry += (prev_sum < accum_sum) * o64
       end
     end
     #PHASE 3.5 ADDITIVE PARTS
@@ -318,10 +332,8 @@ i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}) = i64mul!(a, b, Val{__cell_leng
       @code quote
         prev_sum = accum_sum
         @inbounds accum_sum += a.a[$idx_sum]
-        carry += (prev_sum < accum_sum) * o64
         prev_sum = accum_sum
         @inbounds accum_sum += b.a[$idx_sum]
-        carry += (prev_sum < accum_sum) * o64
       end
     end
     #at the end of each loop, be sure to copy over the lower 64 bits to our
@@ -333,7 +345,7 @@ i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}) = i64mul!(a, b, Val{__cell_leng
   #PHASE 4.  Transfer the last part of the accumulated sum to the first index in
   #in the arraynum.
   @code quote
-    carry = o64
+    carry = z64
     old_top = new_top = top_part(accum_sum)
   end
 
@@ -341,16 +353,17 @@ i64mul!{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}) = i64mul!(a, b, Val{__cell_leng
     @code quote
       #additive part for last segment.
       @inbounds new_top += a.a[1]
-      carry += (old_top < new_top) * o64
+      carry += (old_top > new_top) * o64
       old_top = new_top
       @inbounds new_top += b.a[1]
-      carry += (old_top < new_top) * o64
+      carry += (old_top > new_top) * o64
     end
   end
 
   @code quote
     #store the last word.
     @inbounds a.a[1] = new_top
-    return (carry, UNUM_UBIT_MASK)
+
+    return (carry, ubit)
   end
 end

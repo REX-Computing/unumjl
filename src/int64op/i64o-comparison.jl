@@ -63,7 +63,9 @@ function lessthanwithubit{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, fsize::UInt16
         a.a[idx] < b.a[idx] && return true
       end
     end
-    @inbounds lessthanwithubit(a.a[middle_spot], b.a[middle_spot], middle_size, orequal)
+
+    @inbounds res = lessthanwithubit(a.a[middle_spot], b.a[middle_spot], middle_size, orequal)
+    return res
 end
 
 ################################################################################
