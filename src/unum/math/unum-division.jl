@@ -51,27 +51,24 @@ __frac_bits(FSS::Int64) = max_fsize(FSS) + 1
   _bexp = decode_exp(b)
 
   #solve the exponent.
-  exponent = _aexp - _bexp - 1
-
-  (exponent > max_exponent(ESS)) && return mmr(U, result_sign)
-  (exponent < min_exponent(ESS,FSS)) && return sss(U, result_sign)
-
-  exponent += _asubnormal * 1 - _bsubnormal * 1
+  exponent = _aexp - _bexp
+  exponent += _asubnormal * 1 - _bsubnormal * 1 - 1
 
   dividend = copy(a)
   _asubnormal && (exponent -= normalize!(dividend))
+  zero_a = frac_ctz(dividend)
+
   divisor = copy(b)
-  _bsubnormal && (exponent -= normalize!(divisor))
+  _bsubnormal && (exponent += normalize!(divisor))
+  zero_b = frac_ctz(divisor)
+
+  (exponent > max_exponent(ESS)) && return mmr(U, result_sign)
+  (exponent < min_exponent(ESS,FSS) - 1) && return sss(U, result_sign)
 
   exponent += frac_div!(dividend, divisor)
 
   if FSS < 6
     dividend.fraction &= mask_top(FSS)
-  end
-
-  if exponent < min_exponent(ESS)
-    #do something wierd
-    return nan(U)
   end
 
   (dividend.esize, dividend.exponent) = encode_exp(exponent)
@@ -82,8 +79,6 @@ __frac_bits(FSS::Int64) = max_fsize(FSS) + 1
   #count zeros on the tail of the dividend.
   zero_r = frac_ctz(dividend)
   one_r  = frac_cto(dividend)
-  zero_a = frac_ctz(a)
-  zero_b = frac_ctz(b)
 
   if (zero_a == zero_r + zero_b - __frac_bits(FSS))
     exact_trim!(dividend)
@@ -94,6 +89,21 @@ __frac_bits(FSS::Int64) = max_fsize(FSS) + 1
     make_ulp!(dividend)
   end
 
+  exponent = decode_exp(dividend)
+
+  exponent > max_exponent(ESS) && return mmr!(dividend, result_sign)
+
+  if exponent < min_exponent(ESS)
+    #in the case that we need to make this subnormal.
+    right_shift = to16(min_exponent(ESS) - exponent)
+    right_shift > (max_fsize(FSS) + o16) && return sss!(dividend, result_sign)
+    frac_rsh_underflow_check!(dividend, right_shift)
+    frac_set_bit!(dividend, right_shift)
+    dividend.esize = max_esize(ESS)
+    dividend.exponent = z64
+  end
+
+  coerce_sign!(dividend, result_sign)
   return dividend
 end
 
@@ -130,8 +140,8 @@ doc"""
       traversals = 1
     end
 
-    println("dm: ", d_multiple)
-    println("dr: ", d_result)
+    #println("dm: ", d_multiple)
+    #println("dr: ", d_result)
 
     #square the fraction part of the result.
     d_multiple = frac_sqr!(d_multiple)
@@ -162,10 +172,10 @@ function frac_sqr!(number::UInt128)
   result >>= 63                      #63 because there's a *2 in there.
   result += top_word * top_word
 end
-frac_sqr!{ESS,FSS}(multiplier::UnumLarge{ESS,FSS}) = (frac_mul!(multiplier, multiplier.fraction, Val{__cell_length(FSS) + 1}, Val{false}); multiplier)
+frac_sqr!{ESS,FSS}(multiplier::UnumLarge{ESS,FSS}) = (frac_mul!(multiplier, multiplier.fraction, Val{__cell_length(FSS) + __xtras(FSS)}, Val{false}); multiplier)
 
 frac_dmul!{ESS,FSS}(dividend::UnumSmall{ESS,FSS}, multiplier::UnumSmall{ESS,FSS}) = frac_mul!(dividend, multiplier.fraction)
-frac_dmul!{ESS,FSS}(dividend::UnumLarge{ESS,FSS}, multiplier::UnumLarge{ESS,FSS}) = frac_mul!(dividend, multiplier.fraction, Val{__cell_length(FSS) + 1}, Val{true})
+frac_dmul!{ESS,FSS}(dividend::UnumLarge{ESS,FSS}, multiplier::UnumLarge{ESS,FSS}) = frac_mul!(dividend, multiplier.fraction, Val{__cell_length(FSS) + __xtras(FSS)}, Val{true})
 function frac_dmul!(dividend::i128shell, multiplier::UInt128)
   carry = o64
   top_d = (dividend.a >> 64)
@@ -199,7 +209,14 @@ end
 
 prep_result!{ESS,FSS}(a::UnumSmall{ESS,FSS}) = a
 prep_result!{ESS}(a::UnumSmall{ESS,6}) = i128shell(UInt128(a.fraction) << 64)
-prep_result!{ESS,FSS}(a::UnumLarge{ESS,FSS}) = (push!(a.fraction.a, z64); a)
+function prep_result!{ESS,FSS}(a::UnumLarge{ESS,FSS})
+  for idx = 1:__xtras(FSS)
+    push!(a.fraction.a, z64)
+  end
+  return a
+end
+
+__xtras(FSS) = 4#__cell_length(FSS) >> 1
 
 prep_multiple!{ESS,FSS}(a::UnumSmall{ESS,FSS}) = (a.fraction = (z64 - ((a.fraction >> 1) | t64)); a)
 function prep_multiple!{ESS}(a::UnumSmall{ESS, 6})
@@ -214,17 +231,26 @@ function prep_multiple!{ESS,FSS}(a::UnumLarge{ESS,FSS})
     invert!(a.fraction)
   end
 
+  @inbounds a.fraction[__cell_length(FSS)] -= (lbit * o64)
   #now go through and invert every cell.
 
   #TODO:  Decide on this question (not now!)
   #hack-ey.  Should we be doing this or checking to see if we have the right size??
   push!(a.fraction.a, lbit * t64)
+  for idx = 2:__xtras(FSS)
+    push!(a.fraction.a, z64)
+  end
   return a
 end
 
 finalize_result!{ESS,FSS}(a::UnumSmall{ESS,FSS}, b::UnumSmall{ESS,FSS}) = nothing
-finalize_result!{ESS,FSS}(a::UnumLarge{ESS,FSS}, b::UnumLarge{ESS,FSS}) = pop!(a.fraction.a)
 finalize_result!{ESS}(a::UnumSmall{ESS,6}, b::i128shell) = (a.fraction = top_part(b.a))
+function finalize_result!{ESS,FSS}(a::UnumLarge{ESS,FSS}, b::UnumLarge{ESS,FSS})
+  for idx = 1:__xtras(FSS)
+    pop!(a.fraction.a)
+  end
+end
+
 
 @universal function div_inexact(a::Unum, b::Unum, result_sign::UInt16)
   is_mmr(a) && (return mmr_div(b, result_sign))
@@ -233,13 +259,27 @@ finalize_result!{ESS}(a::UnumSmall{ESS,6}, b::i128shell) = (a.fraction = top_par
   is_mmr(b) && (return mmr_div_left(a, result_sign))
   is_sss(b) && (return sss_div_left(a, result_sign))
 
-  return nan(U)
+  #calculate the tops and the bottoms of both ulps.
+  outer_bound_dividend = is_exact(a) ? a : outward_exact(a)
+  outer_bound_divisor = is_exact(b) ? b : outward_exact(b)
+
+  #calculate the inner and outer bounds of the result.
+  inner = div_exact(a, outer_bound_divisor, result_sign)
+  outer = div_exact(outer_bound_dividend, b, result_sign)
+  #just in case we found an exact number here, make it not so.
+  is_exact(inner) && outward_ulp!(inner)
+  is_exact(outer) && inward_ulp!(outer)
+
+  return (result_sign != z16) ? resolve_as_utype!(outer, inner) : resolve_as_utype!(inner, outer)
 end
 
 @universal function mmr_div(b::Unum, result_sign::UInt16)
   if mag_greater_than_one(b)
     is_mmr(b) && return (result_sign == z16) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
-    return nan(U)
+    outer_bound_b = is_exact(b) ? b : outward_exact(b)
+    inner_bound = div_exact(big_exact(U), outer_bound_b, result_sign)
+    is_exact(inner_bound) && outward_ulp!(inner_bound)
+    return (result_sign != z16) ? resolve_as_utype!(neg_mmr(U), inner_bound) : resolve_as_utype!(inner_bound, mmr(U))
   else
     return mmr(U, result_sign)
   end
@@ -250,16 +290,25 @@ end
     return sss(U, result_sign)
   else
     is_sss(b) && return (result_sign == z16) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
-    return nan(U, result_sign)
+
+    outer_bound = div_exact(small_exact(U), make_exact(b), result_sign)
+    is_exact(outer_bound) && inward_ulp!(outer_bound)
+    return (result_sign != z16) ? resolve_as_utype!(outer_bound, neg_sss(U)) : resolve_as_utype!(sss(U), outer_bound)
   end
 end
 
 @universal function mmr_div_left(a::Unum, result_sign::UInt16)
-  return nan(U)
+ outer_bound_a = is_exact(a) ? a : outward_exact(a)
+
+ outer_bound = div_exact(a, big_exact(U), result_sign)
+ is_exact(outer_bound) && inward_ulp!(outer_bound)
+ return (result_sign != z16) ? resolve_as_utype!(outer_bound, neg_sss(U)) : resolve_as_utype!(sss(U), outer_bound)
 end
 
 @universal function sss_div_left(a::Unum, result_sign::UInt16)
-  return nan(U)
+  inner_bound = div_exact(a, small_exact(U), result_sign)
+  is_exact(inner_bound) && outward_ulp!(inner_bound)
+  return (result_sign != z16) ? resolve_as_utype!(neg_mmr(U), inner_bound) : resolve_as_utype!(inner_bound, mmr(U))
 end
 
 #import the Base divide operation and bind it to the udiv and udiv! functions

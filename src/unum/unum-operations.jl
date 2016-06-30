@@ -278,9 +278,11 @@ frac_cto{ESS,FSS}(x::UnumLarge{ESS,FSS}) = cto(x.fraction)
 
 doc"""`Unums.make_exact(::Unum)` forces the ubit of a unum to be 0."""
 @universal make_exact!(x::Unum) = (x.flags &= ~UNUM_UBIT_MASK; x)
+@universal make_exact(x::Unum) = make_exact!(copy(x))
 
 doc"""`Unums.make_ulp(::Unum)` forces the ubit of a unum to be 1."""
 @universal make_ulp!(x::Unum) = (x.flags |= UNUM_UBIT_MASK; x)
+@universal make_ulp(x::Unum) = make_exact!(copy(x))
 
 ################################################################################
 ## carry resolution

@@ -14,4 +14,5 @@ doc"""
 function setenvironment(ESS, FSS)
   options[:env_ESS] = ESS
   options[:env_FSS] = FSS
+  Unum{ESS, FSS}
 end
