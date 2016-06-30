@@ -45,6 +45,14 @@ wwx1 = Unum{4,6}(0x0000000000000000, 0x8000_0000_0000_0000, Unums.UNUM_UBIT_MASK
 @test wwx1 != wwu0 && wwx1 != wwu1 && wwx1 != wwu2  #but not if you move the fsize so that there are more bits.
 
 
+#test to make sure that overlapping ubits provide the correct answer when passed
+#to the min/max functions.
+x = Unum{4,6}(0x0000000000000001, 0x0000000000000000, 0x0003, 0x0001, 0x0000)
+y = Unum{4,6}(0x0000000000000001, 0x1000000000000000, 0x0003, 0x0001, 0x0003)
+
+@test min(x, y) == x
+@test max(x, y) == x
+
 #=
 @test !(zero(Unum{4,6}) > zero(Unum{4,6}))
 =#

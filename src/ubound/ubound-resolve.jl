@@ -46,6 +46,11 @@ doc"""
   return lower
 end
 
+@universal resolve_lower(value::Unum) = value
+@universal resolve_lower(value::Ubound) = value.lower
+@universal resolve_upper(value::Unum) = value
+@universal resolve_upper(value::Ubound) = value.upper
+
 #=
 @universal function force_unum(lower::Unum, upper::Unum)
   @check_resolve

@@ -80,7 +80,7 @@ end
 
   if _shift > max_fsize(FSS)
     #then go down one previous exact unum and decrement.
-    return inward_ulp!(copy(a))
+    return inner_ulp!(copy(a))
   end
 
   #copy the b unum as the temporary result, nuke its ubit just to be sure
@@ -135,7 +135,7 @@ end
     #check to see if the subtraction will cross the exponential barrier
     if is_not_zero(base_value.fraction) && inward_ubit_crosses_zero(base_value.fraction, b.fsize)
       inner_value = subtract_ubit!(copy(base_value), b.fsize)
-      outer_value = inward_ulp!(base_value)
+      outer_value = inner_ulp!(base_value)
 
       #use b instead of "resolve_as_utype" because they can't be contiguous unums.
       return is_positive(a) ? B(inner_value, outer_value) : B(outer_value, inner_value)
@@ -153,7 +153,7 @@ end
   is_mmr(b) && return B(neg_mmr(U), pos_mmr(U)) #all real numbers
   #calculate inner_value by doing an exact subtraction of b from big_exact.
   #ensure that it's an ulp.
-  diff_bound = is_ulp(b) ? outward_exact(b) : b
+  diff_bound = is_ulp(b) ? outer_exact(b) : b
   inner_value = diff_exact(a, diff_bound, max_exponent(ESS), decode_exp(diff_bound))
   #coerce sign and ulp to cover zero and exact cases.
   make_ulp!(coerce_sign!(inner_value, a))
@@ -191,17 +191,14 @@ doc"""
   #first, decide which ulp unum is dominant.
   (d, e, _dexp, _eexp) = (a.fsize < b.fsize) ? (a, b, _aexp, _bexp) : (b, a, _bexp, _aexp)
 
-  d_shell = coerce_sign!(outward_exact(d), a)
-  e_shell = coerce_sign!(outward_exact(e), a)
-  top = inward_ulp!(make_exact!(diff_exact(d_shell, e, decode_exp(d_shell), _eexp)))
-  bot = inward_ulp!(additiveinverse!(make_exact!(diff_exact(e_shell, d, decode_exp(e_shell), _dexp))))
+  d_shell = coerce_sign!(outer_exact(d), a)
+  e_shell = coerce_sign!(outer_exact(e), a)
+  top = inner_ulp!(make_exact!(diff_exact(d_shell, e, decode_exp(d_shell), _eexp)))
+  bot = inner_ulp!(additiveinverse!(make_exact!(diff_exact(e_shell, d, decode_exp(e_shell), _dexp))))
   return is_positive(a) ? B(bot, top) : B(top, bot)
 end
 
 #unary subtraction creates a new unum and flips it.
-function -{ESS,FSS}(x::Unum{ESS,FSS})
-  additiveinverse!(copy(x))
-end
-function -{ESS,FSS}(x::Gnum{ESS,FSS})
+@universal function -(x::Unum)
   additiveinverse!(copy(x))
 end

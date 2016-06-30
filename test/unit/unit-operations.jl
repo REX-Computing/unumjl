@@ -51,6 +51,6 @@ Unums.__resolve_subnormal!(x)
 @test x.exponent == 0
 =#
 
-@test Unums.inward_ulp(Unum{0,0}(2)) == Unums.make_ulp!(Unum{0,0}(1))
-@test Unums.inward_ulp(Unum{2,2}(o64, z64, z16, z16, z16)) == Unum{2,2}(o64, 0xF000_0000_0000_0000, o16, o16, 0x0003)
-@test Unums.inward_ulp(Unum{2,4}(o64, z64, z16, z16, z16)) == Unum{2,4}(o64, 0xFFFF_0000_0000_0000, o16, o16, 0x000F)
+@test Unums.inner_ulp(Unum{0,0}(2)) == Unums.make_ulp!(Unum{0,0}(1))
+@test Unums.inner_ulp(Unum{2,2}(o64, z64, z16, z16, z16)) == Unum{2,2}(o64, 0xF000_0000_0000_0000, o16, o16, 0x0003)
+@test Unums.inner_ulp(Unum{2,4}(o64, z64, z16, z16, z16)) == Unum{2,4}(o64, 0xFFFF_0000_0000_0000, o16, o16, 0x000F)

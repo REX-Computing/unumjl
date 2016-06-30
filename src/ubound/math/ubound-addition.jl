@@ -1,26 +1,25 @@
 
 ################################################################################
 ## addition
-function +{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  lb = a.lowbound + b
-  hb = a.highbound + b
 
-  (typeof(lb) <: Ubound) && (lb = lb.lowbound)
-  (typeof(hb) <: Ubound) && (hb = hb.highbound)
+@universal function add(a::Ubound, b::Unum)
+  lb = a.lower + b
+  hb = a.upper + b
 
-  #do try to collapse it to a unum.
-  ubound_resolve(ubound_unsafe(lb, hb))
+  (typeof(lb) == B) && (lb = lb.lower)
+  (typeof(hb) == B) && (hb = hb.upper)
+
+  (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end
-#alias the reverse function.
-function +{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
-  b + a
-end
-#and for closure, the situation where both operands are Ubounds.
-function +{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
-  lb = a.lowbound + b.lowbound
-  hb = a.highbound + b.highbound
 
-  (typeof(lb) <: Ubound) && (lb = lb.lowbound)
-  (typeof(hb) <: Ubound) && (hb = hb.highbound)
-  ubound_resolve(ubound_unsafe(lb, hb))
+@universal add(a::Unum, b::Ubound) = add(b, a)
+
+@universal function add(a::Ubound, b::Ubound)
+  lb = a.lower + b.lower
+  hb = a.upper + b.upper
+
+  (typeof(lb) == B) && (lb = lb.lower)
+  (typeof(hb) == B) && (hb = hb.upper)
+
+  (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end

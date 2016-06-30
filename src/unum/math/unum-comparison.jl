@@ -99,8 +99,8 @@ end
 
 @universal function Base.min(a::Unum, b::Unum)
   #adjust them in case they are subnormal
-  resolve_subnormal!(a)
-  resolve_subnormal!(b)
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
 
   #first, fastest criterion:  Are they not the same sign?
   if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0
@@ -127,8 +127,8 @@ end
 
 @universal function Base.max(a::Unum, b::Unum)
   #adjust them in case they are subnormal
-  resolve_subnormal!(a)
-  resolve_subnormal!(b)
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
 
   #first, fastest criterion:  Are they not the same sign?
   if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0

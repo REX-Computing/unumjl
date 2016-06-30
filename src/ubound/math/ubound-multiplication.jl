@@ -2,37 +2,44 @@
 
 ################################################################################
 ## multiplication
-function *{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
+
+@universal function mul(a::Unum, b::Ubound)
   b * a
 end
 
-function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  #two cases.  One:  the ubound doesn't straddle zero
-  lbp = a.lowbound * b
-  hbp = a.highbound * b
+@universal function mul(a::Ubound, b::Unum)
+    lbp = a.lower * b
+    hbp = a.upper * b
 
-  t::Ubound = is_negative(b) ? ubound_unsafe(hbp, lbp) : ubound_unsafe(lbp, hbp)
-
-  #attempt to resolve it if we did not straddle zero
-  (a.lowbound.flags & UNUM_SIGN_MASK == a.highbound.flags & UNUM_SIGN_MASK) ? ubound_resolve(t) : t
+    if is_ulp(lbp) && is_ulp(hbp)
+      is_negative(b) ? resolve_utype!(hbp, lbp) : resolve_utype!(lbp, hbp)
+    else
+      is_negative(b) ? B(hbp, lbp) : B(lbp, hbp)
+    end
 end
 
-function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
+@universal function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
   signcode::UInt16 = 0
-  is_negative(a.lowbound)  && (signcode += 1)
-  is_negative(a.highbound) && (signcode += 2)
-  is_negative(b.lowbound)  && (signcode += 4)
-  is_negative(b.highbound) && (signcode += 8)
+
+  is_negative(a.upper) && (signcode += 1)
+  is_negative(a.lower) && (signcode += 2)
+  is_negative(b.upper) && (signcode += 4)
+  is_negative(b.lower) && (signcode += 8)
 
   if (signcode == 0) #everything is positive
-    ubound_resolve(ubound_unsafe(a.lowbound * b.lowbound, a.highbound * b.highbound))
+    lower_result = resolve_lower(a.lower * b.lower)
+    upper_result = resolve_upper(a.upper * b.upper)
+    (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif (signcode == 1) #only a.lowbound is negative
-    ubound_unsafe(a.lowbound * b.highbound, a.highbound * b.highbound)
+    B(resolve_lower(a.lower * b.upper), resolve_upper(a.upper * b.upper))
   #signcode 2 is not possible
   elseif (signcode == 3) #a is negative and b is positive
-    ubound_resolve(ubound_unsafe(a.lowbound * b.highbound, a.highbound * b.lowbound))
+    lower_result = resolve_lower(a.lower * b.lower)
+    upper_result = resolve_upper(a.upper * b.upper)
+
+    (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif (signcode == 4) #only b.lowbound is negative
-    ubound_unsafe(b.lowbound * a.highbound, b.highbound * a.highbound)
+    B(resolve_lower(b.lowbound * a.highbound), resolve_upper(b.highbound * a.highbound))
   elseif (signcode == 5) #a.lowbound and b.lowbound are negative
     minchoice1 = b.lowbound * a.highbound
     minchoice2 = b.highbound * a.lowbound
@@ -63,3 +70,4 @@ function *{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
     throw(ArgumentError("some ubound had incorrect orientation, $signcode."))
   end
 end
+=#

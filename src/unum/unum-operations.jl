@@ -69,47 +69,6 @@ export abs!
   return dest  #for chaining purposes
 end
 
-#=
-doc"""
-  Unums.match_fsize!{ESS,FSS} takes the location of fsize and moves it over to dest.
-
-  The exponent on src should less than or equal to the exponent on dest.
-"""
-function match_fsize!{ESS,FSS}(src::Unum{ESS,FSS}, dest::Unum{ESS,FSS})
-  src_exp::Int64 = decode_exp(src)
-  dest_exp::Int64 = decode_exp(dest)
-  dest.fsize = UInt16(min(src.fsize + dest_exp - src_exp, max_fsize(FSS)))
-end
-=#
-#=
-#note the difference between "more/less", and "next/prev" - next/prev refers
-#to position along the number line, "more/less" refers to magnitude along the
-#number line.  NB:  __bigger_exact and __smaller_exact do *not* perform checks
-#on the properties of their passed values so should be used with caution.
-
-function __outward_exact{ESS,FSS}(a::Unum{ESS,FSS})
-  #set the location of the added bit:  remember that fsize is the actual length - 1
-  location = (is_ulp(a)) ? a.fsize + 1 : max_fsize(FSS)
-  #generate a new superint that represents what we're going to add in.
-  delta = __bit_from_top(location, length(a.fraction))
-  #add the delta in, making it a
-  (carry, fraction) = __carried_add(z64, a.fraction, delta)
-
-  #check the two cases.
-  if (carry != 0)
-    (esize, exponent) = encode_exp(decode_exp(a) + 1)
-    fraction = lsh(fraction, o16)
-  else
-    esize = a.esize
-    exponent = a.exponent
-  end
-  #recalculate fsize, since this is exact, we can deal with ULPs as needed.
-  fsize::UInt16 = __minimum_data_width(fraction)
-
-  Unum{ESS,FSS}(fsize, esize, a.flags & UNUM_SIGN_MASK, fraction, exponent)
-end
-=#
-
 doc"""
   `Unums.normalize!(::Unum)` takes a unum that is purportedly subnormal form and
   normalizes it.  This entails shifting just past the top bit.  this function
@@ -172,10 +131,10 @@ end
 ## sophisticated exactitude functions.
 
 doc"""
-  `Unums.outward_ulp!(::Unum)` returns the smallest-width ulp immediately above the
+  `Unums.outer_ulp!(::Unum)` returns the smallest-width ulp immediately above the
   current (exact) unum.
 """
-@universal function outward_ulp!(x::Unum)
+@universal function outer_ulp!(x::Unum)
   @ensure_exact(x)
 
   resolve_degenerates!(x)
@@ -183,13 +142,13 @@ doc"""
   x.fsize = max_fsize(FSS)
   make_ulp!(x)
 end
-@universal outward_ulp(x::Unum) = outward_ulp!(copy(x))
+@universal outer_ulp(x::Unum) = outer_ulp!(copy(x))
 
 doc"""
-  `Unums.inward_ulp!(::Unum)` returns the smallest-width ulp immediately below the
+  `Unums.inner_ulp!(::Unum)` returns the smallest-width ulp immediately below the
   current unum.
 """
-@universal function inward_ulp!(x::Unum)
+@universal function inner_ulp!(x::Unum)
   @ensure_exact(x)
   resolve_degenerates!(x)
   make_ulp!(x)
@@ -208,11 +167,11 @@ doc"""
 
   return x
 end
-@universal inward_ulp(x::Unum) = inward_ulp!(copy(x))
+@universal inner_ulp(x::Unum) = inner_ulp!(copy(x))
 
 doc"""
 """
-@universal function outward_exact!(x::Unum)
+@universal function outer_exact!(x::Unum)
   @ensure_ulp(x)
   resolve_degenerates!(x)
   carry = frac_add_ubit!(x, x.fsize)
@@ -230,21 +189,33 @@ doc"""
   end
   exact_trim!(make_exact!(x))
 end
-@universal outward_exact(x::Unum) = outward_exact!(copy(x))
+@universal outer_exact(x::Unum) = outer_exact!(copy(x))
 
-@universal function inward_exact!(x::Unum)
+@universal function inner_exact!(x::Unum)
   @ensure_ulp(x)
   make_exact!(x)
 end
-@universal inward_exact(x::Unum) = inward_exact!(copy(x))
+@universal inner_exact(x::Unum) = inner_exact!(copy(x))
+
+#real number/dedekind cut formulas.
+@universal function lub(x::Unum)
+  is_exact(x) && return x
+  is_positive(x) && return outer_bound(x)
+  return inner_bound(x)
+end
+@universal function glb(x::Unum)
+  is_exact(x) && return x
+  is_positive(x) && return inner_bound(x)
+  return outer_bound(x)
+end
 
 ################################################################################
 ## recast as upper and lower versions.
 
-@universal upper_exact!(x::Unum) = is_positive(x) ? outward_exact!(x) : inward_exact!(x)
-@universal lower_exact!(x::Unum) = is_positive(x) ? inward_exact!(x) : outward_exact!(x)
-@universal upper_ulp!(x::Unum) = is_positive(x) ? outward_ulp!(x) : inward_ulp!(x)
-@universal lower_ulp!(x::Unum) = is_positive(x) ? inward_ulp!(x) : outward_ulp!(x)
+@universal upper_exact!(x::Unum) = is_positive(x) ? outer_exact!(x) : inner_exact!(x)
+@universal lower_exact!(x::Unum) = is_positive(x) ? inner_exact!(x) : outer_exact!(x)
+@universal upper_ulp!(x::Unum) = is_positive(x) ? outer_ulp!(x) : inner_ulp!(x)
+@universal lower_ulp!(x::Unum) = is_positive(x) ? inner_ulp!(x) : outer_ulp!(x)
 
 @universal upper_exact(x::Unum) = upper_exact!(copy(x))
 @universal lower_exact(x::Unum) = lower_exact!(copy(x))

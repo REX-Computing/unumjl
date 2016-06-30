@@ -183,11 +183,11 @@ end
 @universal function sss_mult(a::Unum, result_sign::UInt16)
   if mag_greater_than_one(a)
     temp1 = small_exact(U, result_sign)
-    temp2 = is_exact(a) ? a : outward_exact(a)
+    temp2 = is_exact(a) ? a : outer_exact(a)
 
     outer_value = mul_exact(temp1, temp2, result_sign)
 
-    is_exact(outer_value) && inward_ulp!(outer_value)
+    is_exact(outer_value) && inner_ulp!(outer_value)
 
     (result_sign == z16) ? resolve_as_utype!(sss(U, result_sign), outer_value) : resolve_as_utype!(outer_value, sss(U, result_sign))
   else

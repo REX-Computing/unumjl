@@ -1,29 +1,45 @@
 ###############################################################################
 #subtraction
 
-function -{ESS,FSS}(a::Ubound{ESS,FSS})
-  Ubound(-a.highbound, -a.lowbound)
+
+@universal function sub(a::Ubound, b::Unum)
+  lb = a.lower - b
+  hb = a.upper - b
+
+  (typeof(lb) == B) && (lb = lb.lower)
+  (typeof(hb) == B) && (hb = hb.upper)
+
+  (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end
 
-function -{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  lb = a.lowbound - b
-  hb = a.highbound - b
+@universal function sub(a::Unum, b::Ubound)
+  lb = a - b.upper
+  hb = a - b.lower
 
-  (typeof(lb) <: Ubound) && (lb = lb.lowbound)
-  (typeof(hb) <: Ubound) && (hb = hb.highbound)
-  ubound_resolve(ubound_unsafe(lb, hb))
+  (typeof(lb) == B) && (lb = lb.lower)
+  (typeof(hb) == B) && (hb = hb.upper)
+
+  (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end
 
-function -{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
-  lb = a - b.highbound
-  hb = a - b.lowbound
+@universal function sub(a::Ubound, b::Ubound)
+  lb = a.lower - b.upper
+  hb = a.upper - b.lower
 
-  (typeof(lb) <: Ubound) && (lb = lb.lowbound)
-  (typeof(hb) <: Ubound) && (hb = hb.highbound)
-  ubound_resolve(ubound_unsafe(lb, hb))
+  (typeof(lb) == B) && (lb = lb.lower)
+  (typeof(hb) == B) && (hb = hb.upper)
+
+  (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end
 
-function -{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
-  #I'm too lazy to do this explicitly.
-  a + (-b)
+@universal function additiveinverse!(a::Ubound)
+  hb = -a.lower
+  a.lower = -a.upper
+  a.upper = hb
+  return a
+end
+
+#unary subtraction creates a new unum and flips it.
+@universal function -(x::Ubound)
+  additiveinverse!(copy(x))
 end

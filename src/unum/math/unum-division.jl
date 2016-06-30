@@ -260,15 +260,15 @@ end
   is_sss(b) && (return sss_div_left(a, result_sign))
 
   #calculate the tops and the bottoms of both ulps.
-  outer_bound_dividend = is_exact(a) ? a : outward_exact(a)
-  outer_bound_divisor = is_exact(b) ? b : outward_exact(b)
+  outer_bound_dividend = is_exact(a) ? a : outer_exact(a)
+  outer_bound_divisor = is_exact(b) ? b : outer_exact(b)
 
   #calculate the inner and outer bounds of the result.
   inner = div_exact(a, outer_bound_divisor, result_sign)
   outer = div_exact(outer_bound_dividend, b, result_sign)
   #just in case we found an exact number here, make it not so.
-  is_exact(inner) && outward_ulp!(inner)
-  is_exact(outer) && inward_ulp!(outer)
+  is_exact(inner) && outer_ulp!(inner)
+  is_exact(outer) && inner_ulp!(outer)
 
   return (result_sign != z16) ? resolve_as_utype!(outer, inner) : resolve_as_utype!(inner, outer)
 end
@@ -276,9 +276,9 @@ end
 @universal function mmr_div(b::Unum, result_sign::UInt16)
   if mag_greater_than_one(b)
     is_mmr(b) && return (result_sign == z16) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
-    outer_bound_b = is_exact(b) ? b : outward_exact(b)
+    outer_bound_b = is_exact(b) ? b : outer_exact(b)
     inner_bound = div_exact(big_exact(U), outer_bound_b, result_sign)
-    is_exact(inner_bound) && outward_ulp!(inner_bound)
+    is_exact(inner_bound) && outer_ulp!(inner_bound)
     return (result_sign != z16) ? resolve_as_utype!(neg_mmr(U), inner_bound) : resolve_as_utype!(inner_bound, mmr(U))
   else
     return mmr(U, result_sign)
@@ -292,22 +292,22 @@ end
     is_sss(b) && return (result_sign == z16) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
 
     outer_bound = div_exact(small_exact(U), make_exact(b), result_sign)
-    is_exact(outer_bound) && inward_ulp!(outer_bound)
+    is_exact(outer_bound) && inner_ulp!(outer_bound)
     return (result_sign != z16) ? resolve_as_utype!(outer_bound, neg_sss(U)) : resolve_as_utype!(sss(U), outer_bound)
   end
 end
 
 @universal function mmr_div_left(a::Unum, result_sign::UInt16)
- outer_bound_a = is_exact(a) ? a : outward_exact(a)
+ outer_bound_a = is_exact(a) ? a : outer_exact(a)
 
  outer_bound = div_exact(a, big_exact(U), result_sign)
- is_exact(outer_bound) && inward_ulp!(outer_bound)
+ is_exact(outer_bound) && inner_ulp!(outer_bound)
  return (result_sign != z16) ? resolve_as_utype!(outer_bound, neg_sss(U)) : resolve_as_utype!(sss(U), outer_bound)
 end
 
 @universal function sss_div_left(a::Unum, result_sign::UInt16)
   inner_bound = div_exact(a, small_exact(U), result_sign)
-  is_exact(inner_bound) && outward_ulp!(inner_bound)
+  is_exact(inner_bound) && outer_ulp!(inner_bound)
   return (result_sign != z16) ? resolve_as_utype!(neg_mmr(U), inner_bound) : resolve_as_utype!(inner_bound, mmr(U))
 end
 
