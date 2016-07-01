@@ -24,11 +24,13 @@ end
   return a.fraction == b.fraction
 end
 
+#TODO:  Make this comparison not depend on making new Unums.
 @universal function cmp_outer_bound(a::Unum, b::Unum)
   @matchsign_devmode a b
   resolve_degenerates!(a)
   resolve_degenerates!(b)
   decode_exp(a) == decode_exp(b) || return false
+  return outer_exact(a) == outer_exact(b)
 end
 
 @universal function cmp_lower_bound(a::Unum, b::Unum)

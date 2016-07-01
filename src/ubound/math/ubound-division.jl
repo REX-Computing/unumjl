@@ -5,58 +5,74 @@
 ################################################################################
 ## division
 
-function /{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
-  aln = is_negative(a.lowbound)
-  ahn = is_negative(a.highbound)
+@universal function udiv(a::Ubound, b::Unum)
+  aln = is_negative(a.lower)
+  ahn = is_negative(a.upper)
   bn = is_negative(b)
 
-  (aln != ahn) && return (bn ? ubound_unsafe(a.highbound / b, a.lowbound / b) : ubound_unsafe(a.lowbound / b, a.highbound / b))
-  bn ? ubound_resolve(ubound_unsafe(a.highbound / b, a.lowbound / b)) : ubound_resolve(ubound_unsafe(a.lowbound / b, a.highbound / b))
+  (aln != ahn) && return (bn ? B(a.upper / b, a.lower / b) : B(a.lower / b, a.upper / b))
+
+  bn ? resolve_utype!(a.upper / b, a.lower / b) : resolve_utype!(a.lower / b, a.upper / b)
 end
 
-function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
-  bln = is_negative(b.lowbound)
+@universal function udiv(a::Unum, b::Ubound)
+  bln = is_negative(b.lower)
 
-  (bln != is_negative(b.highbound)) && return nan(Unum{ESS,FSS})
-  (is_negative(a) != bln) ? ubound_resolve(ubound_unsafe(a / b.lowbound, a / b.highbound)) : ubound_resolve(ubound_unsafe(a / b.highbound, a / b.lowbound))
+  #if the dividend straddles, then we have nan.
+  (bln != is_negative(b.upper)) && return nan(U)
+
+  if (is_negative(a) != bln)
+    lower_result = resolve_lower(a / b.lower)
+    upper_result = resolve_upper(a / b.upper)
+    resolve_utype!(lower_result, upper_result)
+  else
+    lower_result = resolve_lower(a / b.upper)
+    upper_result = resolve_upper(a / b.lower)
+    resolve_utype!(lower_result, upper_result)
+  end
 end
 
-function /{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
+@universal function udiv(a::Ubound, b::Ubound)
   signcode::UInt16 = 0
-  is_negative(a.lowbound)  && (signcode += 1)
-  is_negative(a.highbound) && (signcode += 2)
-  is_negative(b.lowbound)  && (signcode += 4)
-  is_negative(b.highbound) && (signcode += 8)
+  is_negative(a.lower) && (signcode += 1)
+  is_negative(a.upper) && (signcode += 2)
+  is_negative(b.lower) && (signcode += 4)
+  is_negative(b.upper) && (signcode += 8)
 
   if (signcode == 0) #everything is positive
-    ubound_resolve(ubound_unsafe(a.lowbound / b.highbound, a.highbound / b.lowbound))
+    lower_result = resolve_lower(a.lower / b.upper)
+    upper_result = resolve_upper(a.upper / b.lower)
+    resolve_utype!(lower_result, upper_result)
   elseif (signcode == 1) #only a.lowbound is negative
-    ubound_unsafe(a.lowbound / b.lowbound, a.highbound / b.lowbound)
+    B(a.lower / b.lower, a.upper / b.lower)
   #signcode 2 is not possible
   elseif (signcode == 3) #a is negative and b is positive
-    ubound_resolve(ubound_unsafe(a.highbound / b.lowbound, a.lowbound / b.highbound))
+    lower_result = resolve_lower(a.upper / b.lower)
+    upper_result = resolve_upper(a.lower / b.upper)
+    resolve_utype!(lower_result, upper_result)
   elseif (signcode == 4) #only b.lowbound is negative
     #b straddles zero so we'll output NaN
-    return nan(Unum{ESS,FSS})
+    return nan(U)
   elseif (signcode == 5) #a.lowbound and b.lowbound are negative
     #b straddles zero so we'll output NaN
-    return nan(Unum{ESS,FSS})
+    return nan(U)
   #signcode 6 is not possible
   elseif (signcode == 7) #only b.highbound is positive
     #b straddles zero so we'll output NaN
-    return nan(Unum{ESS,FSS})
+    return nan(U)
   #signcode 8, 9, 10, 11 are not possible
   elseif (signcode == 12) #b is negative, a is positive
-    ubound_resolve(ubound_unsafe(a.highbound / b.lowbound, a.lowbound / b.highbound))
+    lower_result = resolve_lower(a.upper / b.lower)
+    upper_result = resolve_upper(a.lower / b.upper)
+    resolve_utype!(lower_result, upper_result)
   elseif (signcode == 13) #b is negative, a straddles
-    ubound_unsafe(a.highbound / b.highbound, a.lowbound / b.highbound)
+    B(a.upper / b.upper, a.lower / b.upper)
   #signcode 14 is not possible
   elseif (signcode == 15) #everything is negative
-    ubound_resolve(ubound_unsafe(a.lowbound / b.highbound, a.highbound / b.lowbound))
+    lower_result = resolve_lower(a.lower / b.upper)
+    upper_result = resolve_upper(a.upper / b.lower)
+    resolve_utype!(lower_result, upper_result)
   else
-    println("----")
-    println(describe(a))
-    println(describe(b))
-    throw(ArgumentError("some ubound had incorrect orientation, $signcode."))
+    throw(ArgumentError("error dividing ubounds $a and $b, throws invalid signcode $signcode."))
   end
 end
