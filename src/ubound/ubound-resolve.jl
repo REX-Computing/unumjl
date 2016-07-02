@@ -46,13 +46,18 @@ doc"""
   return lower
 end
 
+doc"""
+  `Unums.resolve_lower(::Unum)`
+  `Unums.resolve_lower(::Ubound)`
+  Returns a Unum that represents the lower end of a Ubound, or just the Unum itself.
+"""
 @universal resolve_lower(value::Unum) = value
 @universal resolve_lower(value::Ubound) = value.lower
+
+doc"""
+  `Unums.resolve_upper(::Unum)`
+  `Unums.resolve_upper(::Ubound)`
+  Returns a Unum that represents the upper end of a Ubound, or just the Unum itself.
+"""
 @universal resolve_upper(value::Unum) = value
 @universal resolve_upper(value::Ubound) = value.upper
-
-#=
-@universal function force_unum(lower::Unum, upper::Unum)
-  @check_resolve
-end
-=#

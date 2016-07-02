@@ -237,3 +237,23 @@ function Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, s::AbstractString)
   #next pull out the exponent
 end
 =#
+
+__textual(v::UnumSmall) = Float64(v)
+__textual(v::UnumLarge) = calculate(v)
+
+@universal function describe(v::Unum)
+  print("Unum{$ESS,$FSS}(")
+  print(__textual(v))
+  print(is_exact(v) ? " exact)" : " ulp)")
+  println()
+end
+
+@universal function describe(v::Ubound)
+  print("Ubound{$ESS,$FSS}(")
+  print(__textual(v.lower))
+  print(is_exact(v.lower) ? " exact " : " ulp ")
+  print("→ ")
+  print(__textual(v.upper))
+  print(is_exact(v.upper) ? " exact)" : " ulp)")
+  println()
+end

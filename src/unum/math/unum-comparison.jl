@@ -62,9 +62,11 @@ doc"""
   _bexp = decode_exp(b)
 
   #so now we know that these two have the same sign.
-  (_bexp > _aexp) && return true
-  (_bexp < _aexp) && return false
+  (_aexp < _bexp) && return true
+  (_aexp > _bexp) && return false
   #check fractions.
+
+  is_exact(a) & is_exact(b) && return (a.fraction < b.fraction)
 
   #in the case that b is an ulp and a is exact, then exact equality means a is
   #less, otherwise exact equality does not.
@@ -97,59 +99,59 @@ end
 @universal <=(a::Unum, b::Unum) = !(a > b)
 @universal >=(a::Unum, b::Unum) = !(b > a)
 
-@universal function Base.min(a::Unum, b::Unum)
+@universal function inner(a::Unum, b::Unum)
   #adjust them in case they are subnormal
   resolve_degenerates!(a)
   resolve_degenerates!(b)
-
-  #first, fastest criterion:  Are they not the same sign?
-  if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0
-    is_negative(a) && return a
-    return b
-  end
 
   #next criterion, are the exponents different
   _aexp = decode_exp(a)
   _bexp = decode_exp(b)
   if (_aexp != _bexp)
-    ((_aexp > _bexp) != is_negative(a)) && return a
-    return b
+    return (_aexp < _bexp) ? a : b
   end
+
   #next criteria, check the fractions
   if (a.fraction != b.fraction)
-    ((a.fraction > b.fraction) != is_negative(a)) && return a
-    return b
+    return (a.fraction < b.fraction) ? a : b
   end
+
   #finally, check the ubit
-  (is_ulp(a) != is_negative(a)) && return a
-  return b
+  return is_ulp(a) ? a : b
+end
+
+@universal function outer(a::Unum, b::Unum)
+  #adjust them in case they are subnormal
+  resolve_degenerates!(a)
+  resolve_degenerates!(b)
+
+  #next criterion, are the exponents different
+  _aexp = decode_exp(a)
+  _bexp = decode_exp(b)
+  if (_aexp != _bexp)
+    return (_aexp > _bexp) ? a : b
+  end
+
+  #next criteria, check the fractions
+  lessthanwithubit(a.fraction, b.fraction, min(a.fsize, b.fsize)) ? b : a
+end
+
+@universal function Base.min(a::Unum, b::Unum)
+  #first, fastest criterion:  Are they not the same sign?
+  if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0
+    return is_negative(a) ? a : b
+  end
+
+  return is_negative(a) ? outer(a, b) : inner(a, b)
 end
 
 @universal function Base.max(a::Unum, b::Unum)
-  #adjust them in case they are subnormal
-  resolve_degenerates!(a)
-  resolve_degenerates!(b)
-
   #first, fastest criterion:  Are they not the same sign?
   if (a.flags $ b.flags) & UNUM_SIGN_MASK != 0
-    isnegative(a) && return b
-    return a
+    return is_negative(a) ? b : a
   end
-  #next criterion, are the exponents different
-  _aexp = decode_exp(a)
-  _bexp = decode_exp(b)
-  if (_aexp != _bexp)
-    ((_aexp > _bexp) != is_negative(a)) && return b
-    return a
-  end
-  #next criteria, check the fractions
-  if (a.fraction != b.fraction)
-    ((a.fraction > b.fraction) != is_negative(a)) && return b
-    return a
-  end
-  #finally, check the ubit
-  (is_ulp(a) != is_negative(a)) && return b
-  return a
+
+  return is_negative(a) ? inner(a, b) : outer(a, b)
 end
 
 doc"""

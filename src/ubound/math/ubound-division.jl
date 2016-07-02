@@ -12,7 +12,14 @@
 
   (aln != ahn) && return (bn ? B(a.upper / b, a.lower / b) : B(a.lower / b, a.upper / b))
 
-  bn ? resolve_utype!(a.upper / b, a.lower / b) : resolve_utype!(a.lower / b, a.upper / b)
+  outer_result = a.upper / b
+  inner_result = a.lower / b
+
+  if is_ulp(inner_result) && is_ulp(outer_result)
+    bn ? resolve_as_utype!(outer_result, inner_result) : resolve_as_utype!(inner_result, outer_result)
+  else
+    bn ? B(outer_result, inner_result) : B(inner_result, outer_result)
+  end
 end
 
 @universal function udiv(a::Unum, b::Ubound)
@@ -24,11 +31,11 @@ end
   if (is_negative(a) != bln)
     lower_result = resolve_lower(a / b.lower)
     upper_result = resolve_upper(a / b.upper)
-    resolve_utype!(lower_result, upper_result)
+    (is_ulp(lower_result) && is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   else
     lower_result = resolve_lower(a / b.upper)
     upper_result = resolve_upper(a / b.lower)
-    resolve_utype!(lower_result, upper_result)
+    (is_ulp(lower_result) && is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   end
 end
 
@@ -42,14 +49,14 @@ end
   if (signcode == 0) #everything is positive
     lower_result = resolve_lower(a.lower / b.upper)
     upper_result = resolve_upper(a.upper / b.lower)
-    resolve_utype!(lower_result, upper_result)
+    resolve_as_utype!(lower_result, upper_result)
   elseif (signcode == 1) #only a.lowbound is negative
     B(a.lower / b.lower, a.upper / b.lower)
   #signcode 2 is not possible
   elseif (signcode == 3) #a is negative and b is positive
     lower_result = resolve_lower(a.upper / b.lower)
     upper_result = resolve_upper(a.lower / b.upper)
-    resolve_utype!(lower_result, upper_result)
+    resolve_as_utype!(lower_result, upper_result)
   elseif (signcode == 4) #only b.lowbound is negative
     #b straddles zero so we'll output NaN
     return nan(U)
@@ -64,14 +71,14 @@ end
   elseif (signcode == 12) #b is negative, a is positive
     lower_result = resolve_lower(a.upper / b.lower)
     upper_result = resolve_upper(a.lower / b.upper)
-    resolve_utype!(lower_result, upper_result)
+    resolve_as_utype!(lower_result, upper_result)
   elseif (signcode == 13) #b is negative, a straddles
     B(a.upper / b.upper, a.lower / b.upper)
   #signcode 14 is not possible
   elseif (signcode == 15) #everything is negative
     lower_result = resolve_lower(a.lower / b.upper)
     upper_result = resolve_upper(a.upper / b.lower)
-    resolve_utype!(lower_result, upper_result)
+    resolve_as_utype!(lower_result, upper_result)
   else
     throw(ArgumentError("error dividing ubounds $a and $b, throws invalid signcode $signcode."))
   end

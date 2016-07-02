@@ -49,9 +49,10 @@ doc"""
 """
 function lessthanwithubit(a::UInt64, b::UInt64, fsize::UInt16, orequal::Bool = false)
   mask = mask_top(fsize) #first generate the mask corresponding to the int.
+
   orequal && return ((a & mask) <= (b & mask))
-  ((a & mask) >= (b & mask)) && return false
-  return true
+
+  return ((a & mask) < (b & mask))
 end
 function lessthanwithubit{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, fsize::UInt16, orequal::Bool = false)
   #compute the last cell we need to scan.
@@ -145,38 +146,6 @@ function cmpplusubit{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, a_fsize::UInt16, b
     cmpplusubit_ordered(a, b, a_fsize, b_fsize)
   end
 end
-
-
-
-#=
-#compares two arraynums, up to a certain number of bits (fsize), returns true if
-#a is bigger than (b with its lowest bit set).
-@gen_code function cmpplusubit{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS}, fsize::UInt16)
-  @code quote
-    accum::Bool = true
-    alive::Bool = true
-    mask::UInt64 = mask_top(fsize & 0x003F)
-    tmask::UInt64
-    amask::UInt64
-    bmask::UInt64
-    fcell::UInt16 = fsize >> 6
-  end
-
-  for idx = 1:__cell_length(FSS)
-    iminusone = idx - 1
-    @code quote
-      tmask = ((fcell < $iminusone) * f64) | mask & ~((fcell > $iminusone) * f64)
-      amask = a.a[$idx] & tmask
-      bmask = b.a[$idx] & tmask
-      accum &= (amask < bmask)
-      alive &= (amask == bmask)
-    end
-  end
-  @code quote
-    accum & (!alive)
-  end
-end
-=#
 
 function !={FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)

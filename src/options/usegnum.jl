@@ -33,7 +33,7 @@ macro bind_operation(op, fsymbol)
     esc(quote
       @universal $op(a::Unum, b::Unum)     = $fsymbol(a, b)
       @universal $op(a::Unum, b::Ubound)   = $fsymbol(a, b)
-      @universal $op(a::Unum, b::Ubound)   = $fsymbol(a, b)
+      @universal $op(a::Ubound, b::Unum)   = $fsymbol(a, b)
       @universal $op(a::Ubound, b::Ubound) = $fsymbol(a, b)
     end)
   end

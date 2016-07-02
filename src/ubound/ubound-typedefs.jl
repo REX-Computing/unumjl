@@ -73,6 +73,9 @@ else
   @universal Base.call(T::Type{Ubound{ESS,FSS}}, bound::Ubound) = B(copy(bound.lower), copy(bound.upper))
 end
 
+#to make Ubound construction easier, you don't have to specify the {ESS,FSS} pair when calling it.
+Base.call{ESS,FSS}(T::Type{Ubound}, lower::Unum{ESS,FSS}, upper::Unum{ESS,FSS}) = Ubound{ESS,FSS}(lower, upper)
+
 doc"""
   `ubound(::Unum, ::Unum)`
   `ubound(::Ubound, ::Unum)`

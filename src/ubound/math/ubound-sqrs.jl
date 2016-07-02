@@ -3,22 +3,22 @@
 #square and square root
 
 #computes the square of a unum x.  For ubounds we must do a check.
-function sqr{ESS,FSS}(x::Ubound{ESS,FSS})
+@universal function sqr(x::Ubound)
   signcode::UInt16 = 0
   is_neg_def(x.lowbound) && (signcode += 1)
   is_neg_def(x.highbound) && (signcode += 2)
 
-  #parse through the signcodes
+  #parse through the signcode possibilities
   if signcode == 0
-    ubound_resolve(ubound_unsafe(x.lowbound * x.lowbound, x.highbound * x.highbound))
+    lower_result = resolve_lower(x.lower * x.lower)
+    upper_result = resolve_upper(x.upper * x.upper)
+    resolve_as_utype(lower_result, upper_result)
   elseif signcode == 1
-    l = is_subnormal(x.lowbound) ? __resolve_subnormal!(x.lowbound) : x.lowbound
-    h = is_subnormal(x.highbound) ? __resolve_subnormal!(x.highbound) : x.highbound
-    (v, _) = magsort(l, h)
-    ubound_unsafe(zero(Unum{ESS,FSS}), v * v)
+    B(zero(U), result)
   #signcode 2 is impossible
   elseif signcode == 3
-    ubound_resolve(ubound_unsafe(x.highbound * x.highbound, x.lowbound * x.lowbound))
+    lower_result = resolve_lower(x.upper * x.upper)
+    upper_result = resolve_upper(x.lower * x.lower)
   end
 end
 
