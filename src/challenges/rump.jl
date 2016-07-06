@@ -1,8 +1,7 @@
 #rump's formula
 
-include("../unum.jl")
 using Unums
-include("../unum_optimizer.jl")
+include("../methods/unum_optimizer.jl")
 
 vtypes = [Float16, Float32, Float64, BigFloat]
 
@@ -19,7 +18,7 @@ for T in vtypes
   x = convert(T, 77617)
   y = convert(T, 33096)
 
-  z = float64(type_rump(T, x, y))
+  z = Float64(type_rump(T, x, y))
 
   println("rump's formula result in $(T) : $(z)")
 end

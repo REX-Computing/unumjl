@@ -251,7 +251,9 @@ end
 ## UNUMS TO FLOAT
 macro fcreate()
   code = :()
+  topbits = Dict(Float16 => 0x8000, Float32 => 0x8000_0000, Float64 => 0x8000_0000_0000_0000)
   for F in [Float16, Float32, Float64]
+    topbit = topbits[F]
     code = quote
       $code
       @universal function Base.convert(T::Type{$F}, x::Unum)
@@ -270,9 +272,6 @@ macro fcreate()
         res = zero(fp.I)
 
         signshift = bits - 2
-
-        #first, transfer the sign bit over.
-        res |= (convert(fp.I, x.flags & UNUM_SIGN_MASK) << signshift)
 
         #highjack the full_decode function to retrieve the unbiased exponent and the fraction.
         (unbiased_exp, src_frac, _, __) = full_decode(x, Val{6})
@@ -293,6 +292,10 @@ macro fcreate()
 
         #transfer the fraction bits.
         res |= convert(fp.I, fraction >> (63 - fp.fsize))
+
+        #transfer the signbit
+        res |= $topbit * is_negative(x)
+
         reinterpret(T, res)
       end
     end

@@ -35,3 +35,60 @@ x = Unum{4,7}(1.0) / Unum{4,7}(3.0)
 @test x == Unum{4,7}(0x0000000000000001, UInt64[0x5555555555555555,0x5555555555555555], 0x0001, 0x0002, 0x007f)
 Unums.make_exact!(x)
 @test (x / x) == one(Unum{4,7})
+
+################################################################################
+# test with ubounds
+x = Ubound(Unum{4,6}(6), Unum{4,6}(7))
+y = Unum{4,6}(3)
+@test (x / y) == Ubound(Unum{4,6}(2), Unum{4,6}(7) / Unum{4,6}(3))
+
+#testing special ubound division (NB: p. 138, TEoE).
+UT = Unum{3,5}
+
+################################################################################
+## TOP chart, left -> right, top -> bottom
+x = Ubound(UT(0), UT(1))
+y = Ubound(UT(-1), UT(0))
+@test x / y == Ubound(neg_inf(UT), UT(0))
+y = Ubound(UT(1), inward_ulp!(UT(2)))
+@test x / y == Ubound(UT(0), UT(1))
+y = Ubound(UT(1), UT(2))
+@test x / y == Ubound(UT(0), UT(1))
+y = Ubound(UT(1), mmr(UT))
+@test x / y = Ubound(UT(0), UT(1))
+y = Ubound(UT(1), inf(UT))
+@test x / y = Ubound(UT(0), UT(1))
+################################################################################
+x = Ubound(sss(UT), UT(1))
+y = Ubound(UT(-1), UT(0))
+@test x / y == Ubound(neg_inf(UT), UT(0))
+y = Ubound(UT(1), inward_ulp!(UT(2)))
+@test x / y == Ubound(sss(UT), UT(1))
+y = Ubound(UT(1), UT(2))
+@test x / y == Ubound(sss(UT), UT(1))
+y = Ubound(UT(1), mmr(UT))
+@test x / y = Ubound(sss(0), UT(1))
+y = Ubound(UT(1), inf(UT))
+@test x / y = Ubound(UT(0), UT(1))
+################################################################################
+x = Ubound(UT(1), UT(2))
+y = Ubound(UT(-1), UT(0))
+@test x / y == Ubound(neg_inf(UT), UT(-1))
+y = Ubound(UT(1), inward_ulp!(UT(2)))
+@test x / y == Ubound(sss(UT), UT(1))
+y = Ubound(Unums.make_ulp!(UT(1)), mmr(UT))
+@test x / y == Ubound(sss(UT), UT(2))
+y = Ubound(UT(1), mmr(UT))
+@test x / y = Ubound(sss(0), UT(2))
+y = Ubound(UT(1), inf(UT))
+@test x / y = Ubound(UT(0), UT(2))
+
+
+#=
+x = Ubound(UT(1), UT(2))
+y = Ubound(UT(0), UT(1))
+
+@test x / y == Ubound(UT(1), Inf(UT))
+
+x = Ubound(UT)
+=#

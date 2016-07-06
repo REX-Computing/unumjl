@@ -80,7 +80,7 @@ end
 
   if _shift > max_fsize(FSS)
     #then go down one previous exact unum and decrement.
-    return inner_ulp!(copy(a))
+    return inner_ulp!(make_exact!(copy(a)))
   end
 
   #copy the b unum as the temporary result, nuke its ubit just to be sure
@@ -156,7 +156,7 @@ end
   diff_bound = is_ulp(b) ? outer_exact(b) : b
   inner_value = diff_exact(a, diff_bound, max_exponent(ESS), decode_exp(diff_bound))
   #coerce sign and ulp to cover zero and exact cases.
-  make_ulp!(coerce_sign!(inner_value, a))
+  outer_ulp!(make_exact!(coerce_sign!(inner_value, a)))
 
   #check for the dominant sign.  If a was positive make it (inner_value -> mmr)
   #if a was negative, make it (-mmr -> inner_value )

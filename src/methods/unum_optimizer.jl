@@ -9,7 +9,7 @@ end
 
 function scalc{ESS,FSS}(x::Ubound{ESS,FSS})
   #string(calculate(x.lowbound), "->", calculate(x.highbound))
-  string(convert(Float64, x.lowbound), "->", convert(Float64, x.highbound))
+  string(convert(Float64, x.lower), "->", convert(Float64, x.upper))
 end
 
 function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
@@ -20,7 +20,7 @@ function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
     verbose && println("environment {$sess, $sfss} result: $(scalc(res))")
     #for now, use floating point here.
     if (typeof(res) <: Ubound)
-      if (is_sss(res.lowbound) || is_sss(res.highbound) || is_mmr(res.lowbound) || is_mmr(res.highbound))
+      if (is_sss(res.lower) || is_sss(res.lower) || is_mmr(res.upper) || is_mmr(res.upper))
         verbose && println("overflow")
         sess += 1
         sfss += 1
@@ -35,13 +35,13 @@ function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
       end
     end
     unum_w = if (typeof(res) <: Ubound)
-               calculate(res.highbound) - calculate(res.lowbound)
+               calculate(res.upper) - calculate(res.lower)
              elseif is_ulp(res)
                abs(calculate(Unums.__outward_exact(res)) - calculate(Unums.__inward_exact(res)))
              else
                0
              end
-    unum_r = (typeof(res) <: Ubound) ? abs(calculate(res.lowbound)) : abs(calculate(res))
+    unum_r = (typeof(res) <: Ubound) ? abs(calculate(res.lower)) : abs(calculate(res))
     rel_w = unum_w / unum_r
     if rel_w < lim
       verbose && println("solved; rel. width $rel_w < $lim")

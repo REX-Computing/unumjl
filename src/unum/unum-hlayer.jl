@@ -243,17 +243,37 @@ __textual(v::UnumLarge) = calculate(v)
 
 @universal function describe(v::Unum)
   print("Unum{$ESS,$FSS}(")
-  print(__textual(v))
-  print(is_exact(v) ? " exact)" : " ulp)")
+  if is_exact(v)
+    print(__textual(v))
+    print("ex")
+  else
+    (lb, ub) = is_negative(v) ? (outer_exact(v), v) : (v, outer_exact(v))
+    print(__textual(lb))
+    print(" op → ")
+    print(__textual(ub))
+    print(" op")
+  end
+  print(")")
   println()
 end
 
 @universal function describe(v::Ubound)
   print("Ubound{$ESS,$FSS}(")
-  print(__textual(v.lower))
-  print(is_exact(v.lower) ? " exact " : " ulp ")
-  print("→ ")
-  print(__textual(v.upper))
-  print(is_exact(v.upper) ? " exact)" : " ulp)")
+  if is_exact(v.lower)
+    print(__textual(v.lower))
+    print(" ex")
+  else
+    print(__textual(is_negative(v.lower) ? outer_exact(v.lower) : v.lower))
+    print(" op")
+  end
+  print(" → ")
+  if is_exact(v.upper)
+    print(__textual(v.upper))
+    print(" ex")
+  else
+    print(__textual(is_negative(v.upper) ? v : outer_exact(v.upper)))
+    print(" op")
+  end
+  print(")")
   println()
 end

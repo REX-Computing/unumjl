@@ -129,7 +129,7 @@ end
 
   inner_result = mul_exact(a, b, result_sign)
 
-  make_ulp!(inner_result)
+  is_exact(inner_result) && outer_ulp!(inner_result)
   result_exponent = decode_exp(inner_result) + is_subnormal(inner_result) * 1
 
   if is_exact(a)
@@ -137,8 +137,23 @@ end
   elseif is_exact(b)
     outer_result = sum_exact(inner_result, b, result_exponent, result_exponent - a.fsize - 1)
   else
+    ############################################################################
+    # consider the representation of an ulp:
+    # (2^p) * F (+) 2^(p - fs)
+    # where p is the power, F is the fraction, and fs is fsize + 1, and (+) is
+    # the ulp-range generating operator.
+    #
+    # 2^(p1)(F1)(+)2^(p1 - fs1) * 2^(p2)(F2)(+)2^(p2 - fs2)
+    # gives 2^(p1p2)(F1F2)(+)2^(p1p2)(2^(-fs1)(F2) + 2^(-fs2)(F1) + 2^(-fs1-fs2))
+    #
+    # note that 2^(p1p2)(F1F2) is the exact product.
+
+    # look at the two numbers, a and b, and decide which one is more precise and
+    # which one is fuzzy.  Assign these respectively to the _precise and _fuzzy
+    # temporary variables.
     (_precise, _fuzzy) = (a.fsize < b.fsize) ? (b , a) : (a, b)
 
+    #copy the precise one and make it the "outer_result, temporarily"
     outer_result = copy(_precise)
     shift = _precise.fsize - _fuzzy.fsize
 
@@ -150,15 +165,30 @@ end
     carry = frac_add!(carry, outer_result, _fuzzy.fraction)
     frac_rsh!(outer_result, _fuzzy.fsize)
 
+    #this second part SHOULD BE THE HEURISTIC ALGORITHM FOR
+
     carry2 = z64
     ((carry & o64) != z64) && ((shift == z16) ? (carry2 = o64) : frac_set_bit!(outer_result, shift))
     ((carry & 0x0000_0000_0000_0002) != z64) && ((shift == o16) ? (carry2 = o64) : frac_set_bit!(outer_result, (shift - o16)))
     carry2 = frac_add!(carry2, outer_result, inner_result.fraction)
 
+    ############################################################
+
+    println(outer_result)
+
     resolve_carry!(carry2, outer_result, result_exponent)
+
+    println(outer_result)
+
+    describe(outer_result)
+
+    println("yo")
+    println("carry2 == $carry2")
 
     #if we wound up still subnormal, then re-subnormalize the exponent. (exp - 1)
     outer_result.exponent &= f64 * (carry2 != 0)
+
+    describe(outer_result)
 
     #check to see if we're getting too big.
     (outer_result.exponent > max_biased_exponent(ESS)) && mmr!(outer_result, result_sign)
@@ -166,6 +196,11 @@ end
     #equals inf.
     __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
   end
+
+  println("----")
+  println(result_sign)
+  describe(inner_result)
+  describe(outer_result)
 
   return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)
 end
