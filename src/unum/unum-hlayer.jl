@@ -239,13 +239,14 @@ end
 =#
 
 __textual(v::UnumSmall) = Float64(v)
+__textual{ESS}(v::UnumSmall{ESS,6}) = calculate(v)
 __textual(v::UnumLarge) = calculate(v)
 
 @universal function describe(v::Unum)
   print("Unum{$ESS,$FSS}(")
   if is_exact(v)
     print(__textual(v))
-    print("ex")
+    print(" ex")
   else
     (lb, ub) = is_negative(v) ? (outer_exact(v), v) : (v, outer_exact(v))
     print(__textual(lb))

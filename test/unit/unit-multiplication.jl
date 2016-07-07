@@ -23,6 +23,19 @@ p = Unum{4,7}(0x0000000000000001, UInt64[0x8000000000000000,0x0000000000000000],
 q = Unum{4,7}(0x0000000000000007, UInt64[0x4000000000000000,0x0000000000000000], 0x0000, 0x0002, 0x0002)
 @test Unums.is_exact(p * q)
 
+#making sure our heuristic multiplication works.
+
+#double ulp.
+x = Unum{3,4}(2)
+x.fsize = 2
+Unums.make_ulp!(x)
+
+y = Unum{3,4}(2)
+y.fsize = 3
+Unums.make_ulp!(y)
+
+
+
 #=
 uft1 = unum_easy(Unum{4,6}, zero(UInt16), frac1, 1)
 uft2 = unum_easy(Unum{4,6}, zero(UInt16), frac2, 1)

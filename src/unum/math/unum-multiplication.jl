@@ -154,53 +154,57 @@ end
     (_precise, _fuzzy) = (a.fsize < b.fsize) ? (b , a) : (a, b)
 
     #copy the precise one and make it the "outer_result, temporarily"
-    outer_result = copy(_precise)
-    shift = _precise.fsize - _fuzzy.fsize
-
-    frac_rsh!(outer_result, shift)
-
-    carry = z64
-    (issubnormal(_precise)) || ((shift == z16) ? (carry = o64) : (frac_set_bit!(outer_result, shift)))
-    #add the two fractionals parts together, and set the carry.
-    carry = frac_add!(carry, outer_result, _fuzzy.fraction)
-    frac_rsh!(outer_result, _fuzzy.fsize)
-
-    #this second part SHOULD BE THE HEURISTIC ALGORITHM FOR
-
-    carry2 = z64
-    ((carry & o64) != z64) && ((shift == z16) ? (carry2 = o64) : frac_set_bit!(outer_result, shift))
-    ((carry & 0x0000_0000_0000_0002) != z64) && ((shift == o16) ? (carry2 = o64) : frac_set_bit!(outer_result, (shift - o16)))
-    carry2 = frac_add!(carry2, outer_result, inner_result.fraction)
-
-    ############################################################
-
-    println(outer_result)
-
-    resolve_carry!(carry2, outer_result, result_exponent)
-
-    println(outer_result)
-
+    outer_result = make_exact!(copy(_fuzzy))
+    #calculate 2^(-(precise.fsize + 1))(fuzzy.fraction), but only have it shifted
+    #by (precise.fsize + 1) - (fuzzy.fsize + 1) == precise.fsize - fuzzy.fsize
+    first_shift = _precise.fsize - _fuzzy.fsize
+    rsh_and_set_ubit!(outer_result, first_shift)
+    #don't forget to set the invisible one.
+    if (first_shift > z64)
+      is_subnormal(_fuzzy) || frac_set_bit!(outer_result, first_shift)
+      carry = z64
+    else
+      carry = o64 * !is_subnormal(_fuzzy)
+    end
+    #add the bit that corresponds to the 2^-(precise.fsize + 1 + fuzzy.fsize + 1)
+    #less the (fuzzy.fsize + 1) == 2^precise.fsize + 1.  Note that frac_add_ubit
+    #adds as zero-indexed, so we simply add the precise.fsize ubit.  Also, set
+    #an initial carry variable, which is zero.
+    carry += frac_add_ubit!(outer_result, _precise.fsize) * o64
+    #add the _precise value into the number.
+    carry = frac_add!(carry, outer_result, _precise.fraction)
+    #add the subnormal state
+    carry += !is_subnormal(_precise) * o64
+    #next, shift the fraction by (fuzzy.fsize + 1).
+    rsh_and_set_ubit!(outer_result, _fuzzy.fsize + o16)
+    ((carry & o64) != z64) && frac_set_bit!(outer_result, _fuzzy.fsize + o16)
+    #carry could be 0, 1, 2, or 3.
+    #next check if the upper bit of carry exists.
+    if ((carry & 0x0000_0000_0000_0002) != 0)
+      if (_fuzzy.fsize == z16)
+        #set carry to one
+        carry = o64
+      else
+        #set carry to zero and push the appropriate bit on the fraction.
+        carry = z64
+        frac_set_bit(outer_result, _fuzzy.fsize - o16)
+      end
+    else
+      carry = z64
+    end
     describe(outer_result)
-
-    println("yo")
-    println("carry2 == $carry2")
-
-    #if we wound up still subnormal, then re-subnormalize the exponent. (exp - 1)
-    outer_result.exponent &= f64 * (carry2 != 0)
-
-    describe(outer_result)
+    carry += !is_frac_zero(inner_result) * o64
+    carry = frac_add!(carry, outer_result, inner_result.fraction)
+    resolve_carry!(carry, outer_result, decode_exp(inner_result))
 
     #check to see if we're getting too big.
     (outer_result.exponent > max_biased_exponent(ESS)) && mmr!(outer_result, result_sign)
     #check to make sure we haven't done the inf hack, where the result exactly
     #equals inf.
     __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
-  end
 
-  println("----")
-  println(result_sign)
-  describe(inner_result)
-  describe(outer_result)
+    is_exact(outer_result) && inner_ulp!(outer_result)
+  end
 
   return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)
 end
