@@ -12,28 +12,19 @@
   if signcode == 0
     lower_result = resolve_lower(x.lower * x.lower)
     upper_result = resolve_upper(x.upper * x.upper)
-    resolve_as_utype(lower_result, upper_result)
+
+    is_ulp(lower_result) && is_ulp(upper_result) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif signcode == 1
-    println("hi!")
-    println("----")
-
     lower_result = x.lower * x.lower
-
-    println("zzzz")
-
     upper_result = x.upper * x.upper
-
-    println("yo!")
-    println("----")
-    println(lower_result)
-    println(upper_result)
 
     B(zero(U), max(lower_result, upper_result))
   #signcode 2 is impossible
   elseif signcode == 3
     lower_result = resolve_lower(x.upper * x.upper)
     upper_result = resolve_upper(x.lower * x.lower)
-    resolve_as_utype(lower_result, upper_result)
+
+    is_ulp(lower_result) && is_ulp(upper_result) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   end
 end
 

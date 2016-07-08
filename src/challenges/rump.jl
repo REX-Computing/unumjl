@@ -6,11 +6,11 @@ include("../methods/unum_optimizer.jl")
 vtypes = [Float16, Float32, Float64, BigFloat]
 
 function type_rump(T, x, y)
-  __A = convert(T, 333.75)
-  __B = convert(T, 11)
-  __C = convert(T, 121)
-  __D = convert(T, 2)
-  __E = convert(T, 5.5)
+  __A = T(333.75)
+  __B = T(11)
+  __C = T(121)
+  __D = T(2)
+  __E = T(5.5)
   __A * y^6 + (x^2) * (__B * x^2 * y^2 - y^6 - __C * y^4 - __D) + __E * y^8 + x / (__D * y)
 end
 
@@ -24,8 +24,8 @@ for T in vtypes
 end
 
 function u_rump(T)
-  x = convert(T, 77617)
-  y = convert(T, 33096)
+  x = T(77617)
+  y = T(33096)
 
   type_rump(T, x, y)
 end

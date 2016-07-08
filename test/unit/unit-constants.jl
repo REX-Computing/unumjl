@@ -85,3 +85,14 @@ end
 @uctest Unum{1,1} neg_small_exact z64 0x4000_0000_0000_0000 0x0002 0x0001 0x0001
 @uctest Unum{4,6} neg_small_exact z64 o64                   0x0002 0x000F 0x003F
 @uctest Unum{4,8} neg_small_exact z64 [z64, z64, z64, o64]  0x0002 0x000F 0x00FF
+
+#this doesn't seem to always work.
+@test is_mmr(mmr(Unum{0,0}))
+@test is_mmr(mmr(Unum{1,1}))
+@test is_mmr(mmr(Unum{2,2}))
+@test is_mmr(mmr(Unum{3,3}))
+@test is_mmr(mmr(Unum{3,5}))
+@test is_mmr(mmr(Unum{4,6}))
+@test is_mmr(mmr(Unum{4,7}))
+#turns out that the generation of the top_mask implicitly converted an UInt16 to
+#Int64 by adding one, which has a different top_mask definition.

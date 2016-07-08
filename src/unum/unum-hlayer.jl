@@ -238,9 +238,9 @@ function Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, s::AbstractString)
 end
 =#
 
-__textual(v::UnumSmall) = Float64(v)
+__textual{ESS,FSS}(v::UnumSmall{ESS,FSS}) = Float64(v)
 __textual{ESS}(v::UnumSmall{ESS,6}) = calculate(v)
-__textual(v::UnumLarge) = calculate(v)
+__textual{ESS,FSS}(v::UnumLarge{ESS,FSS}) = calculate(v)
 
 @universal function describe(v::Unum)
   print("Unum{$ESS,$FSS}(")
@@ -272,9 +272,11 @@ end
     print(__textual(v.upper))
     print(" ex")
   else
-    print(__textual(is_negative(v.upper) ? v : outer_exact(v.upper)))
+    print(__textual(is_negative(v.upper) ? v.upper : outer_exact(v.upper)))
     print(" op")
   end
   print(")")
   println()
 end
+
+export describe

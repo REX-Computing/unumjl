@@ -23,6 +23,14 @@ p = Unum{4,7}(0x0000000000000001, UInt64[0x8000000000000000,0x0000000000000000],
 q = Unum{4,7}(0x0000000000000007, UInt64[0x4000000000000000,0x0000000000000000], 0x0000, 0x0002, 0x0002)
 @test Unums.is_exact(p * q)
 
+#wierd multiplication results.
+
+x = Ubound(neg_one(Unum{3,4}), pos_one(Unum{3,4}))
+@test x * x == x
+@test is_zero((x ^ 2).lower)
+@test x ^ 3 == x
+@test is_zero((x ^ 4).lower)
+
 #making sure our heuristic multiplication works.
 
 #double ulp.

@@ -39,7 +39,7 @@ doc"""
   if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
     (_aexp >= _bexp) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
   else
-    is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : unum_diff(b, a, _bexp, _aexp)
+    is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : additiveinverse!(unum_diff(b, a, _bexp, _aexp))
   end
 end
 
@@ -118,6 +118,7 @@ end
   end
 
   is_exact(result) && exact_trim!(result)
+  trim_and_set_ubit!(result)
 
   return result
 end

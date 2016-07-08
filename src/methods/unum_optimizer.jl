@@ -1,23 +1,13 @@
 #unum_optimizer.jl
 
 #takes a function and repeatedly runs it until it gives appropriate precision.
-
-function scalc{ESS,FSS}(x::Unum{ESS,FSS})
-  #string(calculate(x))
-  string(convert(Float64, x))
-end
-
-function scalc{ESS,FSS}(x::Ubound{ESS,FSS})
-  #string(calculate(x.lowbound), "->", calculate(x.highbound))
-  string(convert(Float64, x.lower), "->", convert(Float64, x.upper))
-end
-
 function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
   res = 0
   for (idx = 1:20)
     T = Unum{sess, sfss}
     res = f(T)
-    verbose && println("environment {$sess, $sfss} result: $(scalc(res))")
+    verbose && println("environment {$sess, $sfss} result: ")
+    describe(res)
     #for now, use floating point here.
     if (typeof(res) <: Ubound)
       if (is_sss(res.lower) || is_sss(res.lower) || is_mmr(res.upper) || is_mmr(res.upper))

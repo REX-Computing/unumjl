@@ -64,8 +64,12 @@ doc"""
 @universal function trim_and_set_ubit!(x::Unum, fsize::UInt16)
   x.flags |= (needs_ubit(x.fraction, fsize) * UNUM_UBIT_MASK)
   frac_trim!(x, fsize)
+  x.fsize = min(fsize, max_fsize(FSS))
   return x
 end
+
+trim_and_set_ubit!{ESS,FSS}(x::UnumSmall{ESS,FSS}) = trim_and_set_ubit!(x, max_fsize(FSS))
+trim_and_set_ubit!{ESS,FSS}(x::UnumLarge{ESS,FSS}) = nothing
 
 doc"""
   `Unums.rsh_and_set_ubit!(x::Unum, shift::UInt16)` is a utility that shifts the

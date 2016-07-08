@@ -115,7 +115,7 @@ end
   end
 
   is_exact(result) && exact_trim!(result)
-  result.fsize = min(result.fsize, max_fsize(FSS))
+  trim_and_set_ubit!(result)
 
   return coerce_sign!(result, result_sign)
 end
@@ -187,12 +187,12 @@ end
       else
         #set carry to zero and push the appropriate bit on the fraction.
         carry = z64
-        frac_set_bit(outer_result, _fuzzy.fsize - o16)
+        frac_set_bit!(outer_result, _fuzzy.fsize - o16)
       end
     else
       carry = z64
     end
-    describe(outer_result)
+
     carry += !is_frac_zero(inner_result) * o64
     carry = frac_add!(carry, outer_result, inner_result.fraction)
     resolve_carry!(carry, outer_result, decode_exp(inner_result))
@@ -204,9 +204,18 @@ end
     __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
 
     is_exact(outer_result) && inner_ulp!(outer_result)
+    trim_and_set_ubit!(outer_result)
   end
 
-  return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)
+  if is_ulp(inner_result) && is_ulp(outer_result)
+    return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)
+  else
+    println("----")
+    describe(inner_result)
+    println(outer_result)
+    describe(outer_result)
+    return (result_sign == z16) ? B(inner_result, outer_result) : B(outer_result, inner_result)
+  end
 end
 
 

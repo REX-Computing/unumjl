@@ -138,7 +138,7 @@ doc"""
   if FSS == 0
     x.fraction == 0
   elseif FSS < 7
-    x.fraction == mask_top(max_fsize(FSS) - 1)
+    x.fraction == mask_top(max_fsize(FSS) - 0x0001)
   else
     is_mmr_frac(x.fraction)
   end

@@ -120,6 +120,7 @@ end
   is_inf(result) && return mmr(U, @signof a)
 
   is_exact(result) && exact_trim!(result)
+  trim_and_set_ubit!(result)
 
   return result
 end

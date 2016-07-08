@@ -3,38 +3,38 @@
 
 
 @universal function sub(a::Ubound, b::Unum)
-  lb = a.lower - b
-  hb = a.upper - b
-
-  (typeof(lb) == B) && (lb = lb.lower)
-  (typeof(hb) == B) && (hb = hb.upper)
+  lb = resolve_lower(a.lower - b)
+  hb = resolve_upper(a.upper - b)
 
   (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end
 
 @universal function sub(a::Unum, b::Ubound)
-  lb = a - b.upper
-  hb = a - b.lower
-
-  (typeof(lb) == B) && (lb = lb.lower)
-  (typeof(hb) == B) && (hb = hb.upper)
+  lb = resolve_lower(a - b.upper)
+  hb = resolve_upper(a - b.lower)
 
   (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end
 
 @universal function sub(a::Ubound, b::Ubound)
-  lb = a.lower - b.upper
-  hb = a.upper - b.lower
 
-  (typeof(lb) == B) && (lb = lb.lower)
-  (typeof(hb) == B) && (hb = hb.upper)
+  println("&&&&")
+  describe(a)
+  describe(b)
+
+  lb = resolve_lower(a.lower - b.upper)
+  hb = resolve_upper(a.upper - b.lower)
+
+  is_sss(lb) && is_sss(hb) && (@signof(lb) == @signof(hb)) && return sss(U, @signof(lb))
+
+  is_mmr(lb) && is_mmr(hb) && (@signof(lb) == @signof(hb)) && return mmr(U, @signof(lb))
 
   (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end
 
 @universal function additiveinverse!(a::Ubound)
-  hb = -a.lower
-  a.lower = -a.upper
+  hb = additiveinverse!(a.lower)
+  a.lower = additiveinverse!(a.upper)
   a.upper = hb
   return a
 end
