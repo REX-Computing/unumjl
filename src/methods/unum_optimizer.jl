@@ -27,7 +27,7 @@ function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
     unum_w = if (typeof(res) <: Ubound)
                calculate(res.upper) - calculate(res.lower)
              elseif is_ulp(res)
-               abs(calculate(Unums.__outward_exact(res)) - calculate(Unums.__inward_exact(res)))
+               abs(calculate(Unums.outer_exact(res)) - calculate(Unums.inner_exact(res)))
              else
                0
              end

@@ -11,7 +11,7 @@ function frac_sub!{ESS,FSS}(carry::UInt64, subtrahend::UnumSmall{ESS,FSS}, minue
   return carry
 end
 function frac_sub!{ESS,FSS}(carry::UInt64, subtrahend::UnumLarge{ESS,FSS}, minuend::ArrayNum{FSS})
-  i64sub!(carry, subtrahend, minuend)
+  i64sub!(carry, subtrahend.fraction, minuend)
 end
 
 
@@ -37,12 +37,8 @@ doc"""
 
   #check to see if the signs on a and b are mismatched.
   if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
-    println("hoy")
-    describe(a)
-    describe(b)
-    (_aexp >= _bexp) ? (println("sgn,", @signof(a)); unum_sum(a, b, _aexp, _bexp)) : unum_sum(b, a, _bexp, _aexp)
+    (_aexp >= _bexp) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
   else
-    println("hey")
     is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : additiveinverse!(unum_diff(b, a, _bexp, _aexp))
   end
 end
@@ -62,9 +58,6 @@ doc"""
   is_mmr(a) && return mmr_sub(a, b)
   #there is a corner case that b winds up being infinity (and a does not; same
   #with mmr.)
-
-  describe(a)
-  describe(b)
 
   if (is_exact(a) && is_exact(b))
     diff_exact(a, b, _aexp, _bexp)

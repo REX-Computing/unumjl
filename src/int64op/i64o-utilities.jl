@@ -51,7 +51,7 @@ end
 function get_bit{FSS}(a::ArrayNum{FSS}, bit::UInt16)
   a_index = ((bit - o16) >> 6) + o16
   b_index = ((bit - o16) % 64)
-  @inbounds (a.a[a_index] & (t64 >> b_index)) != 0
+  @inbounds return (a.a[a_index] & (t64 >> b_index)) != 0
 end
 
 doc"""

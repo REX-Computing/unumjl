@@ -23,15 +23,6 @@ end
   is_sss(lb) && is_sss(hb) && (@signof(lb) == @signof(hb)) && return sss(U, @signof(lb))
   is_mmr(lb) && is_mmr(hb) && (@signof(lb) == @signof(hb)) && return mmr(U, @signof(lb))
 
-  println("----")
-  println(a)
-  println(b)
-  describe(a)
-  describe(b)
-  println("xxxx")
-  describe(lb)
-  describe(hb)
-
   (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
 end
 
