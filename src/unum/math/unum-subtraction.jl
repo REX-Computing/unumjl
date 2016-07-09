@@ -37,8 +37,12 @@ doc"""
 
   #check to see if the signs on a and b are mismatched.
   if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
-    (_aexp >= _bexp) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
+    println("hoy")
+    describe(a)
+    describe(b)
+    (_aexp >= _bexp) ? (println("sgn,", @signof(a)); unum_sum(a, b, _aexp, _bexp)) : unum_sum(b, a, _bexp, _aexp)
   else
+    println("hey")
     is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : additiveinverse!(unum_diff(b, a, _bexp, _aexp))
   end
 end
@@ -50,7 +54,7 @@ import Base.-
 doc"""
   `Unums.unum_diff(::Unum, ::Unum, _aexp, _bexp)` outputs a Unum OR Ubound
   corresponding to the difference of two unums.  This function as a prerequisite
-  must have the exponent on a exceed the exponent on b.
+  must have the b be inward of a
 """
 @universal function unum_diff(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #basic secondary checks which eject early results.
@@ -58,6 +62,9 @@ doc"""
   is_mmr(a) && return mmr_sub(a, b)
   #there is a corner case that b winds up being infinity (and a does not; same
   #with mmr.)
+
+  describe(a)
+  describe(b)
 
   if (is_exact(a) && is_exact(b))
     diff_exact(a, b, _aexp, _bexp)

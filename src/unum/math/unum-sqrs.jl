@@ -18,7 +18,8 @@ function _rawpow(x, p::Integer)
   elseif p == 2
     return x * x
   elseif iseven(p)
-    return _rawpow(x, p ÷ 2)
+    t = _rawpow(x, p ÷ 2)
+    return t * t
   else
     return x * _rawpow(x, p - 1)
   end
@@ -35,7 +36,7 @@ function pow(x, p::Integer)
     throw(DomainError())
   end
   #set up the number of iterations we do the multiply.
-  iseven(p) ? sqr(_rawpow(x, p ÷ 2)) : _rawpow(x, p - 1)
+  iseven(p) ? sqr(_rawpow(x, p ÷ 2)) : x * _rawpow(x, p - 1)
 end
 
 import Base.^

@@ -10,7 +10,7 @@ function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
     describe(res)
     #for now, use floating point here.
     if (typeof(res) <: Ubound)
-      if (is_sss(res.lower) || is_sss(res.lower) || is_mmr(res.upper) || is_mmr(res.upper))
+      if (is_sss(res.lower) || is_sss(res.upper) || is_mmr(res.lower) || is_mmr(res.upper))
         verbose && println("overflow")
         sess += 1
         sfss += 1

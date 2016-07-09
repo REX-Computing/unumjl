@@ -16,8 +16,14 @@ ethr = Unums.decode_exp(wthr)
 @test Unums.diff_exact(wtwo, -wone, etwo, eone) == wone              #two minus one is one
 @test Unums.diff_exact(wthr, -wone, ethr, eone) == wtwo
 
+#test that the sign things seem to work.
 x = Unum{3,3}(7.191347884985208e19)
 y = Unum{3,3}(1.3733397310822187e27)
+@test is_negative(x - y)
+
+x = Unum{4,5}(-1.314174462714471e27)
+y = Unum{4,5}(1.4517351819998816e20)
+@test Unums.is_inward(y, x)
 @test is_negative(x - y)
 
 #=

@@ -155,6 +155,7 @@ end
 
     #copy the precise one and make it the "outer_result, temporarily"
     outer_result = make_exact!(copy(_fuzzy))
+    coerce_sign!(outer_result, inner_result)
     #calculate 2^(-(precise.fsize + 1))(fuzzy.fraction), but only have it shifted
     #by (precise.fsize + 1) - (fuzzy.fsize + 1) == precise.fsize - fuzzy.fsize
     first_shift = _precise.fsize - _fuzzy.fsize
@@ -210,10 +211,6 @@ end
   if is_ulp(inner_result) && is_ulp(outer_result)
     return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)
   else
-    println("----")
-    describe(inner_result)
-    println(outer_result)
-    describe(outer_result)
     return (result_sign == z16) ? B(inner_result, outer_result) : B(outer_result, inner_result)
   end
 end

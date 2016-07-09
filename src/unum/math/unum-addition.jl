@@ -90,6 +90,7 @@ end
 
   #copy the b unum as the temporary result.
   result = copy(b)
+  coerce_sign!(result, a)
 
   #check to see if "shift" is zero.
   if (shift == 0x0000)
@@ -165,9 +166,10 @@ end
 
     #the bigger ulp data gets added in
     augmented_value = add_bit_and_set_ulp!(copy(base_value), max(_shift_a, _shift_b), min(_shift_a, _shift_b))
+    trim_and_set_ubit!(augmented_value)
 
     #create a ubound (of the correct type) with the base_value and augmented_value.
-    return is_positive(a) ? B(base_value, augmented_value) : B(augmented_value, base_value)
+    return is_positive(a) ? resolve_as_utype!(base_value, augmented_value) : resolve_as_utype!(augmented_value, base_value)
   else
     ulp_shift = is_ulp(a) * _shift_a + is_ulp(b) * _shift_b
     base_value.fsize = min(ulp_shift, max_fsize(FSS))

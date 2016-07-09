@@ -30,6 +30,11 @@ doc"""
   #check to make sure the exponents are the same.
   (decode_exp(lower) == decode_exp(upper)) || return B(lower, upper)
 
+  is_sss(lower) && is_sss(upper) && return sss(U, @signof(lower))
+  is_mmr(lower) && is_mmr(upper) && return mmr(U, @signof(lower))
+
+  (lower.fraction == upper.fraction) && return lower
+
   #discriminate between negative and positive numbers, which have their bounds
   #differently.
   if is_positive(lower)

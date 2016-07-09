@@ -11,9 +11,6 @@ end
     lbp = resolve_lower(a.lower * b)
     hbp = resolve_upper(a.upper * b)
 
-    is_sss(lbp) && is_sss(hbp) && (@signof(lbp) == @signof(hbp)) && return sss(U, @signof(lbp))
-    is_mmr(lbp) && is_mmr(hbp) && (@signof(lbp) == @signof(hbp)) && return mmr(U, @signof(lbp))
-
     if is_ulp(lbp) && is_ulp(hbp)
       is_negative(b) ? resolve_as_utype!(hbp, lbp) : resolve_as_utype!(lbp, hbp)
     else

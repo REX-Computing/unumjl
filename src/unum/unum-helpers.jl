@@ -69,6 +69,7 @@ doc"""
 end
 
 trim_and_set_ubit!{ESS,FSS}(x::UnumSmall{ESS,FSS}) = trim_and_set_ubit!(x, max_fsize(FSS))
+trim_and_set_ubit!{ESS}(x::UnumSmall{ESS,6}) = nothing
 trim_and_set_ubit!{ESS,FSS}(x::UnumLarge{ESS,FSS}) = nothing
 
 doc"""
