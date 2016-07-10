@@ -26,6 +26,12 @@ y = Unum{4,5}(1.4517351819998816e20)
 @test Unums.is_inward(y, x)
 @test is_negative(x - y)
 
+#long subtraction, discovered as an error in rump's formula.
+
+x = Unum{4,7}(0x00000000000000F9, UInt64[0x7d31ee79ca44b643,0x91bb985960000000], 0x0000, 0x0007, 0x0063)
+y = Unum{4,7}(0x00000000000000F9, UInt64[0x7d31ee79ca44b643,0x91bb985960000080], 0x0000, 0x0007, 0x0079)
+@test y - x == Unum{4,7}(2)
+
 #=
 #11 September 2015 - identified through continuous testing.  The problem here is
 #that the two normal floats share their exponent factor, and clears a huge swath

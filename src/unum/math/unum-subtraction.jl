@@ -106,9 +106,16 @@ end
     #nb we only need to check the top bit.
     is_frac_zero(result) && return zero!(result, (guardbit != z64) * UNUM_UBIT_MASK)
 
-    if (_aexp != min_exponent(ESS))
-      frac_lsh!(result, o16)
-      (result.esize, result.exponent) = encode_exp(_aexp - 1)
+    _mexp = min_exponent(ESS)
+
+    if (_aexp != _mexp)
+      #next count how many zeros are in the front of the fraction.
+      places_to_shift = clz(result.fraction) + o16
+      #check to make sure that places_to_shift doesn't get too big.
+      (_aexp - places_to_shift < _mexp) && (places_to_shift = to16(_aexp - _mexp))
+
+      frac_lsh!(result, places_to_shift)
+      (result.esize, result.exponent) = encode_exp(_aexp - places_to_shift)
     end
   else
     #check to see if we need to the guard bit to set ubit.
