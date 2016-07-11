@@ -119,6 +119,28 @@ tsma = Unum{4,7}(UInt64(0b10), [z64, o64], z16, o16, UInt16(127))
 ttot = Unum{4,7}(UInt64(0b11), [t64, z64], z16, o16, z16        )
 @test tbig + tsma == ttot
 
+#sometimes adding an ulp and a non-ulp doesn't work.  Discovered by basic
+#demonstration of the addition problem.
+
+x = Unum{2,2}(32)
+x += one(Unum{2,2})
+x += one(Unum{2,2})
+y = Unums.make_ulp!(Unum{2,2}(32))
+y.fsize = 0x0002
+@test x == y
+
+#adding two ulps sometimes doesn't work.  Discovered by basic demonstration of
+#0.2 + 0.1 != 0.3
+x = Unum{4,6}(2) / Unum{4,6}(10)
+y = Unum{4,6}(1) / Unum{4,6}(10)
+z = x + y
+
+@test Unums.lub(z) > Unum{4,6}(0x0000000000000001, 0x3333333333333333, 0x0000, 0x0002, 0x003F)
+
+x = Unum{4,6}(1) / Unum{4,6}(3)
+z = x + x + x
+@test Unums.lub(z) > one(Unum{4,6})
+
 #=
 ##############################################
 ## tests discovered by continuous testing.

@@ -200,13 +200,14 @@ end
 
     #check to see if we're getting too big.
     (outer_result.exponent > max_biased_exponent(ESS)) && mmr!(outer_result, result_sign)
-    #check to make sure we haven't done the inf hack, where the result exactly
-    #equals inf.
-    __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
 
     is_exact(outer_result) && inner_ulp!(outer_result)
     trim_and_set_ubit!(outer_result)
   end
+
+  #check to make sure we haven't done the inf hack, where the result exactly
+  #equals inf.
+  __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
 
   if is_ulp(inner_result) && is_ulp(outer_result)
     return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)

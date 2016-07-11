@@ -96,3 +96,18 @@ function is_mmr_frac{FSS}(n::ArrayNum{FSS})
   end
   return (n.a[l] == 0xFFFF_FFFF_FFFF_FFFE)
 end
+
+bool_bottom_bit(FSS::Int64, fraction::UInt64) = (bottom_bit(FSS) & fraction) != 0
+bool_bottom_bit{FSS}(n::ArrayNum{FSS}) = (n.a[__cell_length(FSS)] & o64) != 0
+bool_bottom_bit{ESS,FSS}(x::UnumSmall{ESS,FSS}) = bool_bottom_bit(FSS, x.fraction)
+bool_bottom_bit{ESS,FSS}(x::UnumLarge{ESS,FSS}) = bool_bottom_bit(x.fraction)
+
+doc"""
+  `Unums.bool_indexed_bit(fraction, index)`
+"""
+bool_indexed_bit(fraction::UInt64, index::UInt16) = ((t64 >> index) & fraction) != 0
+function bool_indexed_bit{FSS}(fraction::ArrayNum{FSS}, index::UInt16)
+  cell_index = (index ÷ 0x0040) + o16
+  index = index % 0x0040
+  bool_indexed_bit(n.a[cell_index], index)
+end

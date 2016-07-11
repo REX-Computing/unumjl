@@ -11,3 +11,4 @@ include("./math/ubound-sqrs.jl")
 
 include("ubound-resolve.jl")
 include("ubound-hlayer.jl")
+include("ubound-properties.jl")

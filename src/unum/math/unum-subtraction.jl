@@ -127,6 +127,8 @@ end
   is_exact(result) && exact_trim!(result)
   trim_and_set_ubit!(result)
 
+  clear_mathflags!(result)
+
   return result
 end
 

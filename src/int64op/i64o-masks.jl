@@ -81,6 +81,7 @@ doc"""
 bottom_bit(fsize::UInt16) = reinterpret(UInt64, -9223372036854775808 >>> fsize)
 bottom_bit(FSS::Int64) = bottom_bit(max_fsize(FSS))
 bottom_bit(::UInt64, fsize::UInt16) = reinterpret(UInt64, -9223372036854775808 >>> fsize)
+bottom_bit(::UInt64) = reinterpret(UInt64, -9223372036854775808 >>> fsize)
 
 doc"""
 `Unums.bottom_bit!` returns the bottom bit of a fraction with a given fsize.
@@ -103,3 +104,6 @@ function bottom_bit!{FSS}(n::ArrayNum{FSS})
   @inbounds n.a[l] = o64
   return n
 end
+
+@fracproc bottom_bit
+@fracproc bottom_bit fsize

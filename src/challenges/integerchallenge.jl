@@ -1,11 +1,10 @@
 #integerchallenge.jl
 
-include("../unum.jl")
-include("../unum_optimizer.jl")
+include("../methods/unum_optimizer.jl")
 
 using Unums
 
-const limit = 10000000
+const limit = 100_000_000
 
 function addtolimit(T::Type)
   sum = one(T)
@@ -17,4 +16,4 @@ function addtolimit(T::Type)
 end
 
 r = optimize(addtolimit, 0.1, verbose = true)
-println("result:  $(float64(r))")
+describe(r)

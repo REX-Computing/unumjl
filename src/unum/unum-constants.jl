@@ -183,11 +183,7 @@ export sss, sss!, pos_sss, neg_sss, pos_sss!, neg_sss!
   x.flags = flags & (~UNUM_UBIT_MASK)
   x.exponent = z64
 
-  if FSS < 7
-    x.fraction = bottom_bit(x.fsize)
-  else
-    bottom_bit!(x.fraction)
-  end
+  frac_bottom_bit!(x)
 
   return x
 end

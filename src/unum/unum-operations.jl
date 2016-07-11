@@ -200,13 +200,13 @@ end
 #real number/dedekind cut formulas.
 @universal function lub(x::Unum)
   is_exact(x) && return x
-  is_positive(x) && return outer_bound(x)
-  return inner_bound(x)
+  is_positive(x) && return outer_exact(x)
+  return inner_exact(x)
 end
 @universal function glb(x::Unum)
   is_exact(x) && return x
-  is_positive(x) && return inner_bound(x)
-  return outer_bound(x)
+  is_positive(x) && return inner_exact(x)
+  return outer_exact(x)
 end
 
 ################################################################################

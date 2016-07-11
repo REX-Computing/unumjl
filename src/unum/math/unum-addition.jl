@@ -132,6 +132,7 @@ doc"""
   be converted into an fsize.
 """
 @universal function add_bit_and_set_ulp!(a::Unum, big_ulp::UInt16, little_ulp::UInt16)
+  #note that this adds to the zero-indexed bit.
   carried = frac_add_ubit!(a, big_ulp)
   if (carried)
     #rightshift by one.
@@ -148,26 +149,62 @@ doc"""
   return a
 end
 
+macro __eject_outward_ulp()
+  esc(quote
+    base_value.fsize = _mfsize
+    make_ulp!(base_value)
+    return base_value
+  end)
+end
+
 @universal function sum_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #first, do the exact sum, to calculate the "base value" of the resulting sum.
   base_value = sum_exact(a, b, _aexp, _bexp)
+  _mfsize = max_fsize(FSS)
 
   _rexp = decode_exp(base_value)
   _shift_a = to16(_rexp - _aexp) + a.fsize
   _shift_b = to16(_rexp - _bexp) + b.fsize
 
+  add_fsize::UInt16
+  ulp_fsize::UInt16
+
   if (is_ulp(a) && is_ulp(b))
     #figure out which one has a bigger ulp delta.
-    #case one:  shift_a and shift_b are both greater than max_fsize (rare!)
-    if (_shift_a > max_fsize(FSS)) && (_shift_b > max_fsize(FSS))
-      base_value.fsize = max_fsize(FSS)
-      return make_ulp!(base_value)
+    #case one:  shift_a is bigger than max_fsize.  This only happens if it was
+    #already the smallest ulp, and there was an exponent augmentation.
+    if (_shift_a > _mfsize)
+      #check to see if the exponent on b is farther away than the exponent on a plus the fraction size.
+      if (_aexp - _bexp > _mfsize + 1)
+        #then the base value on the guard location is zero, and two ulps coalesce into one.
+        @__eject_outward_ulp
+      elseif (_aexp - _bexp == _mfsize + 1)
+        #in this case, the hidden bit of b aligns with guard bit.
+        (is_subnormal(b) == bool_bottom_bit(a)) || @__eject_outward_ulp
+
+        add_fsize = _mfsize
+        ulp_fsize = _mfsize
+        #in the remaining cases, the fractions must overlap.
+      elseif _shift_b > _mfsize
+        _b_bit::UInt16 = (_mfsize) - to16(_aexp - _bexp)
+        (bool_indexed_bit(b.fraction, _b_bit) == bool_bottom_bit(a)) && @__eject_outward_ulp
+
+        add_fsize = _mfsize
+        ulp_fsize = _mfsize
+      else
+        add_fsize = _shift_b
+        ulp_fsize = _mfsize
+      end
+    else
+      #the bigger ulp data gets added in
+      add_fsize = min(_shift_a, _shift_b)
+      ulp_fsize = max(_shift_a, _shift_b)
+      #scale down ulp_fsize in case it's too big.
+      ulp_fsize = min(ulp_fsize, _mfsize)
     end
 
-    #the bigger ulp data gets added in
-    augmented_value = add_bit_and_set_ulp!(copy(base_value), max(_shift_a, _shift_b), min(_shift_a, _shift_b))
+    augmented_value = add_bit_and_set_ulp!(copy(base_value), add_fsize, ulp_fsize)
     trim_and_set_ubit!(augmented_value)
-
     #create a ubound (of the correct type) with the base_value and augmented_value.
     return is_positive(a) ? resolve_as_utype!(base_value, augmented_value) : resolve_as_utype!(augmented_value, base_value)
   else

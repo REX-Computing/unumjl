@@ -82,12 +82,3 @@ y = Ubound(UT(1), mmr(UT))
 @test x / y == Ubound(sss(UT), UT(2))                     #[1,2] / [1, inf) == (0, 2]
 y = Ubound(UT(1), inf(UT))
 @test x / y == Ubound(UT(0), UT(2))                       #[1,2] / [1, inf] = [0, 2]
-
-#=
-x = Ubound(UT(1), UT(2))
-y = Ubound(UT(0), UT(1))
-
-@test x / y == Ubound(UT(1), Inf(UT))
-
-x = Ubound(UT)
-=#
