@@ -183,3 +183,19 @@ doc"""
     return (decode_exp(x) < 0)
   end
 end
+
+################################################################################
+# detecting if something is a zero ulp
+@universal function is_zero_ulp(x::Unum)
+  is_ulp(x) || return false
+  (x.exponent == z64) || return false
+  is_all_zero(x.fraction)
+end
+
+################################################################################
+# detecting if something is an inf ulp
+@universal function is_inf_ulp(x::Unum)
+  is_ulp(x) || return false
+  (decode_exp(x) == max_exponent(ESS)) || return false
+
+end

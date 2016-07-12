@@ -54,7 +54,7 @@ doc"""
 """
 @universal function unum_diff(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #basic secondary checks which eject early results.
-  is_inf(a) && return is_inf(b) ? nan(U) : inf(U, @signof a)
+  is_inf(a) && return is_inf(b) ? B(neg_inf(U), inf(U)) : inf(U, @signof a)
   is_mmr(a) && return mmr_sub(a, b)
   #there is a corner case that b winds up being infinity (and a does not; same
   #with mmr.)

@@ -55,188 +55,6 @@ end
   FSS > 0 && (res = string(res, space, bits(x.fsize)[17-FSS:16]))
   res
 end
-#=
-doc"""
-`prettyprint` prints out a Unum in a pretty fashion.  Copy/pasting the output
-will create something that is pretty-parseable.
-"""
-@unum function prettyprint(x::Unum)
-
-  print_with_color(:blue, "Unum{$ESS,$FSS}:")
-
-  is_pos_inf(x) && (print_with_color(:green, "inf");  println(); return)
-  is_pos_mmr(x) && (print_with_color(:green, "mmr");  println(); return)
-  is_pos_sss(x) && (print_with_color(:green, "sss");  println(); return)
-  is_neg_inf(x) && (print_with_color(:green, "-inf"); println(); return)
-  is_neg_mmr(x) && (print_with_color(:green, "-mmr"); println(); return)
-  is_neg_sss(x) && (print_with_color(:green, "-sss"); println(); return)
-  is_nan(x)     && (print_with_color(:red, "NaN");  println(); return)
-  is_zero(x)    && (print_with_color(:white, "0.0");  println(); return)
-
-  subnormal_value = is_exp_zero(x) ? 1 : 0
-  exponent_value = subnormal_value + decode_exp(x)
-
-
-  print('"', (x.flags & UNUM_SIGN_MASK == 0) ? "" : "-")
-  print(1 - subnormal_value, "." , bits(x.fraction)[1:x.fsize + 1])
-  (x.flags & UNUM_UBIT_MASK == 0) ? "" : print_with_color(:green, "⋯")
-  print_with_color(:red, "b")
-  print_with_color(:yellow, string("×2^", exponent_value))
-  println('"')
-end
-
-abstract ubit_coersion_symbol
-
-doc"""
-`⇥` triggers the generation of a unum, as a part of the conversion, it coerces a
-floating point preceding it to be exact and throws a warning if it shouldn't be
-exact.
-
-Ex. usage:
-  4.5⇥ == Unum{4,6}(<insert value here>)
-  4.6⇥ == Unum{4,6}(<insert value here>), with a warning.
-"""
-type ⇥ <: ubit_coersion_symbol; end
-
-doc"""
-`⋯` triggers the generation of a unum, as a part of the conversion, it coerces a
-floating point preceding it to be inexact.
-
-Ex. usage:
-  4.5⋯ == Unum{4,6}(<insert value here>)
-  4.6⋯ == Unum{4,6}(<insert value here>)
-"""
-type ⋯ <: ubit_coersion_symbol; end
-
-doc"""
-`exact` triggers the generation of a unum, as a part of the conversion, it coerces a
-floating point preceding it to be exact and throws a warning if it shouldn't be
-exact.
-
-Ex. usage:
-  4.5(exact) == Unum{4,6}(<insert value here>)
-  4.6(exact) == Unum{4,6}(<insert value here>), with a warning.
-"""
-typealias exact ⇥
-
-doc"""
-`ulp` triggers the generation of a unum, as a part of the conversion, it coerces a
-floating point preceding it to be inexact.
-
-Ex. usage:
-  4.5(ulp) == Unum{4,6}(<insert value here>)
-  4.6(ulp) == Unum{4,6}(<insert value here>)
-"""
-typealias ulp ⋯
-
-doc"""
-`auto` triggers the generation of a unum with automatic detection of ubit based
-on the literal representation.  NB: This could cast high-precision exact values
-as ulps.
-
-Ex. usage:
-  4.5(ulp) == Unum{4,6}(<insert value here>)
-  4.6(ulp) == Unum{4,6}(<insert value here>)
-"""
-type auto <: ubit_coersion_symbol; end
-
-doc"""
-`repeat` triggers the generation of a inexact unum that is equivalent to a decimal
-literal with repeating digits
-
-Ex. usage:
-  0.3(rpt{1}) == Unum{4,6}(<insert value here>)
-"""
-type rpt{DIGITS} <: ubit_coersion_symbol; end
-export exact, ulp, auto, rpt, ⇥, ⋯
-
-doc"""
-the `@unum` macro triggers the following float literal to be parsed and interpreted as a
-unum literal with automatic ulp detection.
-
-Ex. usage:
-  `@unum 4.5` == Unum{4,5}(<insert value here>)
-"""
-macro unum(param)
-  (isa(param, Float64)) && return param
-  throw(ArgumentError("the @unum macro must be passed a float literal"))
-end
-export @unum
-
-import Base.*
-function *(x::AbstractFloat, ::Type{⇥})
-  println("creates an exact unum for value $x")
-  nothing
-end
-
-function *(x::AbstractFloat, ::Type{⋯})
-  println("creates an inexact unum for value $x")
-  nothing
-end
-
-function *(x::AbstractFloat, ::Type{auto})
-  println("creates a autodetected unum for value $x")
-  nothing
-end
-
-function *{DIGITS}(x::AbstractFloat, ::Type{rpt{DIGITS}})
-  println("creates a repeating decimal with value $x")
-  nothing
-end
-export *
-
-################################################################################
-# parsing prettyprint
-type b0; end
-type b1; end
-export b0, b1
-
-type __udata
-  exponent::Int
-  floatrep::Integer
-  flags::UInt16
-  subnormal::Bool
-end
-
-import Base.-
-
-function Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, u::__udata)
-  println("generating for $u")
-end
-
-function -(f::Function)
- #special functions
-  f == sss && return neg_sss
-  f == mmr && return neg_mmr
-  f == inf && return neg_inf
-  throw(MethodError())
-end
-
-function Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, f::Function)
-  f == sss && return sss(Unum{ESS,FSS})
-  f == mmr && return mmr(Unum{ESS,FSS})
-  f == inf && return inf(Unum{ESS,FSS})
-  f == neg_sss && return neg_sss(Unum{ESS,FSS})
-  f == neg_mmr && return neg_mmr(Unum{ESS,FSS})
-  f == neg_inf && return neg_inf(Unum{ESS,FSS})
-  f == nan && return nan(Unum{ESS,FSS})
-end
-
-Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, x::Float64) = convert(Unum{ESS,FSS}, x)
-
-################################################################################
-# unum string parsing
-function Base.colon{ESS,FSS}(::Type{Unum{ESS,FSS}}, s::AbstractString)
-  println("parsing the prettyprint string $s")
-  #first there should be a numerical section.  Scan for this.
-
-  #then scan for the presence or not of the UBIT identifier
-
-  #next check if this is a binary or decimal representation.
-
-  #next pull out the exponent
-end
-=#
 
 __textual{ESS,FSS}(v::UnumSmall{ESS,FSS}) = Float64(v)
 __textual{ESS}(v::UnumSmall{ESS,6}) = calculate(v)
@@ -278,5 +96,40 @@ end
   print(")")
   println()
 end
-
 export describe
+
+
+doc"""
+  `ℜ` is used to generate special sets of real numbers in prettyprint directives.
+
+  * `Unum{4,6}(ℜ) == Ubound(neg_mmr(Unum{4,6}), pos_mmr(Unum{4,6}))`
+  * `Unum{4,6}(ℜ(∘)) == Ubound(neg_inf(Unum{4,6}), pos_inf(Unum{4,6}))`
+"""
+type ℜ; end
+
+doc"""
+  `ℜ⁺` is used to generate special sets of real numbers in prettyprint directives.
+
+  * `Unum{4,6}(ℜ⁺) == Ubound(zero(Unum{4,6}), pos_mmr(Unum{4,6}))`
+  * `Unum{4,6}(ℜ⁺(*)) == Ubound(pos_sss(Unum{4,6}), pos_mmr(Unum{4,6}))`
+  * `Unum{4,6}(ℜ⁺(∘)) == Ubound(zero(Unum{4,6}), pos_inf(Unum{4,6}))`
+"""
+type ℜ⁺; end  #positive real numbers
+
+doc"""
+  `ℜ⁻` is used to generate special sets of real numbers in prettyprint directives.
+
+  * `Unum{4,6}(ℜ⁻) == Ubound(neg_mmr(Unum{4,6}), zero(Unum{4,6}))`
+  * `Unum{4,6}(ℜ⁻(*)) == Ubound(neg_mmr(Unum{4,6}), neg_sss(Unum{4,6}))`
+  * `Unum{4,6}(ℜ⁻(∘)) == Ubound(neg_inf(Unum{4,6}), zero(Unum{4,6}))`
+"""
+type ℜ⁻; end
+type ∘; end
+
+Base.call(::Type{ℜ}, ::Type{∘}) = :_rextended
+Base.call(::Type{ℜ⁺}, f::Function) = (f == (*)) ? :_rposstar : nothing
+Base.call(::Type{ℜ⁻}, f::Function) = (f == (*)) ? :_rnegstar : nothing
+Base.call(::Type{ℜ⁺}, ::Type{∘}) = :_rposext
+Base.call(::Type{ℜ⁻}, ::Type{∘}) = :_rnegext
+
+export ℜ, ℜ⁺, ℜ⁻, ∘

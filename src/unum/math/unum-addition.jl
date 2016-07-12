@@ -210,9 +210,15 @@ end
   else
     #check to see if we're adding a very insignificant number.
     if is_ulp(a) && (_aexp > _bexp + _mfsize)
+      println("----")
+      println(a)
       augmented_value = outer_exact(a)
       augmented_value.fsize = _mfsize
       make_ulp!(augmented_value)
+
+      describe(base_value)
+      describe(augmented_value)
+
       return is_positive(a) ? resolve_as_utype!(base_value, augmented_value) : resolve_as_utype!(augmented_value, base_value)
     end
 

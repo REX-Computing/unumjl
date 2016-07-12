@@ -175,6 +175,7 @@ neg_sss{ESS,FSS}(::Type{Unum{ESS,FSS}}) = sss(Unum{ESS,FSS}, UNUM_SIGN_MASK)
 @universal neg_sss!(x::Unum) = sss!(x, UNUM_SIGN_MASK)
 export sss, sss!, pos_sss, neg_sss, pos_sss!, neg_sss!
 
+
 ################################################################################
 # small_exact is tricky because it generates a very unique signature.
 @universal function __set_small_exact!(x::Unum, flags::UInt16 = z16)
