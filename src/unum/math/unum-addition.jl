@@ -210,27 +210,14 @@ end
   else
     #check to see if we're adding a very insignificant number.
     if is_ulp(a) && (_aexp > _bexp + _mfsize)
-      #then expand the ulp.
-      _bfsize = base_value.fsize
-      #inspect the bit at fsize.  if it is zero, just return the extended augmented value
-      if !bool_indexed_bit(base_value.fraction, _bfsize)
-        base_value.fsize -= o16
-        return base_value
-      end
-
-      #if it's one, consider augmenting.
-      if (_bfsize == 0)
-        println("doh")
-        return nan(U)
-      else
-        base_value.fsize = _bfsize + 1
-        frac_trim!(base_value, _bfsize + 1)
-        return base_value
-      end
+      augmented_value = outer_exact(a)
+      augmented_value.fsize = _mfsize
+      make_ulp!(augmented_value)
+      return is_positive(a) ? resolve_as_utype!(base_value, augmented_value) : resolve_as_utype!(augmented_value, base_value)
     end
 
     ulp_shift = is_ulp(a) * _shift_a + is_ulp(b) * _shift_b
-    base_value.fsize = min(ulp_shift, max_fsize(FSS))
+    base_value.fsize = min(ulp_shift, _mfsize)
     make_ulp!(base_value)
     #just in case this "hacks" to mmr.
     is_nan(base_value) && return mmr(U)
