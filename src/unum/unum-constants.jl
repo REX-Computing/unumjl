@@ -108,6 +108,17 @@ doc"""
 @universal neg_inf!(x::Unum, signmask::UInt16) = __infnanset!(x, UNUM_SIGN_MASK)
 export pos_inf, neg_inf, inf!, pos_inf!, neg_inf!
 
+################################################################################
+# cheapest zero ulp and cheapest inf ulp are the bit-cost cheapest of these
+# two classes of number.
+
+cheapest_zero_ulp{ESS,FSS}(T::Type{Unum{ESS,FSS}}, sign::UInt16 = z16) = (FSS < 7) ? cheapest_zero_ulp(UnumSmall{ESS,FSS}, sign) : cheapest_zero_ulp(UnumLarge{ESS,FSS}, sign)
+cheapest_zero_ulp{ESS,FSS}(T::Type{UnumSmall{ESS,FSS}}, sign::UInt16 = z16) = T(z64, z64, sign | UNUM_UBIT_MASK, z16, z16)
+cheapest_zero_ulp{ESS,FSS}(T::Type{UnumLarge{ESS,FSS}}, sign::UInt16 = z16) = T(z64, zero(ArrayNum{FSS}), sign | UNUM_UBIT_MASK, z16, z16)
+
+cheapest_inf_ulp{ESS,FSS}(T::Type{Unum{ESS,FSS}}, sign::UInt16 = z16) = (FSS < 7) ? cheapest_inf_ulp(UnumSmall{ESS,FSS}, sign) : cheapest_inf_ulp(UnumLarge{ESS,FSS}, sign)
+cheapest_inf_ulp{ESS,FSS}(T::Type{UnumSmall{ESS,FSS}}, sign::UInt16 = z16) = T(max_biased_exponent(ESS), t64, sign | UNUM_UBIT_MASK, max_esize(ESS), z16)
+cheapest_inf_ulp{ESS,FSS}(T::Type{UnumLarge{ESS,FSS}}, sign::UInt16 = z16) = T(max_biased_exponent(ESS), top(ArrayNum{FSS}), sign | UNUM_UBIT_MASK, max_esize(ESS), z16)
 
 ################################################################################
 # mmr and big_exact look very similar, so we'll combine the code to generate them

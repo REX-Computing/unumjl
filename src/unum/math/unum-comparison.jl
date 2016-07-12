@@ -81,13 +81,18 @@ end
   _a_pos::Bool = (is_positive(a))
   _b_zer::Bool = is_zero(b)
   _a_zer::Bool = is_zero(a)
+  _a_inf::Bool = is_inf(a)
 
-  (_b_pos) && (!_a_pos) && return false
-  (!_b_pos) && (_a_pos) && return (!(_a_zer && _b_zer))
+  (_b_pos) & (!_a_pos) && return false
+  (!_b_pos) & (_a_pos) && return (!(_a_zer & _b_zer))
 
   #zero can cause problems down the line.
-  _a_zer && return !(_b_pos || _b_zer)
+  _a_zer && return !(_b_pos | _b_zer)
   _b_zer && return _a_pos
+
+  #infinity has strange interactions with some inf_ulp values.
+  (_a_inf & _a_pos) && return !(is_inf(b) & _b_pos)  #if a is positive infinity, greater than only if b is not.
+  (_a_inf & _a_neg) && return false  #if a is negative infinity, never greater than
 
   #use this as a trampoline for is_inward.
   _a_pos && return is_inward(b, a)

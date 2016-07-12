@@ -24,9 +24,9 @@ currently doesn't work so well for FSS > 9"""
   sign = (x.flags & UNUM_SIGN_MASK != 0) ? -1 : 1
   #the sub`normal case
   if (x.exponent == 0)
-    2.0^(decode_exp(x) + 1) * sign * (frac_val(x.fraction)) / big(2.0)^(64 * __ulength(x.fraction))
+    big(2.0)^(decode_exp(x) + 1) * sign * (frac_val(x.fraction)) / big(2.0)^(64 * __ulength(x.fraction))
   else #the normalcase
-    2.0^(decode_exp(x)) * sign * (1 + frac_val(x.fraction) / big(2.0)^(64 * __ulength(x.fraction)))
+    big(2.0)^(decode_exp(x)) * sign * (1 + frac_val(x.fraction) / big(2.0)^(64 * __ulength(x.fraction)))
   end
 end
 export calculate

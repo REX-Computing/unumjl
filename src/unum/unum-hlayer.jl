@@ -56,9 +56,15 @@ end
   res
 end
 
-__textual{ESS,FSS}(v::UnumSmall{ESS,FSS}) = Float64(v)
-__textual{ESS}(v::UnumSmall{ESS,6}) = calculate(v)
-__textual{ESS,FSS}(v::UnumLarge{ESS,FSS}) = calculate(v)
+___textual{ESS,FSS}(v::UnumSmall{ESS,FSS}) = (ESS > 3) ? calculate(v) : Float64(v)
+___textual{ESS}(v::UnumSmall{ESS,6}) = calculate(v)
+___textual{ESS,FSS}(v::UnumLarge{ESS,FSS}) = calculate(v)
+
+@universal function __textual(v::Unum)
+  is_neg_inf(v) && return "-∞"
+  is_pos_inf(v) && return "∞"
+  ___textual(v)
+end
 
 @universal function describe(v::Unum)
   print("Unum{$ESS,$FSS}(")
@@ -66,10 +72,9 @@ __textual{ESS,FSS}(v::UnumLarge{ESS,FSS}) = calculate(v)
     print(__textual(v))
     print(" ex")
   else
-    (lb, ub) = is_negative(v) ? (outer_exact(v), v) : (v, outer_exact(v))
-    print(__textual(lb))
+    print(__textual(glb(v)))
     print(" op → ")
-    print(__textual(ub))
+    print(__textual(lub(v)))
     print(" op")
   end
   print(")")
@@ -82,7 +87,7 @@ end
     print(__textual(v.lower))
     print(" ex")
   else
-    print(__textual(is_negative(v.lower) ? outer_exact(v.lower) : v.lower))
+    print(__textual(glb(v.lower)))
     print(" op")
   end
   print(" → ")
@@ -90,7 +95,7 @@ end
     print(__textual(v.upper))
     print(" ex")
   else
-    print(__textual(is_negative(v.upper) ? v.upper : outer_exact(v.upper)))
+    print(__textual(lub(v.upper)))
     print(" op")
   end
   print(")")

@@ -277,7 +277,7 @@ macro fcreate()
         (unbiased_exp, src_frac, _, __) = full_decode(x, Val{6})
 
         #check to see that unbiased_exp is within appropriate bounds for Float32
-        (unbiased_exp > ebias) && return inf(F) * ((x.flags & UNUM_SIGN_MASK == 0) ? 1 : -1)
+        (unbiased_exp > ebias) && return convert($F, Inf) * ((x.flags & UNUM_SIGN_MASK == 0) ? 1 : -1)
 
         if (unbiased_exp < emin)
          delta = emin - unbiased_exp
