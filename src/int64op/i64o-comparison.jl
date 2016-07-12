@@ -163,7 +163,10 @@ end
 
 
 function same_till_fsize(n1::UInt64, n2::UInt64, s::UInt16)
-  fsize_mask = mask_top(s)
+  (s == z16) && return true
+  
+  fsize_mask = mask_top(s - o16)
+
   (n1 & fsize_mask) == (n2 & fsize_mask)
 end
 function same_till_fsize{FSS}(n1::ArrayNum{FSS}, n2::ArrayNum{FSS}, s::UInt16)

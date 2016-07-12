@@ -109,7 +109,6 @@ __minimum_data_width(n::UInt64) = (res = max(z16, 0x003F - ctz(n)); res == 0xFFF
 #simply assign this to a hash of the array itself.
 Base.hash{FSS}(n::ArrayNum{FSS}, h::UInt) = hash(n.a, h)
 
-
 function contract_outer_fsize(n::UInt64, s::UInt16)
   (0x0040 - ctz(~n & mask_top(s - o16))) * (s != 0)
 end

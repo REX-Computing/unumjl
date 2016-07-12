@@ -105,5 +105,6 @@ function bottom_bit!{FSS}(n::ArrayNum{FSS})
   return n
 end
 
-@fracproc bottom_bit
 @fracproc bottom_bit fsize
+frac_bottom_bit!{ESS,FSS}(x::UnumSmall{ESS,FSS}) = (x.fraction = bottom_bit(FSS); return x)
+frac_bottom_bit!{ESS,FSS}(x::UnumLarge{ESS,FSS}) = (bottom_bit!(x.fraction); return x)

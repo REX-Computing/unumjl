@@ -75,7 +75,6 @@ end
   return carried
 end
 
-
 function sub_ubit(value::UInt64, bit::UInt16)
   result_value = value - (t64 >> bit)
   (result_value, result_value > value)

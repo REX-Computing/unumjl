@@ -68,6 +68,7 @@ end
   if (signcode == 0) #everything is positive
     lower_result = resolve_lower(a.lower / b.upper)
     upper_result = resolve_upper(a.upper / b.lower)
+    
     (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif (signcode == 1) #only a.lowbound is negative
     B(a.lower / b.lower, a.upper / b.lower)
@@ -99,7 +100,7 @@ end
   elseif (signcode == 15) #everything is negative
     lower_result = resolve_lower(a.lower / b.upper)
     upper_result = resolve_upper(a.upper / b.lower)
-    
+
     (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   else
     throw(ArgumentError("error dividing ubounds $a and $b, throws invalid signcode $signcode."))

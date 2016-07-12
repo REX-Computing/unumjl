@@ -33,6 +33,13 @@ doc"""
   resolve_degenerates!(a)
   resolve_degenerates!(b)
 
+  #=
+  println("----")
+  println("hey, dividing")
+  describe(a)
+  describe(b)
+  =#
+
   if is_exact(a) && is_exact(b)
     div_exact(a, b, result_sign)
   else
@@ -253,6 +260,7 @@ end
 
 
 @universal function div_inexact(a::Unum, b::Unum, result_sign::UInt16)
+
   is_mmr(a) && (return mmr_div(b, result_sign))
   is_sss(a) && (return sss_div(b, result_sign))
 

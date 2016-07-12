@@ -18,6 +18,16 @@ wnsome = Unum{0,0}(UInt64(0), UInt64(0), UInt16(3), z16, z16)
 @test_throws ArgumentError Ubound{0,0}(Ubound{0,0}(wnsome, zero(Unum{0,0})), Ubound{0,0}(neg_one(Unum{0,0}), wtwo))
 
 end
+
+#test that the resolve_as_utype! directive works.
+
+x = Unum{2,2}(0x000000000000000C, 0x0000000000000000, 0x0001, 0x0003, 0x0003)
+y = Unum{2,2}(0x000000000000000C, 0x1000000000000000, 0x0001, 0x0003, 0x0003)
+z = Unum{2,2}(0x000000000000000C, 0x0000000000000000, 0x0001, 0x0003, 0x0002)
+@test Unums.resolve_as_utype!(x, y) == z
+
+
+
 ################################################################################
 ## open-ubound-helper:  A short function which returns the open interval version
 ## of a bounding unum for a ubound.

@@ -2,30 +2,27 @@ using Unums
 using Base.Test
 
 @unumbers
-#=
+
 include("./test-infrastructure.jl")
 include("./test-operations.jl")
 include("./test-warlpiri.jl")
+
+
+
+#=
+UT = Unum{3,5}
+
+x = Ubound(UT(1), UT(2))
+y = Ubound(Unums.outer_ulp!(UT(1)), mmr(UT))
+z = (x / y)
+
+println(x)
+describe(x)
+println(y)
+describe(y)
+println(z)
+describe(z)
 =#
 #=
-x = Unum{2,2}(32)
-x += one(Unum{2,2})
-x += one(Unum{2,2})
-y = Unums.make_ulp!(Unum{2,2}(32))
-y.fsize = 0x0002
-@test x == y
+@test x / y == Ubound(sss(UT), Unums.inner_ulp!(UT(2)))   #[1,2] / (1, inf) == (0, 2)
 =#
-
-x = Unum{4,6}(2) / Unum{4,6}(10)
-y = Unum{4,6}(1) / Unum{4,6}(10)
-
-println("----")
-z = x + y
-println("====")
-
-@test Unums.lub(z) > Unum{4,6}(0x0000000000000001, 0x3333333333333333, 0x0000, 0x0002, 0x003F)
-
-x = Unum{4,6}(1) / Unum{4,6}(3)
-z = x + x + x
-
-@test Unums.lub(z) > one(Unum{4,6})
