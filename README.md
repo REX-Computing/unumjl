@@ -3,10 +3,10 @@ How to use the Julia Unum library (0.2):
 
 1. install julia.
   1. instructions for download and files are available at: http://julialang.org/downloads/
-2. unzip the unum package and execute julia in the directory.
+2. Pkg.clone("git://github.com/REX-computing/unumjl.git")
 3. at the prompt, type:
   ```
-  include(“unum.jl”); using Unums
+  using Unums
   ```
   1.  alternatively, use these commands as the first lines of a script and execute the script by typing julia SCRIPT_FILENAME at your command line.
 
