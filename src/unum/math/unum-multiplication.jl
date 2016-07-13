@@ -121,11 +121,11 @@ end
 end
 
 @universal function mul_inexact(a::Unum, b::Unum, result_sign::UInt16)
-  is_mmr(a) && (return mmr_mult(b, result_sign))
-  is_mmr(b) && (return mmr_mult(a, result_sign))
+  is_inf_ulp(a) && (return inf_ulp_mult(a, b, result_sign))
+  is_inf_ulp(b) && (return inf_ulp_mult(b, a, result_sign))
 
-  is_sss(a) && (return sss_mult(b, result_sign))
-  is_sss(b) && (return sss_mult(a, result_sign))
+  is_zero_ulp(a) && (return zero_ulp_mult(a, b, result_sign))
+  is_zero_ulp(b) && (return zero_ulp_mult(b, a, result_sign))
 
   inner_result = mul_exact(a, b, result_sign)
 
@@ -217,28 +217,36 @@ end
 end
 
 
-@universal function mmr_mult(a::Unum, result_sign::UInt16)
-  if mag_greater_than_one(a)
-    return mmr(U, result_sign)
-  else
-    is_sss(a) && return (result_sign == 0) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
-    return nan(U)
-  end
+@universal function inf_ulp_mult(inf_ulp::Unum, b::Unum, result_sign::UInt16)
+  #it is possible to multiply by a number bigger than but very close to one.
+  (decode_exp(b) > 1) && return mmr(U, result_sign) #mmr is lucky enough to have this cheat.
+
+  is_zero_ulp(b) && return (result_sign == 0) ? B(cheapest_zero_ulp(U, z16), cheapest_inf_ulp(U, z16)) :
+                                                  B(cheapest_inf_ulp(U, UNUM_SIGN_MASK), cheapest_zero_ulp(U, UNUM_SIGN_MASK))
+
+  inner_value = mul_exact(inner_exact(inf_ulp), b, result_sign)
+  is_exact(inner_value) && outward_ulp!(inner_value)
+  is_inf_ulp(inner_value) && return inner_value
+
+  return (result_sign == 0) ? resolve_as_utype!(inner_result, mmr(U, result_sign)) :
+                              resolve_as_utype!(mmr(U, result_sign), inner_result)
 end
 
-@universal function sss_mult(a::Unum, result_sign::UInt16)
-  if mag_greater_than_one(a)
-    temp1 = small_exact(U, result_sign)
-    temp2 = is_exact(a) ? a : outer_exact(a)
+@universal function zero_ulp_mult(zero_ulp::Unum, b::Unum, result_sign::UInt16)
+  _ulp_exact = outer_exact(zero_ulp)
+  _val_exact = is_exact(b) ? b : outer_exact(b)
 
-    outer_value = mul_exact(temp1, temp2, result_sign)
+  res_exp = decode_exp(_ulp_exact) + 1 * is_subnormal(_ulp_exact) - decode_exp(_val_exact) - 1 * is_subnormal(_val_exact)
 
-    is_exact(outer_value) && inner_ulp!(outer_value)
+  (res_exp < min_exponent(ESS, FSS)) && return sss(U, result_sign)
+  #cannot be inf_ulp because that case is handled above.
 
-    (result_sign == z16) ? resolve_as_utype!(sss(U, result_sign), outer_value) : resolve_as_utype!(outer_value, sss(U, result_sign))
-  else
-    return sss(U, result_sign)
-  end
+  outer_value = mul_exact(_ulp_exact, _val_exact, result_sign)
+
+  is_exact(outer_value) && inner_ulp!(outer_value)
+  is_sss(outer_value) && return outer_value
+
+  (result_sign == z16) ? resolve_as_utype!(sss(U, result_sign), outer_value) : resolve_as_utype!(outer_value, sss(U, result_sign))
 end
 
 #import the Base add operation and bind it to the add and add! functions
