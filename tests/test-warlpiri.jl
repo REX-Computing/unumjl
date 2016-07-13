@@ -62,6 +62,7 @@ junk_ = nan(Warlpiri)
 warlpiris = [none_, pfew_, pone_, psome, ptwo_, pmany, pall_, junk_, nnone, n_few, n_one, nsome, n_two, nmany, n_all]
 
 #the complete set of warlpiri ubounds
+println("----")
 na_nm = ubound(n_all, nmany)
 na_nt = ubound(n_all, n_two)
 na_ns = ubound(n_all, nsome)
@@ -151,6 +152,12 @@ pt_pm = ubound(ptwo_, pmany)
 pt_pa = ubound(ptwo_, pall_)
 
 pm_pa = ubound(pmany, pall_)
+
+println("one:", bits(pone_))
+println("one x one:", bits(Unums.__mult_exact(pone_, pone_)))
+#println(bits(pfew_ * pfew_))
+
+exit()
 
 #and a general purpose function for testing an operation,
 function testop(op, expected)
