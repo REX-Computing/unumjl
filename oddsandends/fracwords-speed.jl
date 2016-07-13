@@ -1,14 +1,21 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #fracwords-speed.jl
 #testing the speed of various ways of doing fracwords
 
 const count = 10000000
 
-function fracwords(n::Uint16)
+function fracwords(n::UInt16)
   n < 6 ? 1 : (1 << (n - 6))
 end
 
 #enclose in a function body because in julia there are no constant type globals.
-function testy(n::Uint16)
+function testy(n::UInt16)
 println("int(ceil(2^n / 64)): $(int(ceil(2^n/64)))")
 res = 0
 tic()
@@ -38,12 +45,12 @@ println(res)
 println("----")
 end
 
-testy(uint16(1))
-testy(uint16(1))
-testy(uint16(1))
-testy(uint16(0))
-testy(uint16(7))
-testy(uint16(10))
+testy(UInt16(1))
+testy(UInt16(1))
+testy(UInt16(1))
+testy(UInt16(0))
+testy(UInt16(7))
+testy(UInt16(10))
 
 #20 august 2015
 #fixed code, ran again.  Note that about 10x more runs are being done now.

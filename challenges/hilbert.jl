@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #hilbert.jl
 #tests inverting a hilbert matrix.  All of the entries *should* be integers.
 

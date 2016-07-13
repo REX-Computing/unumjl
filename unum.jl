@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #unum.jl - a julia implementation of the unum
 # this file is the module definition file and also contains
 # includes for all of the components which make it work
@@ -22,11 +25,20 @@ function __unum_isdev()
   __UNUM_DEV
 end
 
+import Base.<
+import Base.>
+import Base.==
+import Base.+
+import Base.-
+import Base./
+import Base.*
+import Base.colon
+
 #create the abstract Utype type
 abstract Utype <: Real
 export Utype
 
-#bring in some important uint64 bitwise methods
+#bring in some important UInt64 bitwise methods
 include("unum-int64op.jl")
 #helpers used in the unum type constructors andn pseudoconstructors
 include("unum-helpers.jl")
@@ -61,5 +73,7 @@ include("unum-bitwalk.jl")
 include("unum-promote.jl")
 include("unum-expwalk.jl")
 include("unum_solver.jl")
+
+include("unum-literal.jl")
 
 end #module

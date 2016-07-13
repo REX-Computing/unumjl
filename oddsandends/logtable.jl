@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #log-table.jl
 
 #log table describing logarithmic fractions for all 64-bit fraction bits...  starting

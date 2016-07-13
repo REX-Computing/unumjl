@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #goldschmidt-digits.jl
 
 include("../unum.jl")
@@ -10,27 +17,27 @@ using Unums
 function signof(x::FloatingPoint)
   T = typeof(x)
   if (T == Float64)
-    return ((reinterpret(Uint64, x) & 0x8000_0000_0000_0000) != 0) ? 1 : 0
+    return ((reinterpret(UInt64, x) & 0x8000_0000_0000_0000) != 0) ? 1 : 0
   elseif (T == Float32)
-    return ((reinterpret(Uint32, x) & 0x8000_0000) != 0) ? 1 : 0
+    return ((reinterpret(UInt32, x) & 0x8000_0000) != 0) ? 1 : 0
   end
 end
 
 function exponentof(x::FloatingPoint)
   T = typeof(x)
   if (T == Float64)
-    return int64((reinterpret(Int64, x) & 0x7FF0_0000_0000_0000) >> 52 - 1023)
+    return Int64((reinterpret(Int64, x) & 0x7FF0_0000_0000_0000) >> 52 - 1023)
   elseif (T == Float32)
-    return int64((reinterpret(Int32, x) & 0x7F80_0000) >> 23 - 127)
+    return Int64((reinterpret(Int32, x) & 0x7F80_0000) >> 23 - 127)
   end
 end
 
 function castfrac(x::FloatingPoint)
   T = typeof(x)
   if (T == Float64)
-    return (reinterpret(Uint64, x) & 0x000F_FFFF_FFFF_FFFF) << 12
+    return (reinterpret(UInt64, x) & 0x000F_FFFF_FFFF_FFFF) << 12
   elseif (T == Float32)
-    return uint64(reinterpret(Uint32, x) & 0x007F_FFFF) << 41
+    return UInt64(reinterpret(UInt32, x) & 0x007F_FFFF) << 41
   end
 end
 
@@ -42,12 +49,12 @@ function maskfor(T::Type)
   end
 end
 
-o16 = one(Uint16)
-z16 = zero(Uint16)
+o16 = one(UInt16)
+z16 = zero(UInt16)
 __clz_array=[0x0004,0x0003,0x0002,0x0002, o16, o16, o16, o16, z16,z16,z16,z16,z16,z16,z16,z16]
 function clz(n)
   (n == 0) && return 64
-  res::Uint16 = 0
+  res::UInt16 = 0
   #use the binary search method
   (n & 0xFFFF_FFFF_0000_0000 == 0) && (n <<= 32; res += 0x0020)
   (n & 0xFFFF_0000_0000_0000 == 0) && (n <<= 16; res += 0x0010)
@@ -70,10 +77,10 @@ end
 #performs a simple multiply, Assumes that number 1 has a hidden bit of exactly one
 #and number 2 has a hidden bit of exactly zero
 #(1 + a)(0 + b) = b + ab
-function smult(a::Uint64, b::Uint64)
+function smult(a::UInt64, b::UInt64)
 
   (fraction, _) = Unums.__chunk_mult(a, b)
-  carry = one(Uint64)
+  carry = one(UInt64)
 
   #only perform the respective adds if the *opposing* thing is not subnormal.
   ((carry, fraction) = Unums.__carried_add(carry, fraction, b))
@@ -135,25 +142,25 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   end
 
   #figure out the sign.
-  sign::Uint64 = signof(x) $ signof(y)
+  sign::UInt64 = signof(x) $ signof(y)
 
   #calculate the exponent.
   exp_f::Int64 = exponentof(x) - exponentof(y) + (issubnormal(x) ? 1 : 0) - (issubnormal(y) ? 1 : 0)
 
   #figure the decimals.
-  numerator::Uint64 = castfrac(x)
+  numerator::UInt64 = castfrac(x)
 
   if (issubnormal(x))
-    shift::Uint64 = clz(numerator) + 1
+    shift::UInt64 = clz(numerator) + 1
     numerator = numerator << shift
     exp_f -= shift
   end
   #save the old numerator
   old_numerator = numerator
   #set the carry on the numerator
-  carry::Uint64 = 1
+  carry::UInt64 = 1
 
-  denominator::Uint64 = castfrac(y)
+  denominator::UInt64 = castfrac(y)
   #adjust the denominator in the case that it's a subnormal
   if issubnormal(y)
     shift = clz(denominator)
@@ -172,10 +179,10 @@ function exct(x::FloatingPoint, y::FloatingPoint)
   ourfrac_mask = maskfor(T)
   #do the goldschmidt algorithm
   for (idx = 1:32)
-    factor::Uint64 = (-denominator)
+    factor::UInt64 = (-denominator)
     #simple-fused-multiply-add.
     (carry, numerator) = sfma(carry, numerator, factor)
-    (_, denominator) = sfma(uint64(0), denominator, factor)
+    (_, denominator) = sfma(UInt64(0), denominator, factor)
     (~denominator & ourfrac_mask == 0) && break
     denominator &= ourfrac_mask
     numerator &= ourfrac_mask
@@ -223,8 +230,8 @@ end
 #x = reinterpret(Float32, 0b00000110001001000111001101001111)
 #y = reinterpret(Float32, 0b10000000010010100000111001111111)
 
-x = reinterpret(Float64, rand(Uint64))
-y = reinterpret(Float64, rand(Uint64))
+x = reinterpret(Float64, rand(UInt64))
+y = reinterpret(Float64, rand(UInt64))
 
 #test exact divisions
 #y = floor(rand() * 100000)
@@ -247,8 +254,8 @@ println("zbits:     ", bits(z))
 count = 0
 errors = 0
 while (true)
-  #x = reinterpret(Float64, rand(Uint64))
-  #y = reinterpret(Float64, rand(Uint64))
+  #x = reinterpret(Float64, rand(UInt64))
+  #y = reinterpret(Float64, rand(UInt64))
   x = 30.0
   y = 1.5
   (z, ulp) = exct(x, y)
@@ -259,7 +266,7 @@ while (true)
   (isinf(z)) && continue
 
   if ulp
-    nextfrac = big(reinterpret(Float64, (reinterpret(Uint64, z) + 1)))
+    nextfrac = big(reinterpret(Float64, (reinterpret(UInt64, z) + 1)))
     if (abs(bigguess) > abs(bigres))
       println("lower bound bad")
       println("gsans:", bits(z))

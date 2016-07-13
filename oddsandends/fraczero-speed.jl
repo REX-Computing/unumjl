@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #fraczero-speed.jl
 
 #testing to see how fast we can test to see if the fraction is zero.
@@ -7,7 +14,7 @@
 const count = 1000000
 
 function constfn(b, i)
-  b && (i == zero(Uint64))
+  b && (i == zero(UInt64))
 end
 
 function forloopfn(b)
@@ -26,24 +33,24 @@ end
 
 function testy()
 
-#make a cell array which will hold four-unit int64 arrays
+#make a cell array which will hold four-unit Int64 arrays
 arrays = cell(count)
 for idx = 1:count
-  arrays[idx] = [(rand() < 0.25) ? zero(Uint64) : rand(Uint64) for jdx = 1:4]
+  arrays[idx] = [(rand() < 0.25) ? zero(UInt64) : rand(UInt64) for jdx = 1:4]
 end
 
 println("by comparing against a zero array.")
 sum = 0
 tic()
 for (i=1:count)
-  sum += (arrays[i] == zeros(Uint64, 4)) ? 1 : 0
+  sum += (arrays[i] == zeros(UInt64, 4)) ? 1 : 0
 end
 toc()
 #println forces julia to use the result and not compile it away.
 println(sum)
 
 println("by comparing against a cached zero array.")
-cache = zeros(Uint64, 4)
+cache = zeros(UInt64, 4)
 sum = 0
 tic()
 for (i=1:count)
@@ -57,14 +64,14 @@ println("by mapping an anonymous function")
 sum = 0
 tic()
 for (i=1:count)
-  sum += (reduce((b, i) -> b && (i == zero(Uint64)), true, arrays[i])) ? 1 : 0
+  sum += (reduce((b, i) -> b && (i == zero(UInt64)), true, arrays[i])) ? 1 : 0
 end
 toc()
 #println forces julia to use the result and not compile it away.
 println(sum)
 
 println("by mapping a cached anonymous function.")
-cachefn = (b, i) -> b && (i == zero(Uint64))
+cachefn = (b, i) -> b && (i == zero(UInt64))
 sum = 0
 tic()
 for (i=1:count)

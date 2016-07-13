@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #unit-subtraction.jl
 
 #testing subtraction
@@ -19,8 +26,8 @@ import Unums.o16
 #__diff_exact - an exact subtraction with the first entity having a higher exponent
 
 wone = Unum{4,6}(z16,z16,z16,z64,o64)
-wtwo = Unum{4,6}(z16,uint16(1),z16,z64,uint64(3))
-wthr = Unum{4,6}(z16,uint16(1),z16,t64,uint64(3))
+wtwo = Unum{4,6}(z16,UInt16(1),z16,z64,UInt64(3))
+wthr = Unum{4,6}(z16,UInt16(1),z16,t64,UInt64(3))
 
 @test Unums.__diff_exact(wone, -wone, 0, 0) == zero(Unum{4,6})   #one plus one is two
 @test Unums.__diff_exact(wtwo, -wone, 1, 0) == wone              #two minus one is one
@@ -32,7 +39,7 @@ wthr = Unum{4,6}(z16,uint16(1),z16,t64,uint64(3))
 x1 = Unum{4,6}(0x0033, 0x0007, z16, 0x04dcb922d2c6d000, 0x000000015)
 x2 = Unum{4,6}(0x0033, 0x0007, Unums.UNUM_SIGN_MASK, 0x04dcb8d6e79b5000, 0x000000015)
 de = decode_exp(0x0007, 0x000000015)
-@test Unums.__diff_exact(x1, x2, de, de) == Unum{4,6}(0x0016, 0x0008, z16, 0x2facae0000000000, uint64(0x7b))
+@test Unums.__diff_exact(x1, x2, de, de) == Unum{4,6}(0x0016, 0x0008, z16, 0x2facae0000000000, UInt64(0x7b))
 #fixed by implementing a subroutine that is triggered only when carry is zero for
 #a no-offset subtraction.
 
@@ -52,9 +59,9 @@ dx4 = decode_exp(x4)
 
 #11 september 2015 - identified through continuous testing, in parallel to the
 #ubound problem as in the unit test for addition.
-x5 = Unum{4,6}(0x0032,0x0007,Unums.UNUM_SIGN_MASK,0x4410e89562546000,uint64(0xf2))
-x6 = Unum{4,6}(0x003f,0x0007,z16,0x3db8d7e07e3733ef,uint64(0xf1))
+x5 = Unum{4,6}(0x0032,0x0007,Unums.UNUM_SIGN_MASK,0x4410e89562546000,UInt64(0xf2))
+x6 = Unum{4,6}(0x003f,0x0007,z16,0x3db8d7e07e3733ef,UInt64(0xf1))
 dx5 = decode_exp(x5)
 dx6 = decode_exp(x6)
-@test Unums.__diff_exact(x5,x6,dx5,dx6) == Unum{4,6}(0x003f, 0x0007, Unums.UNUM_UBIT_MASK | Unums.UNUM_SIGN_MASK, 0x4a68f94a46718c11, uint64(0xf1))
+@test Unums.__diff_exact(x5,x6,dx5,dx6) == Unum{4,6}(0x003f, 0x0007, Unums.UNUM_UBIT_MASK | Unums.UNUM_SIGN_MASK, 0x4a68f94a46718c11, UInt64(0xf1))
 #resolved due to an incorrect offset in a fillbit call.

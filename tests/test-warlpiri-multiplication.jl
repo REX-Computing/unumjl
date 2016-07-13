@@ -1,7 +1,14 @@
-#test-warlpiri-addition.jl
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
+#test-warlpiri-multiplication.jl
 
 ###############################################################################
-##COMPLETE ADDITION TABLE
+##COMPLETE MULTIPLICATION TABLE
 
 #column key
 #none_ pfew_ pone_ psome ptwo_ pmany pall_ junk_ nnone n_few n_one nsome n_two nmany n_all

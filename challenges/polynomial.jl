@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #polynomial.jl
 #solves an arbitrary 6-degree polynomial, using the arbitrary function solver
 

@@ -8,7 +8,7 @@ using Unums
 function erand()
   u = convert(Unum{4,6}, exp(100 * randn()) * (rand() < 0.5 ? -1 : 1))
   #flip the ubit randomly
-  unum_unsafe(u, u.flags | (rand() < 0.5 ? Unums.UNUM_UBIT_MASK : zero(Uint16)))
+  unum_unsafe(u, u.flags | (rand() < 0.5 ? Unums.UNUM_UBIT_MASK : zero(UInt16)))
 end
 
 function to_big(u)

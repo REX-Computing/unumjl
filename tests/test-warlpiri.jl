@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #unum-test-warlpiri.jl
 
 #unit tests based on warlpiri mathematics.
@@ -8,16 +15,16 @@ using Unums
 using Base.Test
 
 #some useful unsigned int constants
-one16 = one(Uint16)
-one64 = one(Uint64)
-zero16 = zero(Uint16)
-zero64 = zero(Uint64)
+one16 = one(UInt16)
+one64 = one(UInt64)
+zero16 = zero(UInt16)
+zero64 = zero(UInt64)
 top64 = 0x8000_0000_0000_0000 #our representation for the fraction part is left-shifted.
 
 #create the warlpiri type.  This is a 0/0 unum.
 Warlpiri = Unum{0,0}
 #an external constructor will make things a bit easier, sadly we have to lower case this.
-warlpiri(flags::Integer, frac::Uint64, exp::Uint64) = Warlpiri(zero16, zero16, uint16(flags), frac, exp)
+warlpiri(flags::Integer, frac::UInt64, exp::UInt64) = Warlpiri(zero16, zero16, UInt16(flags), frac, exp)
 #first let's make sure that the Warlpiri unums take up four bits
 @test 4 == maxubits(Warlpiri)
 
@@ -153,11 +160,30 @@ pt_pa = ubound(ptwo_, pall_)
 
 pm_pa = ubound(pmany, pall_)
 
+<<<<<<< HEAD
 println("one:", bits(pone_))
 println("one x one:", bits(Unums.__mult_exact(pone_, pone_)))
 #println(bits(pfew_ * pfew_))
 
 exit()
+=======
+#=
+println("====")
+a = pone_
+
+println("one:", bits(a))
+println("div:", bits(a / a))
+println("exd:", bits(Unums.__div_exact(a, a, zero(UInt16))))
+
+a = pfew_
+b = pfew_
+println(bits(a))
+println(bits(b))
+println("----")
+println(bits(a / b))
+exit()
+=#
+>>>>>>> 4f2ffc024bda3473ab6443329f6082cdd1548c40
 
 #and a general purpose function for testing an operation,
 function testop(op, expected)
@@ -174,12 +200,6 @@ function testop(op, expected)
     for j=1:15
       try
         res = op(warlpiris[i], warlpiris[j])
-
-#=        println("====")
-        println(bits(res))
-        println(bits(expected[i,j]))
-        println(typeof(expected[i,j]))
-        println(isequal(res, expected[i,j]))=#
 
         if !isequal(res, expected[i, j])
           println("$i, $j: $(bits(warlpiris[i])) $op $(bits(warlpiris[j])) failed as $(bits(res)); should be $(bits(expected[i,j]))")
@@ -199,3 +219,4 @@ end
 
 include("test-warlpiri-addition.jl")
 include("test-warlpiri-multiplication.jl")
+include("test-warlpiri-division.jl")

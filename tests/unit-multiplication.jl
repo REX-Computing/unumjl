@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #unit-multiplication.jl
 
 #testing chunk multiplication
@@ -12,11 +19,11 @@ f64_frac_mask = 0xFFFF_FFFF_FFFE_0000
 frac1 = 0x7c26c92fea77e000
 frac2 = 0x997d76a4e016d000
 
-uft1 = unum_easy(Unum{4,6}, zero(Uint16), frac1, 1)
-uft2 = unum_easy(Unum{4,6}, zero(Uint16), frac2, 1)
+uft1 = unum_easy(Unum{4,6}, zero(UInt16), frac1, 1)
+uft2 = unum_easy(Unum{4,6}, zero(UInt16), frac2, 1)
 xft1 = convert(Float64, uft1)
 xft2 = convert(Float64, uft2)
-ifm3 = (reinterpret(Uint64, xft1 * xft2) << 12) & f64_frac_mask
+ifm3 = (reinterpret(UInt64, xft1 * xft2) << 12) & f64_frac_mask
 ufm3 = (Unums.__mult_exact(uft1, uft2)).fraction & f64_frac_mask
 @test ifm3 == ufm3
 #result:  A coding error caused this carry function in the multiplication

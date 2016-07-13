@@ -1,3 +1,6 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #ubound-division.jl
 
 #division on ubounds.
@@ -22,7 +25,7 @@ function /{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS})
 end
 
 function /{ESS,FSS}(a::Ubound{ESS,FSS}, b::Ubound{ESS,FSS})
-  signcode::Uint16 = 0
+  signcode::UInt16 = 0
   is_negative(a.lowbound)  && (signcode += 1)
   is_negative(a.highbound) && (signcode += 2)
   is_negative(b.lowbound)  && (signcode += 4)

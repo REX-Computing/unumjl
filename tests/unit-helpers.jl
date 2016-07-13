@@ -1,3 +1,10 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+
+#see LICENSE.txt
+
+#this work was supported in part by DARPA Contract D15PC00135
+
+
 #test-helpers.jl
 
 #test __frac_trim(frac, fsize) - this is a function solely used in the
@@ -7,32 +14,32 @@
 #the new superint, the fsize (as potentially modified), and a ubit.
 
 #in a 64-bit single width superint.  Trim for fsize = 0, i.e. down to 1 bit.
-@test Unums.__frac_trim(nobits,  uint16(0)) == (nobits, 0, 0)
-@test Unums.__frac_trim(allbits, uint16(0)) == (msb1  , 0, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim(nobits,  UInt16(0)) == (nobits, 0, 0)
+@test Unums.__frac_trim(allbits, UInt16(0)) == (msb1  , 0, Unums.UNUM_UBIT_MASK)
 #Trim for fsize = 1, i.e. down to two bits.
-@test Unums.__frac_trim(nobits,  uint16(1)) == (nobits, 0, 0) #note this is the same as above
-@test Unums.__frac_trim(allbits, uint16(1)) == (0xC000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim(nobits,  UInt16(1)) == (nobits, 0, 0) #note this is the same as above
+@test Unums.__frac_trim(allbits, UInt16(1)) == (0xC000_0000_0000_0000, 1, Unums.UNUM_UBIT_MASK)
 #in this case we have a distant uncertain-causing bit and also a trailing zero.
 #The trim should not move to 0, and the ubit should be flagged.
-@test Unums.__frac_trim(0x8010_0000_0000_0000, uint16(0)) == (msb1, 0, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim(0x8010_0000_0000_0000, uint16(3)) == (msb1, 3, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, uint16(61)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
-@test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, uint16(63)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
-@test Unums.__frac_trim(allbits, uint16(63)) == (allbits, 63, 0)
+@test Unums.__frac_trim(0x8010_0000_0000_0000, UInt16(0)) == (msb1, 0, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim(0x8010_0000_0000_0000, UInt16(3)) == (msb1, 3, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, UInt16(61)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
+@test Unums.__frac_trim(0xFFFF_FFFF_FFFF_FFFC, UInt16(63)) == (0xFFFF_FFFF_FFFF_FFFC, 61, 0)
+@test Unums.__frac_trim(allbits, UInt16(63)) == (allbits, 63, 0)
 #test two-cell SuperInt with fractrim.
-@test Unums.__frac_trim([nobits, nobits], uint16(0)) == ([nobits, nobits], 0, 0)
-@test Unums.__frac_trim([nobits, nobits], uint16(127)) == ([nobits, nobits], 0, 0)
-@test Unums.__frac_trim([lsb1, nobits], uint16(0)) == ([nobits, nobits], 0, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim([lsb1, nobits], uint16(63)) == ([nobits, nobits], 63, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim([nobits, lsb1], uint16(63)) == ([nobits, lsb1], 63, 0)
+@test Unums.__frac_trim([nobits, nobits], UInt16(0)) == ([nobits, nobits], 0, 0)
+@test Unums.__frac_trim([nobits, nobits], UInt16(127)) == ([nobits, nobits], 0, 0)
+@test Unums.__frac_trim([lsb1, nobits], UInt16(0)) == ([nobits, nobits], 0, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim([lsb1, nobits], UInt16(63)) == ([nobits, nobits], 63, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim([nobits, lsb1], UInt16(63)) == ([nobits, lsb1], 63, 0)
 #test three-cell SuperInts with fractrim.
-@test Unums.__frac_trim([nobits, nobits, nobits], uint16(0)) == ([nobits, nobits, nobits], 0, 0)
-@test Unums.__frac_trim([nobits, nobits, nobits], uint16(191)) == ([nobits, nobits, nobits], 0 ,0)
-@test Unums.__frac_trim([allbits, allbits, allbits], uint16(63)) == ([nobits, nobits, allbits], 63, Unums.UNUM_UBIT_MASK)
-@test Unums.__frac_trim([allbits, allbits, allbits], uint16(191)) == ([allbits, allbits, allbits,], 191, 0)
+@test Unums.__frac_trim([nobits, nobits, nobits], UInt16(0)) == ([nobits, nobits, nobits], 0, 0)
+@test Unums.__frac_trim([nobits, nobits, nobits], UInt16(191)) == ([nobits, nobits, nobits], 0 ,0)
+@test Unums.__frac_trim([allbits, allbits, allbits], UInt16(63)) == ([nobits, nobits, allbits], 63, Unums.UNUM_UBIT_MASK)
+@test Unums.__frac_trim([allbits, allbits, allbits], UInt16(191)) == ([allbits, allbits, allbits,], 191, 0)
 
 #make sure we can't try to trim something to more bits than it has.
-@test_throws ArgumentError Unums.__frac_trim(nobits, uint16(64))
+@test_throws ArgumentError Unums.__frac_trim(nobits, UInt16(64))
 
 #testing the frac_match, which expands or contracts a SuperInt to match the fss, and throws
 #the ubit flag if it makes sense.
@@ -132,8 +139,8 @@ end
 @test Unums.__frac_cells(7) == 2
 @test Unums.__frac_cells(8) == 4
 
-@test Unums.__set_lsb(zero(Uint64), 0) == 0x8000_0000_0000_0000
-@test Unums.__set_lsb(zero(Uint64), 5) == 0x0000_0001_0000_0000
-@test Unums.__set_lsb(zero(Uint64), 6) == 0x0000_0000_0000_0001
-@test Unums.__set_lsb(zeros(Uint64, 2), 7) == [0x0000_0000_0000_0001, 0x0]
-@test Unums.__set_lsb(zeros(Uint64, 4), 8) == [0x0000_0000_0000_0001, 0x0, 0x0, 0x0]
+@test Unums.__set_lsb(zero(UInt64), 0) == 0x8000_0000_0000_0000
+@test Unums.__set_lsb(zero(UInt64), 5) == 0x0000_0001_0000_0000
+@test Unums.__set_lsb(zero(UInt64), 6) == 0x0000_0000_0000_0001
+@test Unums.__set_lsb(zeros(UInt64, 2), 7) == [0x0000_0000_0000_0001, 0x0]
+@test Unums.__set_lsb(zeros(UInt64, 4), 8) == [0x0000_0000_0000_0001, 0x0, 0x0, 0x0]

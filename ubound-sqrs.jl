@@ -1,10 +1,13 @@
+#Copyright (c) 2015 Rex Computing and Isaac Yonemoto
+#see LICENSE.txt
+#this work was supported in part by DARPA Contract D15PC00135
 #unum-sqrs.jl
 
 #square and square root
 
 #computes the square of a unum x.  For ubounds we must do a check.
 function sqr{ESS,FSS}(x::Ubound{ESS,FSS})
-  signcode::Uint16 = 0
+  signcode::UInt16 = 0
   is_neg_def(x.lowbound) && (signcode += 1)
   is_neg_def(x.highbound) && (signcode += 2)
 
