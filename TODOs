@@ -1,3 +1,13 @@
+1) Implement "Simple" Addition
+2) Implement "Simple" Subtraction
+3) Implement "Simple" Multiplication
+4) Implement "Simple" Division
+
+5) Implement "Gnum" Addition
+6) Implement "Gnum" Subtraction
+7) Implement "Gnum" Multiplication
+8) Implement "Gnum" Division
+
 Adjust the 'calculate' function to either reject or calculate when Unums use a
 fraction length that is much longer than 64 bits
 
@@ -5,7 +15,7 @@ Make a checklist of all of the properties() function that we need to implement
 And make sure those are complete.
 
 Go through all of the places where we have to recalculate the fsize and make
-sure those use the __fsize_of_exact function
+sure those use the __minimum_data_width function
 
 Annotate all functions with {ESS,FSS} signature
 
