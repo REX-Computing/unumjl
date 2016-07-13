@@ -129,6 +129,11 @@ y = Unums.make_ulp!(Unum{2,2}(32))
 y.fsize = 0x0002
 @test x == y
 
+x = Unum{2,2}(0x000000000000000C, 0x2000000000000000, 0x0001, 0x0003, 0x0003)
+x += one(Unum{2,2})
+b = Unum{2,2}(0x000000000000000C, 0x2000000000000000, 0x0001, 0x0003, 0x0002)
+@test x == b
+
 #adding two ulps sometimes doesn't work.  Discovered by basic demonstration of
 #0.2 + 0.1 != 0.3
 x = Unum{4,6}(2) / Unum{4,6}(10)

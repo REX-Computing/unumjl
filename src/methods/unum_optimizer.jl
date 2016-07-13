@@ -3,6 +3,8 @@
 #this work was supported in part by DARPA Contract D15PC00135
 #unum_optimizer.jl
 
+import Unums: is_zero_ulp, is_inf_ulp
+
 #takes a function and repeatedly runs it until it gives appropriate precision.
 function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
   res = 0
@@ -13,14 +15,14 @@ function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
     describe(res)
     #for now, use floating point here.
     if (typeof(res) <: Ubound)
-      if (is_sss(res.lower) || is_sss(res.upper) || is_mmr(res.lower) || is_mmr(res.upper))
+      if (is_zero_ulp(res.lower) || is_zero_ulp(res.upper) || is_inf_ulp(res.lower) || is_inf_ulp(res.upper))
         verbose && println("overflow")
         sess += 1
         sfss += 1
         continue
       end
     elseif (typeof(res) <: Unum)
-      if (is_sss(res) || is_mmr(res))
+      if (is_zero_ulp(res) || is_inf_ulp(res))
         verbose && println("overflow")
         sess += 1
         sfss += 1

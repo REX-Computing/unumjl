@@ -55,7 +55,7 @@ doc"""
 @universal function unum_diff(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #basic secondary checks which eject early results.
   is_inf(a) && return is_inf(b) ? nan(U) : copy(a)
-  is_mmr(a) && return mmr_sub(a, b)
+  is_inf_ulp(a) && return inf_ulp_sub(a, b)
   #there is a corner case that b winds up being infinity (and a does not; same
   #with mmr.)
 
@@ -157,8 +157,8 @@ end
   end
 end
 
-@universal function mmr_sub(a::Unum, b::Unum)
-  is_mmr(b) && return B(neg_mmr(U), pos_mmr(U)) #all real numbers
+@universal function inf_ulp_sub(a::Unum, b::Unum)
+  is_mmr(b) && return B(cheapest_inf_ulp(U, UNUM_SIGN_MASK), cheapest_inf_ulp(U)) #all real numbers
   #calculate inner_value by doing an exact subtraction of b from big_exact.
   #ensure that it's an ulp.
   diff_bound = is_ulp(b) ? outer_exact(b) : b
@@ -169,9 +169,9 @@ end
   #check for the dominant sign.  If a was positive make it (inner_value -> mmr)
   #if a was negative, make it (-mmr -> inner_value )
   if ((@signof a) == z16)
-    B(inner_value, pos_mmr(U))
+    resolve_as_utype!(inner_value, pos_mmr(U))
   else
-    B(neg_mmr(U), inner_value)
+    resolve_as_utype!(neg_mmr(U), inner_value)
   end
 end
 

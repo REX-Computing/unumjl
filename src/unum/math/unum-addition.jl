@@ -58,9 +58,6 @@ doc"""
   is_inf(a) && return inf(U, @signof a)
   is_inf(b) && return inf(U, @signof a)
 
-  is_mmr(a) && return mmr(U, @signof a)
-  is_mmr(b) && return mmr(U, @signof a)
-
   (_aexp + _bexp > max_exponent(ESS)) && return mmr(U, @signof a)
 
   if (is_exact(a) && is_exact(b))
@@ -160,6 +157,13 @@ end
 @universal function sum_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #first, do the exact sum, to calculate the "base value" of the resulting sum.
   base_value = sum_exact(a, b, _aexp, _bexp)
+
+  if is_inf_ulp(a)
+    make_ulp!(base_value)
+    is_inf_ulp(base_value) && return base_value
+    return is_positive(a) ? resolve_as_utype!(base_value, mmr(U, @signof(a))) : resolve_as_utype!(mmr(U, @signof(a)), base_value)
+  end
+
   _mfsize = max_fsize(FSS)
 
   _rexp = decode_exp(base_value)
@@ -213,6 +217,7 @@ end
       augmented_value = outer_exact(a)
       augmented_value.fsize = _mfsize
       make_ulp!(augmented_value)
+
       return is_positive(a) ? resolve_as_utype!(base_value, augmented_value) : resolve_as_utype!(augmented_value, base_value)
     end
 
@@ -220,7 +225,7 @@ end
     base_value.fsize = min(ulp_shift, _mfsize)
     make_ulp!(base_value)
     #just in case this "hacks" to mmr.
-    is_nan(base_value) && return mmr(U)
+    is_nan(base_value) && return mmr(U, @signof(a))
     return base_value
   end
 end

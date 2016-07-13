@@ -40,24 +40,22 @@ doc"""
   if is_positive(lower)
     #firstly, the inner ubound is privileged and must be longer than the upper.
     cfsize = contract_outer_fsize(upper.fraction, upper.fsize)
-    cfsize = min(cfsize, contract_inner_fsize(lower.fraction, lower.fsize))
+    cfsize = max(cfsize, contract_inner_fsize(lower.fraction, lower.fsize))
   else
     cfsize = contract_outer_fsize(lower.fraction, lower.fsize)
-    cfsize = min(cfsize, contract_inner_fsize(upper.fraction, upper.fsize))
+    cfsize = max(cfsize, contract_inner_fsize(upper.fraction, upper.fsize))
   end
 
-  fsize = max_fsize(FSS) - cfsize
-
-  same_till_fsize(upper.fraction, lower.fraction, fsize) || return B(lower, upper)
+  same_till_fsize(upper.fraction, lower.fraction, cfsize) || return B(lower, upper)
 
   #special case where we can't coalesce them into two unums.
-  if fsize == 0
+  if cfsize == 0
     lower.fsize = 0
     upper.fsize = 0
     return B(lower, upper)
   end
 
-  lower.fsize = fsize - o16
+  lower.fsize = cfsize - o16
   return lower
 end
 

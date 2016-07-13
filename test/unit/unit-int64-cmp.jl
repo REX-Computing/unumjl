@@ -18,6 +18,21 @@ AN7 = Unums.ArrayNum{7}
   @test_throws ArgumentError Unums.cmpplusubit_matched(zero(AN7), zero(AN7), z16, 0x0041)
 end
 
+@test contract_outer_fsize(0x0000_0000_0000_FFFF, 0x003F) == 0x0030
+@test contract_outer_fsize(0x0000_FFFF_FFFF_FFFF, 0x003F) == 0x0010
+@test contract_outer_fsize(0x0000_FFFF_0000_0000, 0x001F) == 0x0010
+@test contract_outer_fsize(0x0000_FFFF_0000_0000, 0x002F) == 0x002f
+@test contract_outer_fsize(0xFFFF_FFFF_0000_0000, 0x001F) == 0x0000
+@test contract_outer_fsize(0x7FFF_FFFF_0000_0000, 0x001F) == 0x0001
+
+@test contract_inner_fsize(0x0000_0000_0000_0000, 0x003F) == 0x0000
+@test contract_inner_fsize(0x0000_1000_0000_0000, 0x003F) == 0x0014
+@test contract_inner_fsize(0x0000_8000_0000_0000, 0x003F) == 0x0011
+@test contract_inner_fsize(0x0001_0000_0000_0000, 0x003F) == 0x0010
+
+
+
+
 #=
 function __check_cmpplusubit_ordered(FSS, a, b, a_fsize::UInt16, b_fsize::UInt16)
   (div(a_fsize, 0x0040) < div(b_fsize, 0x0040)) || throw(ArgumentError("cmpplusubit_ordered called with improper fsize ordering."))
