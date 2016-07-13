@@ -30,14 +30,26 @@ function is_not_zero{FSS}(n::ArrayNum{FSS})
 end
 
 doc"""
-`is_all_ones` outputs whether or not all of the bits in an UInt64 or an `ArrayNum`
+`is_all_ones(n)` outputs whether or not all of the bits in an UInt64 or an `ArrayNum`
 are one.
+`is_all_ones(n, fsize)` does the same, but constrained to a certain fsize.
 """
 function is_all_ones{FSS}(n::ArrayNum{FSS})
   for idx = 1:__cell_length(FSS)
     @inbounds (n.a[idx] != f64) && return false
   end
   return true
+end
+function is_all_ones(n::UInt64, fsize::UInt16)
+  n == mask_top(fsize)
+end
+function is_all_ones{FSS}(n::ArrayNum{FSS}, fsize::UInt16)
+  cell_index = (fsize ÷ 0x0040) + o16
+  bit_index = fsize % 0x0040
+  for idx = 1:cell_index - 1
+    @inbounds (n.a[idx] != f64) && return false
+  end
+  @inbounds return is_all_ones(n.a[cell_index], bit_index)
 end
 
 doc"""
@@ -87,19 +99,27 @@ function is_not_top{FSS}(n::ArrayNum{FSS})
 end
 
 doc"""
-`is_mmr_frac` has the sole purpose of checking if the fraction looks like mmr.
+`is_mmr_frac(::ArrayNum)` checks if the fraction looks like mmr.
+`is_mmr_frac(::UInt64, ::Type{Val{FSS}})` also checks if the fraction looks like mmr.
 """
+function is_mmr_frac{FSS}(n::UInt64, ::Type{Val{FSS}})
+  if FSS == 0
+    n == z64
+  else
+    n == mask_top(max_fsize(FSS) - 0x0001)
+  end
+end
 function is_mmr_frac{FSS}(n::ArrayNum{FSS})
   l = __cell_length(FSS)
   for idx = 1:(l - 1)
     @inbounds (n.a[idx] != f64) && return false
   end
-  return (n.a[l] == 0xFFFF_FFFF_FFFF_FFFE)
+  @inbounds return (n.a[l] == 0xFFFF_FFFF_FFFF_FFFE)
 end
 
-bool_bottom_bit(FSS::Int64, fraction::UInt64) = (bottom_bit(FSS) & fraction) != 0
+bool_bottom_bit{FSS}(fraction::UInt64, ::Type{Val{FSS}}) = (bottom_bit(FSS) & fraction) != 0
 bool_bottom_bit{FSS}(n::ArrayNum{FSS}) = (n.a[__cell_length(FSS)] & o64) != 0
-bool_bottom_bit{ESS,FSS}(x::UnumSmall{ESS,FSS}) = bool_bottom_bit(FSS, x.fraction)
+bool_bottom_bit{ESS,FSS}(x::UnumSmall{ESS,FSS}) = bool_bottom_bit(x.fraction, Val{FSS})
 bool_bottom_bit{ESS,FSS}(x::UnumLarge{ESS,FSS}) = bool_bottom_bit(x.fraction)
 
 doc"""

@@ -120,6 +120,9 @@ cheapest_inf_ulp{ESS,FSS}(T::Type{Unum{ESS,FSS}}, sign::UInt16 = z16) = (FSS < 7
 cheapest_inf_ulp{ESS,FSS}(T::Type{UnumSmall{ESS,FSS}}, sign::UInt16 = z16) = T(max_biased_exponent(ESS), t64, sign | UNUM_UBIT_MASK, max_esize(ESS), z16)
 cheapest_inf_ulp{ESS,FSS}(T::Type{UnumLarge{ESS,FSS}}, sign::UInt16 = z16) = T(max_biased_exponent(ESS), top(ArrayNum{FSS}), sign | UNUM_UBIT_MASK, max_esize(ESS), z16)
 
+cheapest_inf_ulp{ESS}(T::Type{UnumSmall{ESS, 0}}, sign::UInt16 = z16) = mmr(T)
+cheapest_inf_ulp{ESS}(T::Type{UnumLarge{ESS, 0}}, sign::UInt16 = z16) = mmr(T)
+
 ################################################################################
 # mmr and big_exact look very similar, so we'll combine the code to generate them
 # here.

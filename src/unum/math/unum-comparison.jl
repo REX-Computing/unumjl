@@ -22,8 +22,17 @@ import Base:  ==, <, >, <=, >=  #this statement is necessary to redefine these f
   #now that we know that the exponents are the same,
   #the fractions must also be identical
   (a.fraction != b.fraction) && return false
-  #the ubit on case is simple - the fsizes must be equal
-  ((a.flags & UNUM_UBIT_MASK) == UNUM_UBIT_MASK) && return (a.fsize == b.fsize)
+  #the ubit on case is simple - the fsizes must be equal, except if one is mmr.
+  if ((a.flags & UNUM_UBIT_MASK) == UNUM_UBIT_MASK)
+    is_inf_ulp(a) || return (a.fsize == b.fsize)
+    (a.fsize == b.fsize) && return true
+    #mmr is categorically going to be equal to the inf_ulp with fsize one less
+    #than max_fsize
+    _mfsize = max_fsize(FSS)
+    (a.fsize == _mfsize) && (b.fsize == _mfsize - o16) && return true
+    (b.fsize == _mfsize) && (a.fsize == _mfsize - o16) && return true
+    return false
+  end
   #so we are left with exact floats at any resolution, ok, or uncertain floats
   #with the same resolution.  These must be equal.
   return true
@@ -44,6 +53,7 @@ end
   h = hash(a.exponent, h)
   h
 end
+
 
 #the corresponding isequal function.
 @universal Base.isequal(a::Unum, b::Unum) = (hash(a) == hash(b))

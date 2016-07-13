@@ -134,14 +134,11 @@ doc"""
   for transparent checking of whether or not a Unum has the look of MMR, whether
   or not the Unum has a big or small structure
 """
-@universal function is_mmr_frac(x::Unum)
-  if FSS == 0
-    x.fraction == 0
-  elseif FSS < 7
-    x.fraction == mask_top(max_fsize(FSS) - 0x0001)
-  else
-    is_mmr_frac(x.fraction)
-  end
+function is_mmr_frac{ESS,FSS}(x::UnumSmall{ESS,FSS})
+  is_mmr_frac(x.fraction, Val{FSS})
+end
+function is_mmr_frac{ESS,FSS}(x::UnumLarge{ESS,FSS})
+  is_mmr_frac(x.fraction)
 end
 
 doc"""
@@ -198,4 +195,9 @@ end
   is_ulp(x) || return false
   (decode_exp(x) == max_exponent(ESS)) || return false
 
+  if x.fsize == max_fsize(FSS)
+    is_mmr_frac(x)
+  else
+    is_all_ones(x.fraction, x.fsize)
+  end
 end
