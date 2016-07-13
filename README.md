@@ -1,4 +1,4 @@
-How to use the Julia Unum library (0.1):
+How to use the Julia Unum library (0.2):
 ========================================
 
 1. install julia.
@@ -85,5 +85,17 @@ Unum{4,7}(3.33333333333333333333333333333333333333088438676912023435839846554745
 
 ```
 
+To observe the intended "bits" values as they are in "The End of Error", use the
+builtin `bits(::Unum)` function, `bits(::Unum, ::String)` will insert a spacer.
+
+```
+julia> bits(Unum{0,0}(1))
+"0010"
+julia> bits(Unum{4,7}(1) / Unum{4,7}(3), " ")
+"0 001 01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101 1 0010 1111111"
+```
+
+
 unumjl was created by Isaac Yonemoto on behalf of [REX Computing Inc.](http://rexcomputing.com)
+
 this work was supported in part by DARPA Contract D15PC00135 awarded to REX Computing, Inc.

@@ -216,13 +216,15 @@ end
   end
 end
 
+@universal function allsignedreals(result_sign::UInt16, T::Type{Unum})
+  (result_sign == 0) ? B(cheapest_zero_ulp(U, z16), cheapest_inf_ulp(U, z16)) : B(cheapest_inf_ulp(U, UNUM_SIGN_MASK), cheapest_zero_ulp(U, UNUM_SIGN_MASK))
+end
 
 @universal function inf_ulp_mult(inf_ulp::Unum, b::Unum, result_sign::UInt16)
   #it is possible to multiply by a number bigger than but very close to one.
-  (decode_exp(b) > 1) && return mmr(U, result_sign) #mmr is lucky enough to have this cheat.
+  (decode_exp(b) > 0) && return mmr(U, result_sign) #mmr is lucky enough to have this cheat.
 
-  is_zero_ulp(b) && return (result_sign == 0) ? B(cheapest_zero_ulp(U, z16), cheapest_inf_ulp(U, z16)) :
-                                                  B(cheapest_inf_ulp(U, UNUM_SIGN_MASK), cheapest_zero_ulp(U, UNUM_SIGN_MASK))
+  is_zero_ulp(b) && return allsignedreals(result_sign, U)
 
   inner_value = mul_exact(inner_exact(inf_ulp), b, result_sign)
   is_exact(inner_value) && outward_ulp!(inner_value)
@@ -236,7 +238,7 @@ end
   _ulp_exact = outer_exact(zero_ulp)
   _val_exact = is_exact(b) ? b : outer_exact(b)
 
-  res_exp = decode_exp(_ulp_exact) + 1 * is_subnormal(_ulp_exact) - decode_exp(_val_exact) - 1 * is_subnormal(_val_exact)
+  res_exp = decode_exp(_ulp_exact) + 1 * is_subnormal(_ulp_exact) + decode_exp(_val_exact) + 1 * is_subnormal(_val_exact)
 
   (res_exp < min_exponent(ESS, FSS)) && return sss(U, result_sign)
   #cannot be inf_ulp because that case is handled above.

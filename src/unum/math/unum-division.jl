@@ -33,13 +33,6 @@ doc"""
   resolve_degenerates!(a)
   resolve_degenerates!(b)
 
-  #=
-  println("----")
-  println("hey, dividing")
-  describe(a)
-  describe(b)
-  =#
-
   if is_exact(a) && is_exact(b)
     div_exact(a, b, result_sign)
   else
@@ -261,11 +254,11 @@ end
 
 @universal function div_inexact(a::Unum, b::Unum, result_sign::UInt16)
 
-  is_mmr(a) && (return mmr_div(b, result_sign))
-  is_sss(a) && (return sss_div(b, result_sign))
+  is_inf_ulp(a) && (return inf_ulp_div(a, b, result_sign))
+  is_zero_ulp(a) && (return zero_ulp_div(a, b, result_sign))
 
-  is_mmr(b) && (return mmr_div_left(a, result_sign))
-  is_sss(b) && (return sss_div_left(a, result_sign))
+  is_inf_ulp(b) && (return inf_ulp_div_left(a, b, result_sign))
+  is_zero_ulp(b) && (return zero_ulp_div_left(a, b, result_sign))
 
   #calculate the tops and the bottoms of both ulps.
   outer_bound_dividend = is_exact(a) ? a : outer_exact(a)
@@ -281,41 +274,54 @@ end
   return (result_sign != z16) ? resolve_as_utype!(outer, inner) : resolve_as_utype!(inner, outer)
 end
 
-@universal function mmr_div(b::Unum, result_sign::UInt16)
-  if mag_greater_than_one(b)
-    is_mmr(b) && return (result_sign == z16) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
-    outer_bound_b = is_exact(b) ? b : outer_exact(b)
-    inner_bound = div_exact(big_exact(U), outer_bound_b, result_sign)
-    is_exact(inner_bound) && outer_ulp!(inner_bound)
-    return (result_sign != z16) ? resolve_as_utype!(neg_mmr(U), inner_bound) : resolve_as_utype!(inner_bound, mmr(U))
-  else
-    return mmr(U, result_sign)
-  end
+@universal function inf_ulp_div(inf_ulp::Unum, b::Unum, result_sign::UInt16)
+  (decode_exp(b) < 0) && return mmr(U, result_sign)
+  is_inf_ulp(b) && return allsignedreals(result_sign, U)
+
+  outer_bound_b = is_exact(b) ? b : outer_exact(b)
+  inner_bound_u = inner_exact(inf_ulp)
+
+  result_inner = div_exact(inner_bound_u, outer_bound_b, result_sign)
+
+  is_exact(result_inner) && outer_ulp!(result_inner)
+
+  return (result_sign != z16) ? resolve_as_utype!(neg_mmr(U), result_inner) : resolve_as_utype!(result_inner, mmr(U))
 end
 
-@universal function sss_div(b::Unum, result_sign::UInt16)
-  if mag_greater_than_one(b)
-    return sss(U, result_sign)
-  else
-    is_sss(b) && return (result_sign == z16) ? B(sss(U), mmr(U)) : B(neg_mmr(U), neg_sss(U))
+@universal function zero_ulp_div(zero_ulp::Unum, b::Unum, result_sign::UInt16)
+  is_zero_ulp(b) && return allsignedreals(result_sign, U)
 
-    outer_bound = div_exact(small_exact(U), make_exact(b), result_sign)
-    is_exact(outer_bound) && inner_ulp!(outer_bound)
-    return (result_sign != z16) ? resolve_as_utype!(outer_bound, neg_sss(U)) : resolve_as_utype!(sss(U), outer_bound)
-  end
+  _ulp_exact = outer_exact(zero_ulp)
+  _arg_exact = is_exact(b) ? b : outer_exact(b)
+
+  res_exp = decode_exp(_ulp_exact) + 1 * is_subnormal(_ulp_exact) - decode_exp(_arg_exact) - 1 * is_subnormal(_arg_exact)
+  (res_exp < min_exponent(ESS, FSS)) && return sss(U, result_sign)
+
+  result_outer = div_exact(_ulp_exact, _arg_exact, result_sign)
+  is_exact(result_outer) && inner_ulp!(result_outer)
+
+  return (result_sign != z16) ? resolve_as_utype!(result_outer, neg_sss(U)) : resolve_as_utype!(sss(U), result_outer)
 end
 
-@universal function mmr_div_left(a::Unum, result_sign::UInt16)
- outer_bound_a = is_exact(a) ? a : outer_exact(a)
+@universal function inf_ulp_div_left(a::Unum, inf_ulp::Unum, result_sign::UInt16)
+ _arg_exact = is_exact(a) ? a : outer_exact(a)
+ _ulp_exact = inner_exact(inf_ulp)
 
- outer_bound = div_exact(a, big_exact(U), result_sign)
+ #no need to check inf/inf because that's covered by the right hand side function.
+
+ outer_bound = div_exact(_arg_exact, _ulp_exact, result_sign)
  is_exact(outer_bound) && inner_ulp!(outer_bound)
+
  return (result_sign != z16) ? resolve_as_utype!(outer_bound, neg_sss(U)) : resolve_as_utype!(sss(U), outer_bound)
 end
 
-@universal function sss_div_left(a::Unum, result_sign::UInt16)
-  inner_bound = div_exact(a, small_exact(U), result_sign)
+@universal function zero_ulp_div_left(a::Unum, zero_ulp::Unum, result_sign::UInt16)
+  _arg_exact = is_exact(a) ? a : inner_exact(a)
+  _ulp_exact = outer_exact(zero_ulp)
+
+  inner_bound = div_exact(_arg_exact, _ulp_exact, result_sign)
   is_exact(inner_bound) && outer_ulp!(inner_bound)
+
   return (result_sign != z16) ? resolve_as_utype!(neg_mmr(U), inner_bound) : resolve_as_utype!(inner_bound, mmr(U))
 end
 
