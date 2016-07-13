@@ -68,7 +68,9 @@ end
 
 @universal function describe(v::Unum)
   print("Unum{$ESS,$FSS}(")
-  if is_exact(v)
+  if isnan(v)
+    print("NaN")
+  elseif is_exact(v)
     print(__textual(v))
     print(" ex")
   else
