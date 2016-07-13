@@ -158,7 +158,7 @@ end
 end
 
 @universal function inf_ulp_sub(a::Unum, b::Unum)
-  is_mmr(b) && return B(cheapest_inf_ulp(U, UNUM_SIGN_MASK), cheapest_inf_ulp(U)) #all real numbers
+  is_inf_ulp(b) && return B(cheapest_inf_ulp(U, UNUM_SIGN_MASK), cheapest_inf_ulp(U)) #all real numbers
   #calculate inner_value by doing an exact subtraction of b from big_exact.
   #ensure that it's an ulp.
   diff_bound = is_ulp(b) ? outer_exact(b) : b

@@ -181,7 +181,7 @@ doc"""
     else
       exp = decode_exp(x) + 1
       if exp > max_exponent(ESS)
-        inf!(x)
+        inf!(x, @signof(x))
       else
         (x.esize, x.exponent) = encode_exp(exp)
       end

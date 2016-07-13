@@ -12,7 +12,7 @@ function optimize(f, lim, sess = 0, sfss = 0; verbose = false)
     T = Unum{sess, sfss}
     res = f(T)
     verbose && println("environment {$sess, $sfss} result: ")
-    describe(res)
+    verbose && describe(res)
     #for now, use floating point here.
     if (typeof(res) <: Ubound)
       if (is_zero_ulp(res.lower) || is_zero_ulp(res.upper) || is_inf_ulp(res.lower) || is_inf_ulp(res.upper))

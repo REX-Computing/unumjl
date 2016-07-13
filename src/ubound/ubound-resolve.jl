@@ -56,6 +56,7 @@ doc"""
   end
 
   lower.fsize = cfsize - o16
+  frac_trim!(lower, lower.fsize)
   return lower
 end
 
