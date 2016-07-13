@@ -102,7 +102,7 @@ end
 
   #infinity has strange interactions with some inf_ulp values.
   (_a_inf & _a_pos) && return !(is_inf(b) & _b_pos)  #if a is positive infinity, greater than only if b is not.
-  (_a_inf & _a_neg) && return false  #if a is negative infinity, never greater than
+  (_a_inf & !_a_pos) && return false  #if a is negative infinity, never greater than
 
   #use this as a trampoline for is_inward.
   _a_pos && return is_inward(b, a)
