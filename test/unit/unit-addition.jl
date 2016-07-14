@@ -184,10 +184,3 @@ ctu6 = Unum{4,6}(0x0032,0x0007,0x0002,0x4410e89562546000,0x00000000000000f2)
 #problem occurs due to an incorrect handling of trailing bits after shift in
 #__diff_exact.
 =#
-
-#corner cases on unusual values.
-#zero should return an identical value
-#adding to +inf should return inf.
-#add to max-ulp should return max-ulp
-#inf + -inf should be NaN
-#subtracting from supermax should yield a different ulp

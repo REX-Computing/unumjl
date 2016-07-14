@@ -73,12 +73,15 @@ end
 function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
   #resolve the ubound then check against the unum value.  For now, this returns
   #false.  A correct implementation will do a more detailed check.
-  return false
-  #=
-  resd = ubound_resolve(a)
-  isa(resd, Unum) || return false
-  return resd == b
-  =#
+  is_exact(b) && return false
+  is_exact(a.lower) && return false
+  is_exact(a.upper) && return false
+
+  @signof(a.lower) == @signof(b) || return false
+  @signof(a.upper) == @signof(b) || return false
+
+  cmp_lower_bound(a.lower, b) || return false
+  cmp_upper_bound(a.upper, b) || return false
 end
 
 #just flip the previous function to make things easier.

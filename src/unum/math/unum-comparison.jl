@@ -18,10 +18,13 @@ import Base:  ==, <, >, <=, >=  #this statement is necessary to redefine these f
   _aexp::Int64 = decode_exp(a)
   _bexp::Int64 = decode_exp(b)
 
+  (is_exp_zero(a) != is_exp_zero(b)) && return false
+
   (_aexp != _bexp) && return false
   #now that we know that the exponents are the same,
   #the fractions must also be identical
   (a.fraction != b.fraction) && return false
+
   #the ubit on case is simple - the fsizes must be equal, except if one is mmr.
   if ((a.flags & UNUM_UBIT_MASK) == UNUM_UBIT_MASK)
     is_inf_ulp(a) || return (a.fsize == b.fsize)

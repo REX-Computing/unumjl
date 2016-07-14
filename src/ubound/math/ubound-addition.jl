@@ -2,18 +2,37 @@
 ################################################################################
 ## addition
 
-@universal function add(a::Ubound, b::Unum)
-  lb = resolve_lower(a.lower + b)
-  hb = resolve_upper(a.upper + b)
+macro ejectsolutions()
+  esc(quote
+    (isnan(lower_result) || isnan(upper_result)) && return nan(U)
 
-  (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
+    println(upper_result)
+    println(lower_result)
+    describe(upper_result)
+    describe(lower_result)
+    println(upper_result == lower_result)
+
+    (upper_result == lower_result) && return upper_result
+  end)
+end
+
+@universal function add(a::Ubound, b::Unum)
+  lower_result = resolve_lower(a.lower + b)
+  upper_result = resolve_upper(a.upper + b)
+
+  @ejectsolutions
+
+  (is_ulp(lower_result) && is_ulp(upper_result)) && return resolve_as_utype!(lower_result, upper_result)
+  return B(lower_result, upper_result)
 end
 
 @universal add(a::Unum, b::Ubound) = add(b, a)
 
 @universal function add(a::Ubound, b::Ubound)
-  lb = resolve_lower(a.lower + b.lower)
-  hb = resolve_upper(a.upper + b.upper)
+  lower_result = resolve_lower(a.lower + b.lower)
+  upper_result = resolve_upper(a.upper + b.upper)
 
-  (is_ulp(lb) && is_ulp(hb)) ? resolve_as_utype!(lb, hb) : B(lb, hb)
+  @ejectsolutions
+
+  (is_ulp(lower_result) && is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
 end
