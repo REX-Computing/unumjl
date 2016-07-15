@@ -5,13 +5,6 @@
 macro ejectsolutions()
   esc(quote
     (isnan(lower_result) || isnan(upper_result)) && return nan(U)
-
-    println(upper_result)
-    println(lower_result)
-    describe(upper_result)
-    describe(lower_result)
-    println(upper_result == lower_result)
-
     (upper_result == lower_result) && return upper_result
   end)
 end

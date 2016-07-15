@@ -2,12 +2,12 @@ using Unums
 using Base.Test
 
 @unumbers
-#=
+
 include("./test-infrastructure.jl")
 include("./test-operations.jl")
 include("./test-warlpiri.jl")
-=#
 
+#=
 import Unums: inner_exact!, inner_ulp!, outer_exact!, outer_ulp!
 
 UT = Unum{3, 4}
@@ -33,6 +33,8 @@ left_zero_ulp_u = sss(UT)
 left_pos_exact  = Ubound(UT(1), UT(2))
 left_pos_ulp    = Ubound(outer_ulp!(UT(1)), UT(2))
 
-r = left_zero_exact * left_zero_exact
+r = left_zero_ulp_u * left_pos_exact
 
+println(r)
 describe(r)
+=#

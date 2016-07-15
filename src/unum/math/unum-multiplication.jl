@@ -124,8 +124,8 @@ end
   is_inf_ulp(a) && (return inf_ulp_mult(a, b, result_sign))
   is_inf_ulp(b) && (return inf_ulp_mult(b, a, result_sign))
 
-  is_zero_ulp(a) && (return zero_ulp_mult(a, b, result_sign))
-  is_zero_ulp(b) && (return zero_ulp_mult(b, a, result_sign))
+  is_zero_ulp(a) && return zero_ulp_mult(a, b, result_sign)
+  is_zero_ulp(b) && return zero_ulp_mult(b, a, result_sign)
 
   inner_result = mul_exact(a, b, result_sign)
 

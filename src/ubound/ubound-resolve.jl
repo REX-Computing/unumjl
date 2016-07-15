@@ -27,6 +27,14 @@ doc"""
   #check to make sure the signs are the same.
   (@signof(lower) == @signof(upper)) || return B(lower, upper)
 
+  #check to see if they're both zero ulps
+  if is_zero_ulp(lower) && is_zero_ulp(upper)
+    _lexp = decode_exp(lower) - lower.fsize
+    _uexp = decode_exp(upper) - upper.fsize
+    (_lexp < _uexp) && return upper
+    return lower
+  end
+
   #check to make sure the exponents are the same.
   (decode_exp(lower) == decode_exp(upper)) || return B(lower, upper)
 

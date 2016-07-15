@@ -122,7 +122,7 @@ end
 @universal is_neg_one(x::Unum) = is_negative(x) && is_unit(x)
 #checks if the value is sss ("smaller than small subnormal")
 @universal function is_sss(x::Unum)
-  is_ulp(x) && (x.esize == max_esize(ESS)) && (x.exponent == z64) && is_all_zero(x.fraction)
+  is_ulp(x) && (x.esize == max_esize(ESS)) && (x.exponent == z64) && (x.fsize == max_fsize(FSS)) && is_all_zero(x.fraction)
 end
 @universal is_pos_sss(x::Unum) = is_positive(x) && is_sss(x)
 @universal is_neg_sss(x::Unum) = is_negative(x) && is_sss(x)
