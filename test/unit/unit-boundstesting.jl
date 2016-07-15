@@ -115,7 +115,7 @@ left_zero_ulp_u = sss(UT)
 left_pos_exact  = Ubound(UT(1), UT(2))
 left_pos_ulp    = Ubound(outer_ulp!(UT(1)), UT(2))
 
-right_zero = zero(UT)
+right_zero_exact = zero(UT)
 #TOP TABLE
 #top row, left to right.
 @test left_zero_exact * left_zero_exact == Ubound(UT(0), UT(1))                 #[0, 1] * [0, 1]   == [0, 1]
@@ -154,15 +154,56 @@ ssn2 = Unum{3,5}(z64, z64, o16, 0x0007, 0x001e)
 @test left_pos_ulp * left_pos_ulp    == Ubound(outer_ulp!(UT(1)), UT(4))        #(1, 2] * (1, 2]   == (1, 4]
 @test left_pos_ulp * left_posinf     == inf(UT)                                 #(1, 2] * ∞        == ∞
 #fifth row, left to right.
-@test left_posinf * left_zero_exact == Ubound(UT(0), UT(2))                     #∞ * [0, 1]   == NaN
-@test left_posinf * left_zero_ulp_b == Ubound(sss(UT), UT(2))                   #∞ * (0, 1]   == ∞
-@test left_posinf * left_zero_ulp_u == sss(UT)                                  #∞ * (0, ssn) == ∞
-@test left_posinf * left_pos_exact  == Ubound(outer_ulp!(UT(1)), UT(4))         #∞ * [1, 2]   == ∞
-@test left_posinf * left_pos_ulp    == Ubound(outer_ulp!(UT(1)), UT(4))         #∞ * (1, 2]   == ∞
-@test left_posinf * left_posinf     == inf(UT)                                  #∞ * ∞        == ∞
+@test isequal(left_posinf * left_zero_exact, UT(NaN))                           # ∞ * [0, 1]   == NaN
+@test left_posinf * left_zero_ulp_b == inf(UT)                                  # ∞ * (0, 1]   == ∞
+@test left_posinf * left_zero_ulp_u == inf(UT)                                  # ∞ * (0, ssn) == ∞
+@test left_posinf * left_pos_exact  == inf(UT)                                  # ∞ * [1, 2]   == ∞
+@test left_posinf * left_pos_ulp    == inf(UT)                                  # ∞ * (1, 2]   == ∞
+@test left_posinf * left_posinf     == inf(UT)                                  # ∞ * ∞        == ∞
 
 #BOTTOM TABLE
 #top row, left to right.
+@test right_zero_exact * right_zero_exact == zero(UT)                           # 0 * 0        == 0
+@test right_zero_exact * right_ulp        == zero(UT)                           # 0 * [1, 2)   == 0
+@test right_zero_exact * right_exact      == zero(UT)                           # 0 * [1, 2]   == 0
+@test right_zero_exact * right_posmmr_u   == zero(UT)                           # 0 * (mr, ∞)  == 0
+@test right_zero_exact * right_posmmr_b   == zero(UT)                           # 0 * [1, ∞)   == 0
+@test isequal(right_zero_exact * right_posinf, UT(NaN))                         # 0 * [1, ∞]   == NaN
+#second row, left to right.
+@test right_ulp * right_zero_exact == zero(UT)                                  #[1, 2) * 0        == 0
+#@test right_ulp * right_ulp        == Ubound(UT(1), inner_ulp!(UT(4)))          #[1, 2) * [1, 2)   == [1, 4)
+#@test right_ulp * right_exact      == Ubound(UT(1), inner_ulp!(UT(4)))          #[1, 2) * [1, 2]   == [1, 4)
+@test right_ulp * right_posmmr_u   == mmr(UT)                                   #[1, 2) * (mr, ∞)  == (mr, ∞)
+@test right_ulp * right_posmmr_b   == right_posmmr_b                            #[1, 2) * [1, ∞)   == [1, ∞)
+@test right_ulp * right_posinf     == right_posinf                              #[1, 2) * [1, ∞]   == [1, ∞]
+#third row, left to right.
+@test right_exact * right_zero_exact == zero(UT)                                #[1, 2] * 0        == 0
+#@test right_exact * right_ulp        == Ubound(UT(1), inner_ulp!(UT(4)))        #[1, 2] * [1, 2)   == [1, 4)
+@test right_exact * right_exact      == Ubound(UT(1), UT(4))                    #[1, 2] * [1, 2]   == [1, 4]
+@test right_exact * right_posmmr_u   == mmr(UT)                                 #[1, 2] * (mr, ∞)  == (mr, ∞)
+@test right_exact * right_posmmr_b   == right_posmmr_b                          #[1, 2] * [1, ∞)   == [1, ∞)
+@test right_exact * right_posinf     == right_posinf                            #[1, 2] * [1, ∞]   == [1, ∞]
+#fourth row (unum), left to right.
+@test right_posmmr_u * right_zero_exact == zero(UT)                             #(mr, ∞) * 0        == 0
+@test right_posmmr_u * right_ulp        == mmr(UT)                              #(mr, ∞) * [1, 2)   == (mr, ∞)
+@test right_posmmr_u * right_exact      == mmr(UT)                              #(mr, ∞) * [1, 2]   == (mr, ∞)
+@test right_posmmr_u * right_posmmr_u   == mmr(UT)                              #(mr, ∞) * (mr, ∞)  == (mr, ∞)
+@test right_posmmr_u * right_posmmr_b   == mmr(UT)                              #(mr, ∞) * [1, ∞)   == (mr, ∞)
+@test right_posmmr_u * right_posinf     == Ubound(mmr(UT), inf(UT))             #(mr, ∞) * [1, ∞]   == (mr, ∞]
+#fourth row (ubound), left to right.
+@test right_posmmr_b * right_zero_exact == zero(UT)                             #[1, ∞) * 0        == 0
+@test right_posmmr_b * right_ulp        == right_posmmr_b                       #[1, ∞) * [1, 2)   == [1, ∞)
+@test right_posmmr_b * right_exact      == right_posmmr_b                       #[1, ∞) * [1, 2]   == [1, ∞)
+@test right_posmmr_b * right_posmmr_u   == mmr(UT)                              #[1, ∞) * (mr, ∞)  == (mr, ∞)
+@test right_posmmr_b * right_posmmr_b   == right_posmmr_b                       #[1, ∞) * [1, ∞)   == [1, ∞)
+@test right_posmmr_b * right_posinf     == Ubound(UT(1), inf(UT))               #[1, ∞) * [1, ∞]   == [1, ∞]
+#fifth row, left to right.
+@test isequal(right_posinf * right_zero_exact, UT(NaN))                         #[1, ∞] * 0        == NaN
+@test right_posinf * right_ulp        == right_posinf                           #[1, ∞] * [1, 2)   == [1, ∞]
+@test right_posinf * right_exact      == right_posinf                           #[1, ∞] * [1, 2]   == [1, ∞]
+@test right_posinf * right_posmmr_u   == Ubound(mmr(UT), inf(UT))               #[1, ∞] * (mr, ∞)  == (mr, ∞]
+@test right_posinf * right_posmmr_b   == right_posinf                           #[1, ∞] * [1, ∞)   == [1, ∞]
+@test right_posinf * right_posinf     == right_posinf                           #[1, ∞] * [1, ∞]   == [1, ∞]
 
 
 #testing special ubound division (NB: p. 138, TEoE)

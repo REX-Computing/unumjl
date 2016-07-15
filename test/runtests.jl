@@ -6,7 +6,6 @@ using Base.Test
 include("./test-infrastructure.jl")
 include("./test-operations.jl")
 include("./test-warlpiri.jl")
-
 #=
 import Unums: inner_exact!, inner_ulp!, outer_exact!, outer_ulp!
 

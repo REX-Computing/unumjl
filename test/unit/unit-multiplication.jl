@@ -42,7 +42,11 @@ y = Unum{3,4}(2)
 y.fsize = 3
 Unums.make_ulp!(y)
 
-
+#some strange exact multiplications
+#identified during bounds testing
+x = Unums.inner_exact!(mmr(Unum{3,5}))
+y = Unum{3,5}(0x0000000000000001, 0xFFFFFFFF00000000, 0x0001, 0x0001, 0x001F)
+@test Unums.mul_exact(x, y, z16) == mmr(Unum{3,5})
 
 #=
 uft1 = unum_easy(Unum{4,6}, zero(UInt16), frac1, 1)

@@ -34,7 +34,6 @@ end
 
     @ejectsolutions
 
-
     (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif (signcode == 1) #only a.lowbound is negative
     lower_result = resolve_lower(a.lower * b.upper)

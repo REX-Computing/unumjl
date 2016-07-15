@@ -103,7 +103,7 @@ end
     result.fraction &= mask_top(FSS)
   end
 
-  resolve_carry!(carry, result, exponent)
+  exponent = resolve_carry!(carry, result, exponent)
 
   if (exponent < min_exponent(ESS))
     #in the case that we need to make this subnormal.
@@ -112,6 +112,9 @@ end
     frac_set_bit!(result, right_shift)
     result.esize = max_esize(ESS)
     result.exponent = z64
+  elseif (exponent > max_exponent(ESS))
+    #possible to exceed max_exponent via the additive portios fo the multiplication.
+    return mmr(U)
   end
 
   is_exact(result) && exact_trim!(result)
@@ -226,9 +229,9 @@ end
 
   is_zero_ulp(b) && return allsignedreals(result_sign, U)
 
-  inner_value = mul_exact(inner_exact(inf_ulp), b, result_sign)
-  is_exact(inner_value) && outward_ulp!(inner_value)
-  is_inf_ulp(inner_value) && return inner_value
+  inner_result = mul_exact(inner_exact(inf_ulp), b, result_sign)
+  is_exact(inner_result) && outward_ulp!(inner_result)
+  is_inf_ulp(inner_result) && return inner_result
 
   return (result_sign == 0) ? resolve_as_utype!(inner_result, mmr(U, result_sign)) :
                               resolve_as_utype!(mmr(U, result_sign), inner_result)

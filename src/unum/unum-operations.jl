@@ -275,4 +275,5 @@ doc"""
   end
   (exponent > max_exponent(ESS)) && mmr!(x)  #set it to mmr, if the exponent is too large.
   (x.esize, x.exponent) = encode_exp(exponent)
+  return exponent
 end
