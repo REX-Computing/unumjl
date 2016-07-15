@@ -2,13 +2,13 @@ How to use the Julia Unum library (0.2):
 ========================================
 
 1. install julia.
-  1. instructions for download and files are available at: http://julialang.org/downloads/
-2. Pkg.clone("git://github.com/REX-computing/unumjl.git")
+  * instructions for download and files are available at: http://julialang.org/downloads/
+2. run julia.
+3. at the julia command line, run: `Pkg.clone("git://github.com/REX-computing/unumjl.git", "Unums")`
 3. at the prompt, type:
   ```
   using Unums
   ```
-  1.  alternatively, use these commands as the first lines of a script and execute the script by typing julia SCRIPT_FILENAME at your command line.
 
 You may now use unums.  To convert floating points or integers to unums, use the convert function.  Note that the conversion currently assumes that floating points represent exact values, even if the human-input value cannot be exact.
 
