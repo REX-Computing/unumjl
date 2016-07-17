@@ -52,18 +52,42 @@ __frac_bits(FSS::Int64) = max_fsize(FSS) + 1
 
   #solve the exponent.
   exponent = _aexp - _bexp
-  exponent += _asubnormal * 1 - _bsubnormal * 1 - 1
+
+  exponent += _asubnormal * 1 - _bsubnormal * 1
 
   dividend = copy(a)
   _asubnormal && (exponent -= normalize!(dividend))
   zero_a = frac_ctz(dividend)
 
-  divisor = copy(b)
-  _bsubnormal && (exponent += normalize!(divisor))
-  zero_b = frac_ctz(divisor)
+  #check if the divisor's fraction is all zero. (exact power of two)
+  if is_all_zero(b.fraction)
+    #check for subnormality.
+    if exponent < min_exponent(ESS)
+      dividend.esize = max_esize(ESS)
+      dividend.exponent = z64
+
+      right_shift = to16(min_exponent(ESS) - exponent)
+      right_shift > (max_esize(ESS) + o16) && return sss(U, result_sign)
+
+      frac_rsh_underflow_check!(dividend, right_shift)
+      frac_set_bit!(dividend, right_shift)
+    else
+      (dividend.esize, dividend.exponent) = encode_exp(exponent)
+    end
+    coerce_sign!(dividend, result_sign)
+    return dividend
+  end
 
   (exponent > max_exponent(ESS)) && return mmr(U, result_sign)
   (exponent < min_exponent(ESS,FSS) - 1) && return sss(U, result_sign)
+
+  #we're going to have to readjust so that the top part of the result is
+  #between 0.5 and 1
+  exponent -= 1
+
+  divisor = copy(b)
+  _bsubnormal && (exponent += normalize!(divisor))
+  zero_b = frac_ctz(divisor)
 
   exponent += frac_div!(dividend, divisor)
 
@@ -75,7 +99,6 @@ __frac_bits(FSS::Int64) = max_fsize(FSS) + 1
   dividend.fsize = max_fsize(FSS)
   #create a tentative result.
   make_exact!(dividend)
-  #println("dd:", dividend)
   #count zeros on the tail of the dividend.
   zero_r = frac_ctz(dividend)
   one_r  = frac_cto(dividend)
@@ -139,9 +162,6 @@ doc"""
       d_result = frac_rsh!(d_result, 0x0001)
       traversals = 1
     end
-
-    #println("dm: ", d_multiple)
-    #println("dr: ", d_result)
 
     #square the fraction part of the result.
     d_multiple = frac_sqr!(d_multiple)
@@ -251,14 +271,13 @@ function finalize_result!{ESS,FSS}(a::UnumLarge{ESS,FSS}, b::UnumLarge{ESS,FSS})
   end
 end
 
-
 @universal function div_inexact(a::Unum, b::Unum, result_sign::UInt16)
 
   is_inf_ulp(a) && (return inf_ulp_div(a, b, result_sign))
   is_zero_ulp(a) && (return zero_ulp_div(a, b, result_sign))
 
-  is_inf_ulp(b) && (return inf_ulp_div_left(a, b, result_sign))
-  is_zero_ulp(b) && (return zero_ulp_div_left(a, b, result_sign))
+  is_inf_ulp(b) && (return inf_ulp_div_right(a, b, result_sign))
+  is_zero_ulp(b) && (return zero_ulp_div_right(a, b, result_sign))
 
   #calculate the tops and the bottoms of both ulps.
   outer_bound_dividend = is_exact(a) ? a : outer_exact(a)
@@ -267,6 +286,7 @@ end
   #calculate the inner and outer bounds of the result.
   inner = div_exact(a, outer_bound_divisor, result_sign)
   outer = div_exact(outer_bound_dividend, b, result_sign)
+
   #just in case we found an exact number here, make it not so.
   is_exact(inner) && outer_ulp!(inner)
   is_exact(outer) && inner_ulp!(outer)
@@ -289,6 +309,7 @@ end
 end
 
 @universal function zero_ulp_div(zero_ulp::Unum, b::Unum, result_sign::UInt16)
+
   is_zero_ulp(b) && return allsignedreals(result_sign, U)
 
   _ulp_exact = outer_exact(zero_ulp)
@@ -298,12 +319,14 @@ end
   (res_exp < min_exponent(ESS, FSS)) && return sss(U, result_sign)
 
   result_outer = div_exact(_ulp_exact, _arg_exact, result_sign)
+
   is_exact(result_outer) && inner_ulp!(result_outer)
 
   return (result_sign != z16) ? resolve_as_utype!(result_outer, neg_sss(U)) : resolve_as_utype!(sss(U), result_outer)
 end
 
-@universal function inf_ulp_div_left(a::Unum, inf_ulp::Unum, result_sign::UInt16)
+@universal function inf_ulp_div_right(a::Unum, inf_ulp::Unum, result_sign::UInt16)
+
  _arg_exact = is_exact(a) ? a : outer_exact(a)
  _ulp_exact = inner_exact(inf_ulp)
 
@@ -315,11 +338,12 @@ end
  return (result_sign != z16) ? resolve_as_utype!(outer_bound, neg_sss(U)) : resolve_as_utype!(sss(U), outer_bound)
 end
 
-@universal function zero_ulp_div_left(a::Unum, zero_ulp::Unum, result_sign::UInt16)
+@universal function zero_ulp_div_right(a::Unum, zero_ulp::Unum, result_sign::UInt16)
   _arg_exact = is_exact(a) ? a : inner_exact(a)
   _ulp_exact = outer_exact(zero_ulp)
 
   inner_bound = div_exact(_arg_exact, _ulp_exact, result_sign)
+
   is_exact(inner_bound) && outer_ulp!(inner_bound)
 
   return (result_sign != z16) ? resolve_as_utype!(neg_mmr(U), inner_bound) : resolve_as_utype!(inner_bound, mmr(U))

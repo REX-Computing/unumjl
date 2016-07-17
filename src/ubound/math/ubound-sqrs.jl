@@ -15,8 +15,8 @@
 
     is_ulp(lower_result) && is_ulp(upper_result) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif signcode == 1
-    lower_result = x.lower * x.lower
-    upper_result = x.upper * x.upper
+    lower_result = resolve_upper(x.lower * x.lower)
+    upper_result = resolve_upper(x.upper * x.upper)
 
     B(zero(U), max(lower_result, upper_result))
   #signcode 2 is impossible

@@ -128,3 +128,44 @@ function frac_rsh_underflow_check!{ESS, FSS}(x::UnumLarge{ESS,FSS}, shift::UInt1
   x.flags |= ubit_needed
   return x
 end
+
+################################################################################
+## shift with carry
+doc"""
+  `shift_with_carry(carry::UInt64, fraction::UInt64, shift::UInt16)`
+  `shift_with_carry(carry::UInt64, fraction::ArrayNum, shift::UInt16)`
+
+  shifts a fraction by shift spaces to the left, and copies that number of
+  bits into the fraction at the shift position.
+"""
+function shift_with_carry(carry::UInt64, fraction::UInt64, shift::UInt16)
+  fraction = rsh(fraction, shift)
+  carry_xfer = carry << (0x0040 - shift)
+  carry >>= shift
+  old_fraction = fraction
+  fraction += carry_xfer
+  (old_fraction < fraction) && (carry += o64)
+  return (carry, fraction)
+end
+function shift_with_carry{FSS}(carry::UInt64, fraction::ArrayNum{FSS}, shift::UInt16)
+  rsh!(fraction, shift)
+  shiftbits = shift % 0x0040
+  shiftcell = (shift ÷ 0x0040) + 1
+  carry_xfer = carry << (0x0040 - shiftbits)
+  carry >>= shift
+  @inbounds begin
+    oldvalue = fraction.a[shiftcell]
+    fraction.a[shiftcell] += carry_xfer
+    (oldvalue < fraction.a[shiftcell]) && (carry += o64)
+  end
+  if (shiftcell > 1)
+    @inbounds fraction.a[shiftcell - 1] = carry
+    carry = 0
+  end
+  return (carry, fraction)
+end
+
+@universal function frac_shift_with_carry!(carry::UInt64, x::Unum, shift::UInt16)
+  (carry, x.fraction) = shift_with_carry(carry, x.fraction, shift)
+  return carry
+end
