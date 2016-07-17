@@ -80,7 +80,7 @@ doc"""
 @universal function normalize!(x::Unum)
   leftshift = clz(x.fraction) + o16
   frac_lsh!(x, leftshift)
-  x.fsize -= leftshift
+  x.fsize = (leftshift > x.fsize) ? z16 : x.fsize - leftshift
   return leftshift
 end
 

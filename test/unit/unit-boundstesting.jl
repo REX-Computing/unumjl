@@ -207,38 +207,33 @@ ssn2 = Unum{3,5}(z64, z64, o16, 0x0007, 0x001e)
 
 
 #testing special ubound division (NB: p. 138, TEoE)
-x = Ubound(UT(0), UT(1))
-y = Ubound(UT(-1), UT(0))
-@test x / y == Ubound(neg_inf(UT), UT(0))
-y = Ubound(UT(1), Unums.inner_ulp!(UT(2)))
-@test x / y == Ubound(UT(0), UT(1))
-y = Ubound(UT(1), UT(2))
-@test x / y == Ubound(UT(0), UT(1))
-y = Ubound(UT(1), mmr(UT))
-@test x / y == Ubound(UT(0), UT(1))
-y = Ubound(UT(1), inf(UT))
-@test x / y == Ubound(UT(0), UT(1))
+#special case:
+@test left_zero_exact / left_zero_exact      == Ubound(UT(0), pos_inf(UT))      #[0, 1] / [0, 1]  == [0, ∞]
+#top row.
+@test isequal(left_zero_exact / right_zero_exact, UT(NaN))                      #[0, 1] / 0       == NaN
+@test left_zero_exact / right_ulp            == Ubound(UT(0), UT(1))            #[0, 1] / [1, 2)  == [0, 1]
+@test left_zero_exact / right_exact          == Ubound(UT(0), UT(1))            #[0, 1] / [1, 2]  == [0, 1]
+@test left_zero_exact / right_posmmr_b       == Ubound(UT(0), UT(1))            #[0, 1] / [1, ∞)  == [0, 1]
+@test left_zero_exact / right_posinf         == Ubound(UT(0), UT(1))            #[0, 1] / [1, ∞]  == [0, 1]
 ################################################################################
-x = Ubound(sss(UT), UT(1))
-y = Ubound(UT(-1), UT(0))
-@test x / y == Ubound(neg_inf(UT), neg_sss(UT))
-y = Ubound(UT(1), Unums.inner_ulp!(UT(2)))
-@test x / y == Ubound(sss(UT), UT(1))
-y = Ubound(UT(1), UT(2))
-@test x / y == Ubound(sss(UT), UT(1))
-y = Ubound(UT(1), mmr(UT))
-@test x / y == Ubound(sss(UT), UT(1))
-y = Ubound(UT(1), inf(UT))
-@test x / y == Ubound(UT(0), UT(1))
+#second row
+@test isequal(left_zero_ulp_b / right_zero_exact, UT(NaN))                      #(0, 1] / 0       == NaN
+@test left_zero_ulp_b / right_ulp            == Ubound(sss(UT), UT(1))          #(0, 1] / [1, 2)  == (0, 1]
+@test left_zero_ulp_b / right_exact          == Ubound(sss(UT), UT(1))          #(0, 1] / [1, 2]  == (0, 1]
+@test left_zero_ulp_b / right_posmmr_b       == Ubound(sss(UT), UT(1))          #(0, 1] / [1, ∞)  == (0, 1]
+@test left_zero_ulp_b / right_posinf         == Ubound(UT(0), UT(1))            #(0, 1] / [1, ∞]  == [0, 1]
 ################################################################################
-x = Ubound(UT(1), UT(2))
-y = Ubound(UT(-1), UT(0))
-@test x / y == Ubound(neg_inf(UT), UT(-1))
-y = Ubound(UT(1), Unums.inner_ulp!(UT(2)))
-@test x / y == Ubound(Unums.outer_ulp!(UT(0.5)), UT(2))   #[1,2] / [1,2) == (1/2, 2]
-y = Ubound(Unums.outer_ulp!(UT(1)), mmr(UT))
-@test x / y == Ubound(sss(UT), Unums.inner_ulp!(UT(2)))   #[1,2] / (1, inf) == (0, 2)
-y = Ubound(UT(1), mmr(UT))
-@test x / y == Ubound(sss(UT), UT(2))                     #[1,2] / [1, inf) == (0, 2]
-y = Ubound(UT(1), inf(UT))
-@test x / y == Ubound(UT(0), UT(2))                       #[1,2] / [1, inf] = [0, 2]
+#third row
+@test isequal(left_pos_exact / right_zero_exact, UT(NaN))                       #[1, 2] / 0       == NaN
+@test left_pos_exact / right_ulp         == Ubound(outer_ulp!(UT(0.5)), UT(2))  #[1, 2] / [1, 2)  == (0.5, 2]
+@test left_pos_exact / right_exact       == Ubound(UT(0.5), UT(2))              #[1, 2] / [1, 2]  == [0.5, 2]
+@test left_pos_exact / right_posmmr_b    == Ubound(sss(UT), UT(2))              #[1, 2] / [1, ∞)  == (0, 2]
+@test left_pos_exact / right_posinf      == Ubound(UT(0), UT(2))                #[1, 2] / [1, ∞]  == [0, 2]
+################################################################################
+#fourth row
+@test isequal(left_pos_ulp / right_zero_exact, UT(NaN))                         #(1, 2] / 0       == 0
+@test left_pos_ulp / right_ulp            == Ubound(outer_ulp!(UT(0.5)), UT(2)) #(1, 2] / [1, 2)  == (0.5, 2]
+
+@test left_pos_ulp / right_exact          == Ubound(outer_ulp!(UT(0.5)), UT(2)) #(1, 2] / [1, 2]  == (0.5, 2]
+@test left_pos_ulp / right_posmmr_b       == Ubound(sss(UT), UT(2))             #(1, 2] / [1, ∞)  == (0, 2]
+@test left_pos_ulp / right_posinf         == Ubound(UT(0), UT(2))               #(1, 2] / [1, ∞]  == []

@@ -11,7 +11,7 @@ Base.zero{ESS,FSS}(::Type{UnumLarge{ESS,FSS}}) = UnumLarge{ESS,FSS}(z64, zero(Ar
     :(UnumLarge{ESS,FSS}(z64, zero(ArrayNum{FSS}), z16, z16, z16))
   end
 end
-@universal Base.zero(x::Unum) = zero(typeof(x))
+@universal Base.zero(x::Unum) = zero(U)
 
 doc"""
   the `zero!` function forcibly converts an existing unum to zero.  You can pass

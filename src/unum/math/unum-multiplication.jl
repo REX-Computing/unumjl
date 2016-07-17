@@ -157,55 +157,40 @@ end
     (_precise, _fuzzy) = (a.fsize < b.fsize) ? (b , a) : (a, b)
 
     #copy the precise one and make it the "outer_result, temporarily"
-    outer_result = make_exact!(copy(_fuzzy))
+    outer_result = zero(U)
     coerce_sign!(outer_result, inner_result)
-    #calculate 2^(-(precise.fsize + 1))(fuzzy.fraction), but only have it shifted
-    #by (precise.fsize + 1) - (fuzzy.fsize + 1) == precise.fsize - fuzzy.fsize
-    first_shift = _precise.fsize - _fuzzy.fsize
-    rsh_and_set_ubit!(outer_result, first_shift)
-    #don't forget to set the invisible one.
-    if (first_shift > z64)
-      is_subnormal(_fuzzy) || frac_set_bit!(outer_result, first_shift)
-      carry = z64
-    else
-      carry = o64 * !is_subnormal(_fuzzy)
-    end
-    #add the bit that corresponds to the 2^-(precise.fsize + 1 + fuzzy.fsize + 1)
-    #less the (fuzzy.fsize + 1) == 2^precise.fsize + 1.  Note that frac_add_ubit
-    #adds as zero-indexed, so we simply add the precise.fsize ubit.  Also, set
-    #an initial carry variable, which is zero.
-    carry += frac_add_ubit!(outer_result, _precise.fsize) * o64
-    #add the _precise value into the number.
-    carry = frac_add!(carry, outer_result, _precise.fraction)
-    #add the subnormal state
-    carry += !is_subnormal(_precise) * o64
-    #next, shift the fraction by (fuzzy.fsize + 1).
-    rsh_and_set_ubit!(outer_result, _fuzzy.fsize + o16)
-    ((carry & o64) != z64) && frac_set_bit!(outer_result, _fuzzy.fsize + o16)
-    #carry could be 0, 1, 2, or 3.
-    #next check if the upper bit of carry exists.
-    if ((carry & 0x0000_0000_0000_0002) != 0)
-      if (_fuzzy.fsize == z16)
-        #set carry to one
-        carry = o64
-      else
-        #set carry to zero and push the appropriate bit on the fraction.
-        carry = z64
-        frac_set_bit!(outer_result, _fuzzy.fsize - o16)
-      end
-    else
-      carry = z64
-    end
+    #first set the bit corresponding to the double product.
+    frac_set_bit!(outer_result, _fuzzy.fsize + o16)
 
-    carry += !is_frac_zero(inner_result) * o64
+    #next, add in the precise fraction.
+    carry = frac_add!(o64, outer_result, _fuzzy.fraction)
+
+    if (_precise.fsize == _fuzzy.fsize)
+      carry = frac_add!(carry, outer_result, _precise.fraction)
+    else #move over by the size
+      shift = _precise.fsize - _fuzzy.fsize
+      frac_rsh!(shift, outer_result)
+      #do carry things.
+      carry = frac_shift_with_carry!(carry, outer_result, shift) + o64
+      carry = frac_add!(carry, outer_result, _precise.fraction)
+    end
+    #next calculate the exponent deviation.
+    expected_exponent = decode_exp(a) + decode_exp(b)
+    result_exponent = decode_exp(inner_result)
+    dev = to16(result_exponent - expected_exponent)
+
+    #shift the remainders to match
+    frac_shift_with_carry!(carry, outer_result, _fuzzy.fsize + o16 + dev)
+
     carry = frac_add!(carry, outer_result, inner_result.fraction)
-    resolve_carry!(carry, outer_result, decode_exp(inner_result))
+
+    resolve_carry!(carry, outer_result, result_exponent)
 
     #check to see if we're getting too big.
-    (outer_result.exponent > max_biased_exponent(ESS)) && mmr!(outer_result, result_sign)
+    (decode_exp(outer_result) > max_exponent(ESS)) && mmr!(outer_result, result_sign)
 
-    is_exact(outer_result) && inner_ulp!(outer_result)
     trim_and_set_ubit!(outer_result)
+    make_ulp!(outer_result)
   end
 
   #check to make sure we haven't done the inf hack, where the result exactly

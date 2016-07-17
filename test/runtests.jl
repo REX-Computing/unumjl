@@ -6,6 +6,15 @@ using Base.Test
 include("./test-infrastructure.jl")
 include("./test-operations.jl")
 include("./test-warlpiri.jl")
+
+#=
+U = Unum{0,0}
+y = U(2)
+x = U(2)
+describe(x)
+describe(y)
+describe(x / y)
+=#
 #=
 import Unums: inner_exact!, inner_ulp!, outer_exact!, outer_ulp!
 
