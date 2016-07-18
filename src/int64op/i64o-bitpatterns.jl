@@ -129,5 +129,5 @@ bool_indexed_bit(fraction::UInt64, index::UInt16) = ((t64 >> index) & fraction) 
 function bool_indexed_bit{FSS}(fraction::ArrayNum{FSS}, index::UInt16)
   cell_index = (index ÷ 0x0040) + o16
   index = index % 0x0040
-  bool_indexed_bit(n.a[cell_index], index)
+  bool_indexed_bit(fraction.a[cell_index], index)
 end

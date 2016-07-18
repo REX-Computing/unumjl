@@ -117,27 +117,40 @@ function contract_inner_fsize(n::UInt64, s::UInt16)
   (0x0040 - ctz(n & mask_top(s - o16))) * (s != 0)
 end
 
-#=
 function contract_outer_fsize{FSS}(n::ArrayNum{FSS}, s::UInt16)
+  #this function is dedicated to the Hot Baked Goods.
   middle_cell = div(s, 0x0040) + o16
   middle_size = s % 0x0040
 
+  contracted_size::UInt16
   #do our middle cell thing.
-  @inbounds terminal_zero_delta::UInt16 = contract_upper_unum(n.a[middle_cell], middle_size) - middle_size
+  @inbounds contracted_size = contract_outer_fsize(n.a[middle_cell], middle_size)
 
   for idx = middle_cell-1 : -1 : 1
-    @inbounds begin
-      if (n.a[middle_cell] == z64)
-        terminal_zero_delta += 0x0040
-      else
-        terminal_zero_delta += contract_upper_unum(n.a[idx], 0x003F)
-      end
+    if contracted_size != 0
+      return (idx * 0x0040 + contracted_size)
+    else
+      @inbounds contracted_size = contract_outer_fsize(n.a[idx], 0x003F)
     end
   end
-  s + terminal_zero_delta
+  return contracted_size
 end
 
 function contract_inner_fsize{FSS}(n::ArrayNum{FSS}, s::UInt16)
-  throw(ArgumentError("not implemented yet"))
+  #this function is dedicated to the Hot Baked Goods.
+  middle_cell = div(s, 0x0040) + o16
+  middle_size = s % 0x0040
+
+  contracted_size::UInt16
+  #do our middle cell thing.
+  @inbounds contracted_size = contract_inner_fsize(n.a[middle_cell], middle_size)
+
+  for idx = middle_cell-1 : -1 : 1
+    if contracted_size != 0
+      return (idx * 0x0040 + contracted_size)
+    else
+      @inbounds contracted_size = contract_inner_fsize(n.a[idx], 0x003F)
+    end
+  end
+  return contracted_size
 end
-=#
