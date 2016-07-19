@@ -33,14 +33,17 @@ x = Ubound(neg_one(Unum{3,4}), pos_one(Unum{3,4}))
 
 #making sure our heuristic multiplication works.
 
-#double ulp.
-x = Unum{3,4}(2)
-x.fsize = 2
-Unums.make_ulp!(x)
+#single ulp.
+UT = Unum{3,4}
 
-y = Unum{3,4}(2)
-y.fsize = 3
-Unums.make_ulp!(y)
+right_exact = UT(2)
+right_ulp   = Unums.inner_ulp!(UT(2))
+@test Unums.outer_exact!(right_exact * right_ulp) == UT(4)
+
+#double ulp.
+x = UT(2)
+Unums.inner_ulp!(x)
+@test Unums.outer_exact!(x * x) == UT(4)
 
 #some strange exact multiplications
 #identified during bounds testing

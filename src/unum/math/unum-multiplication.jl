@@ -136,9 +136,11 @@ end
   result_exponent = decode_exp(inner_result) + is_subnormal(inner_result) * 1
 
   if is_exact(a)
-    outer_result = sum_exact(inner_result, a, result_exponent, result_exponent - b.fsize - 1)
+    #why - 2 ?  Because, empirically trying this out.  It feels like it *should* be one,
+    #so that should be a topic of further exploration. 
+    outer_result = sum_exact(inner_result, a, result_exponent, result_exponent - b.fsize - 2)
   elseif is_exact(b)
-    outer_result = sum_exact(inner_result, b, result_exponent, result_exponent - a.fsize - 1)
+    outer_result = sum_exact(inner_result, b, result_exponent, result_exponent - a.fsize - 2)
   else
     ############################################################################
     # consider the representation of an ulp:
@@ -180,14 +182,11 @@ end
     dev = to16(result_exponent - expected_exponent)
 
     #shift the remainders to match
-    frac_shift_with_carry!(carry, outer_result, _fuzzy.fsize + o16 + dev)
+    carry = frac_shift_with_carry!(carry, outer_result, _fuzzy.fsize + o16 + dev)
 
-    carry = frac_add!(carry, outer_result, inner_result.fraction)
+    carry = frac_add!(carry + o16, outer_result, inner_result.fraction)
 
     resolve_carry!(carry, outer_result, result_exponent)
-
-    #check to see if we're getting too big.
-    (decode_exp(outer_result) > max_exponent(ESS)) && mmr!(outer_result, result_sign)
 
     trim_and_set_ubit!(outer_result)
     make_ulp!(outer_result)

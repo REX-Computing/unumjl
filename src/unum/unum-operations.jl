@@ -268,7 +268,7 @@ doc"""
   leftzeroes = clz(carry)
   if (leftzeroes < 0x003F) #less than 63 zeroes
     shift = 0x003F - leftzeroes
-    rsh_and_set_ubit!(x, shift)
+    rsh_and_set_ubit!(x, shift)    
     #now copy the bits over from the carried segment.
     frac_copy_top!(x, (((o64 << shift) - o64) & carry) << (leftzeroes + o16))
     exponent += shift

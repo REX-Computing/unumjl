@@ -45,6 +45,7 @@ doc"""
 
   #discriminate between negative and positive numbers, which have their bounds
   #differently.
+  cfsize::UInt16
   if is_positive(lower)
     #firstly, the inner ubound is privileged and must be longer than the upper.
     cfsize = contract_outer_fsize(upper.fraction, upper.fsize)
