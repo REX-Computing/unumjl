@@ -207,8 +207,13 @@ ssn2 = Unum{3,5}(z64, z64, o16, 0x0007, 0x001e)
 
 
 #testing special ubound division (NB: p. 138, TEoE)
+#NB:  Why is dividing by zero always NaN except in the closed-bounds case?
+#because without adjacent values, the signedness of the resulting infinity is not
+#clear.
+
 #special case:
 @test left_zero_exact / left_zero_exact      == Ubound(UT(0), pos_inf(UT))      #[0, 1] / [0, 1]  == [0, ∞]
+#CHART ONE
 #top row.
 @test isequal(left_zero_exact / right_zero_exact, UT(NaN))                      #[0, 1] / 0       == NaN
 @test left_zero_exact / right_ulp            == Ubound(UT(0), UT(1))            #[0, 1] / [1, 2)  == [0, 1]
@@ -231,9 +236,16 @@ ssn2 = Unum{3,5}(z64, z64, o16, 0x0007, 0x001e)
 @test left_pos_exact / right_posinf      == Ubound(UT(0), UT(2))                #[1, 2] / [1, ∞]  == [0, 2]
 ################################################################################
 #fourth row
-@test isequal(left_pos_ulp / right_zero_exact, UT(NaN))                         #(1, 2] / 0       == 0
+@test isequal(left_pos_ulp / right_zero_exact, UT(NaN))                         #(1, 2] / 0       == NaN
 @test left_pos_ulp / right_ulp            == Ubound(outer_ulp!(UT(0.5)), UT(2)) #(1, 2] / [1, 2)  == (0.5, 2]
-
 @test left_pos_ulp / right_exact          == Ubound(outer_ulp!(UT(0.5)), UT(2)) #(1, 2] / [1, 2]  == (0.5, 2]
 @test left_pos_ulp / right_posmmr_b       == Ubound(sss(UT), UT(2))             #(1, 2] / [1, ∞)  == (0, 2]
-@test left_pos_ulp / right_posinf         == Ubound(UT(0), UT(2))               #(1, 2] / [1, ∞]  == []
+@test left_pos_ulp / right_posinf         == Ubound(UT(0), UT(2))               #(1, 2] / [1, ∞]  == [0, 2]
+################################################################################
+#fifith row
+@test isequal(left_posinf / right_zero_exact, UT(NaN))                          # ∞ / 0       == NaN
+@test left_posinf / right_ulp            == inf(UT)                             # ∞ / [1, 2)  == ∞
+@test left_posinf / right_exact          == inf(UT)                             # ∞ / [1, 2]  == ∞
+@test left_posinf / right_posmmr_b       == inf(UT)                             # ∞ / [1, ∞)  == ∞
+@test isequal(left_posinf / right_posinf, nan(UT))                              # ∞ / [1, ∞]  == NaN
+#CHART TWO is covered by chart one.

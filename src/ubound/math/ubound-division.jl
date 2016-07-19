@@ -10,6 +10,8 @@
   ahn = is_negative(a.upper)
   bn = is_negative(b)
 
+  is_zero(b) && return nan(U)
+
   (aln != ahn) && return (bn ? B(a.upper / b, a.lower / b) : B(a.lower / b, a.upper / b))
 
   outer_result = a.upper / b
@@ -23,10 +25,16 @@
 end
 
 @universal function udiv(a::Unum, b::Ubound)
-  bln = is_negative(b.lower)
-
+  blp = is_pos_def(b.upper)
   #if the dividend straddles, then we have nan.
-  (bln != is_negative(b.upper)) && return nan(U)
+  (blp != is_pos_def(b.lower)) && return nan(U)
+
+  is_zero(a) && return zero(U)
+  if is_inf(a)
+    is_inf(b.lower) && return nan(U)
+    is_inf(b.upper) && return nan(U) 
+    return inf(U, @signof(a) $ @signof(b.lower))
+  end
 
   if (is_negative(a) != bln)
     lower_result = resolve_lower(a / b.lower)
@@ -68,7 +76,7 @@ end
   if (signcode == 0) #everything is positive
     lower_result = resolve_lower(a.lower / b.upper)
     upper_result = resolve_upper(a.upper / b.lower)
-    
+
     (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif (signcode == 1) #only a.lowbound is negative
     B(a.lower / b.lower, a.upper / b.lower)

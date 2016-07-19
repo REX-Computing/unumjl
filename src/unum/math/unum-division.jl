@@ -11,7 +11,9 @@ doc"""
 @universal function udiv(a::Unum, b::Unum)
   #some basic test cases.
   (isnan(a) || isnan(b)) && return nan(U)
-  #division by zero is always a NaN, for unums.
+  #division by zero is always a NaN, for unums.  Why?  Because zero must be unsigned
+  #in the unum spec, the signedness of the resulting infinity is undefined, and the
+  #answer thus must be NaN.
   is_zero(b) && return nan(U)
   #division from zero is always zero.
   is_zero(a) && return zero(U)
