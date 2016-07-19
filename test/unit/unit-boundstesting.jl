@@ -171,14 +171,14 @@ ssn2 = Unum{3,5}(z64, z64, o16, 0x0007, 0x001e)
 @test isequal(right_zero_exact * right_posinf, UT(NaN))                         # 0 * [1, ∞]   == NaN
 #second row, left to right.
 @test right_ulp * right_zero_exact == zero(UT)                                  #[1, 2) * 0        == 0
-#@test right_ulp * right_ulp        == Ubound(UT(1), inner_ulp!(UT(4)))          #[1, 2) * [1, 2)   == [1, 4)
-#@test right_ulp * right_exact      == Ubound(UT(1), inner_ulp!(UT(4)))          #[1, 2) * [1, 2]   == [1, 4)
+@test right_ulp * right_ulp        == Ubound(UT(1), inner_ulp!(UT(4)))          #[1, 2) * [1, 2)   == [1, 4)
+@test right_ulp * right_exact      == Ubound(UT(1), inner_ulp!(UT(4)))          #[1, 2) * [1, 2]   == [1, 4)
 @test right_ulp * right_posmmr_u   == mmr(UT)                                   #[1, 2) * (mr, ∞)  == (mr, ∞)
 @test right_ulp * right_posmmr_b   == right_posmmr_b                            #[1, 2) * [1, ∞)   == [1, ∞)
 @test right_ulp * right_posinf     == right_posinf                              #[1, 2) * [1, ∞]   == [1, ∞]
 #third row, left to right.
 @test right_exact * right_zero_exact == zero(UT)                                #[1, 2] * 0        == 0
-#@test right_exact * right_ulp        == Ubound(UT(1), inner_ulp!(UT(4)))        #[1, 2] * [1, 2)   == [1, 4)
+@test right_exact * right_ulp        == Ubound(UT(1), inner_ulp!(UT(4)))        #[1, 2] * [1, 2)   == [1, 4)
 @test right_exact * right_exact      == Ubound(UT(1), UT(4))                    #[1, 2] * [1, 2]   == [1, 4]
 @test right_exact * right_posmmr_u   == mmr(UT)                                 #[1, 2] * (mr, ∞)  == (mr, ∞)
 @test right_exact * right_posmmr_b   == right_posmmr_b                          #[1, 2] * [1, ∞)   == [1, ∞)

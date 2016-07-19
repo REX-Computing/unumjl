@@ -144,7 +144,7 @@ function shift_with_carry(carry::UInt64, fraction::UInt64, shift::UInt16)
   carry >>= shift
   old_fraction = fraction
   fraction += carry_xfer
-  (old_fraction < fraction) && (carry += o64)
+  (old_fraction > fraction) && (carry += o64)
   return (carry, fraction)
 end
 function shift_with_carry{FSS}(carry::UInt64, fraction::ArrayNum{FSS}, shift::UInt16)
@@ -156,7 +156,7 @@ function shift_with_carry{FSS}(carry::UInt64, fraction::ArrayNum{FSS}, shift::UI
   @inbounds begin
     oldvalue = fraction.a[shiftcell]
     fraction.a[shiftcell] += carry_xfer
-    (oldvalue < fraction.a[shiftcell]) && (carry += o64)
+    (oldvalue > fraction.a[shiftcell]) && (carry += o64)
   end
   if (shiftcell > 1)
     @inbounds fraction.a[shiftcell - 1] = carry
