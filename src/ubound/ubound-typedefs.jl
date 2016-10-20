@@ -31,11 +31,11 @@ end
 end
 
 #overload the call dispatches for naked ubound types.
-@universal function (::Ubound{ESS,FSS})(x::Unum, y::Unum)
+@universal function (::Type{Ubound{ESS,FSS}})(x::Unum, y::Unum)
   B(x, y)
 end
 #an empty constructor defaults to the extended real line.
-function (::Ubound{ESS,FSS}){ESS,FSS}()
+function (::Type{Ubound{ESS,FSS}}){ESS,FSS}()
   if FSS < 7
     UboundSmall{ESS,FSS}(neg_inf(UnumSmall{ESS,FSS}), pos_inf(UnumSmall{ESS,FSS}))
   else
@@ -61,19 +61,19 @@ the left hand must be strictly less than the right hand side.
 ################################################################################
 ## Ubound constructors that take other ubounds as arguments.
 if options[:devmode]
-  @universal (::Ubound{ESS,FSS})(lower::Ubound, upper::Unum)   = __ub_check(lower.upper, upper)       && B(copy(lower.lower), upper)
-  @universal (::Ubound{ESS,FSS})(lower::Unum,   upper::Ubound) = __ub_check(lower,       upper.lower) && B(lower, copy(upper.upper))
-  @universal (::Ubound{ESS,FSS})(lower::Ubound, upper::Ubound) = __ub_check(lower.lower, upper.lower) && __ub_check(lower.upper, upper.upper) && B(copy(lower.lower), copy(upper.upper))
-  @universal (::Ubound{ESS,FSS})(bound::Ubound) = __ub_check(bound.lower, bound.upper) && B(copy(bound.lower), copy(bound.upper))
+  @universal (::Type{Ubound{ESS,FSS}})(lower::Ubound, upper::Unum)   = __ub_check(lower.upper, upper)       && B(copy(lower.lower), upper)
+  @universal (::Type{Ubound{ESS,FSS}})(lower::Unum,   upper::Ubound) = __ub_check(lower,       upper.lower) && B(lower, copy(upper.upper))
+  @universal (::Type{Ubound{ESS,FSS}})(lower::Ubound, upper::Ubound) = __ub_check(lower.lower, upper.lower) && __ub_check(lower.upper, upper.upper) && B(copy(lower.lower), copy(upper.upper))
+  @universal (::Type{Ubound{ESS,FSS}})(bound::Ubound) = __ub_check(bound.lower, bound.upper) && B(copy(bound.lower), copy(bound.upper))
 else
-  @universal (::Ubound{ESS,FSS})(lower::Ubound, upper::Unum)   = B(copy(lower.lower), upper)
-  @universal (::Ubound{ESS,FSS})(lower::Unum,   upper::Ubound) = B(lower, copy(upper.upper))
-  @universal (::Ubound{ESS,FSS})(lower::Ubound, upper::Ubound) = B(copy(lower.lower), copy(upper.upper))
-  @universal (::Ubound{ESS,FSS})(bound::Ubound) = B(copy(bound.lower), copy(bound.upper))
+  @universal (::Type{Ubound{ESS,FSS}})(lower::Ubound, upper::Unum)   = B(copy(lower.lower), upper)
+  @universal (::Type{Ubound{ESS,FSS}})(lower::Unum,   upper::Ubound) = B(lower, copy(upper.upper))
+  @universal (::Type{Ubound{ESS,FSS}})(lower::Ubound, upper::Ubound) = B(copy(lower.lower), copy(upper.upper))
+  @universal (::Type{Ubound{ESS,FSS}})(bound::Ubound) = B(copy(bound.lower), copy(bound.upper))
 end
 
 #to make Ubound construction easier, you don't have to specify the {ESS,FSS} pair when calling it.
-(::Ubound)(lower::Unum{ESS,FSS}, upper::Unum{ESS,FSS}) = Ubound{ESS,FSS}(lower, upper)
+(::Type{Ubound})(lower::Unum{ESS,FSS}, upper::Unum{ESS,FSS}) = Ubound{ESS,FSS}(lower, upper)
 
 doc"""
   `ubound(::Unum, ::Unum)`

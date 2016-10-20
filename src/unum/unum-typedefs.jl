@@ -1,5 +1,6 @@
 #unum-unum.jl
 
+
 #contains information about the unum type and helper functions directly related to constructor.
 
 #the unum type is an abstract type.  We'll be overloading the call function later
@@ -71,7 +72,7 @@ end
 UnumSmall{ESS,FSS}(x::UnumSmall{ESS,FSS}) = UnumSmall{ESS,FSS}(x.exponent, x.fraction, x.flags, x.esize, x.fsize)
 UnumLarge{ESS,FSS}(x::UnumLarge{ESS,FSS}) = UnumLarge{ESS,FSS}(x.exponent, copy(x.fraction), x.flags, x.esize, x.fsize)
 #overide call to provide copy constructors that look like Unum{ESS,FSS} instead of UnumSmall or UnumLarge
-@universal function (::Unum{ESS,FSS})(x::Unum)
+@universal function (::Type{Unum{ESS,FSS}})(x::Unum)
   (FSS < 7) ? (UnumSmall(x)) : (UnumLarge(x))
 end
 @universal function Base.copy(x::Unum)
@@ -80,7 +81,7 @@ end
 
 #override call to allow direct instantiation using the Unum{ESS,FSS} pseudo-constructor.
 #The Unum{ESS,FSS} constructor also does trim operation that sets the ubit correctly.
-@generated function (::Unum{ESS,FSS}){ESS,FSS}(exponent::UInt64, fraction, flags::UInt16, esize::UInt16, fsize::UInt16)
+@generated function (::Type{Unum{ESS,FSS}}){ESS,FSS}(exponent::UInt64, fraction, flags::UInt16, esize::UInt16, fsize::UInt16)
   arrayconversion = :(fraction)
   if (fraction == UInt64)
     utype = UnumSmall
@@ -135,6 +136,7 @@ doc"""
   ranges, it will create constants mmr/sss.
 """
 @universal function buildunum(T::Type{Unum}, true_exponent::Int64, fraction, flags::UInt16, fsize::UInt16)
+
   #determine properties of the destination type.
   min_exp_subnormal = min_exponent(ESS, FSS)
   min_exp_normal = min_exponent(ESS)
@@ -164,13 +166,13 @@ doc"""
   result
 end
 
+
 export unum
 
 #a blank constructor uses the default environment setting
-function (::Unum)(args...)
+function (::Type{Unum})(args...)
   environment()(args...)
 end
-
 
 #masks for the unum flags variable.
 const UNUM_SIGN_MASK = UInt16(0x0002)
