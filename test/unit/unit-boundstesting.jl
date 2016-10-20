@@ -27,7 +27,7 @@ right_posinf =   Ubound(UT(1), inf(UT))
 @test left_neginf + left_negmmr_u == Ubound(neg_inf(UT), neg_mmr(UT))           #[-∞, -1] + (-∞, nmr) == [-∞, nmr)
 @test left_neginf + left_exact    == Ubound(neg_inf(UT), UT(-2))                #[-∞, -1] + [-2, -1]  == [-∞, -2]
 @test left_neginf + left_ulp      == Ubound(neg_inf(UT), UT(-2))                #[-∞, -1] + (-2, -1]  == [-∞, -2]
-@test isequal(left_neginf + left_posinf, nan(UT))                               #[-∞, -1] + ∞  == NaN
+@test isnan(left_neginf + left_posinf)                                          #[-∞, -1] + ∞  == NaN
 #second row (ubound), left to right
 @test left_negmmr_b + left_neginf   == Ubound(neg_inf(UT), UT(-2))              #(-∞, -1] + [-∞, -1]  == [-∞, -2]
 @test left_negmmr_b + left_negmmr_b == Ubound(neg_mmr(UT), UT(-2))              #(-∞, -1] + (-∞, -1]  == (-∞, -2]
@@ -57,7 +57,7 @@ right_posinf =   Ubound(UT(1), inf(UT))
 @test left_ulp + left_ulp      == Ubound(inner_ulp!(UT(-4)), UT(-2))            #(-2, -1] + (-2, -1]  == (-4, -2]
 @test left_ulp + left_posinf   == pos_inf(UT)                                   #(-2, -1] + ∞  == ∞
 #fifth row, left to right
-@test isequal(left_posinf + left_neginf, nan(UT))                               #∞ + [-∞, -1]  == NaN
+@test isnan(left_posinf + left_neginf)                                          #∞ + [-∞, -1]  == NaN
 @test left_posinf + left_negmmr_b == pos_inf(UT)                                #∞ + (-∞, -1]  == ∞
 @test left_posinf + left_negmmr_u == pos_inf(UT)                                #∞ + (-∞, nmr) == ∞
 @test left_posinf + left_exact    == pos_inf(UT)                                #∞ + [-2, -1]  == ∞
@@ -71,7 +71,7 @@ right_posinf =   Ubound(UT(1), inf(UT))
 @test right_neginf + right_exact    == neg_inf(UT)                              #-∞ + [1, 2]  == -∞
 @test right_neginf + right_posmmr_u == neg_inf(UT)                              #-∞ + (mr, ∞) == -∞
 @test right_neginf + right_posmmr_b == neg_inf(UT)                              #-∞ + [1, ∞]  == -∞
-@test isequal(right_neginf + right_posinf, nan(UT))                             #-∞ + ∞       == NaN
+@test isnan(right_neginf + right_posinf)                                        #-∞ + ∞       == NaN
 #second row, left to right.
 @test right_ulp + right_neginf   == neg_inf(UT)                                 #[1, 2) + -∞      == -∞
 @test right_ulp + right_ulp      == Ubound(UT(2), inner_ulp!(UT(4)))            #[1, 2) + [1, 2)  == [2, 4)
@@ -101,7 +101,7 @@ right_posinf =   Ubound(UT(1), inf(UT))
 @test right_posmmr_b + right_posmmr_b == Ubound(UT(2), pos_mmr(UT))             #[1, ∞) + [1, ∞)  == [2, ∞)
 @test right_posmmr_b + right_posinf   == Ubound(UT(2), pos_inf(UT))             #[1, ∞) + [1 ,∞]  == [2, ∞]
 #fifth row, left to right.
-@test isequal(right_posinf + right_neginf, nan(UT))                             #[1, ∞] + -∞      == NaN
+@test isnan(right_posinf + right_neginf)                                        #[1, ∞] + -∞      == NaN
 @test right_posinf + right_ulp      == Ubound(UT(2), pos_inf(UT))               #[1, ∞] + [1, 2)  == [2, ∞]
 @test right_posinf + right_exact    == Ubound(UT(2), pos_inf(UT))               #[1, ∞] + [1, 2]  == [2, ∞]
 @test right_posinf + right_posmmr_u == Ubound(pos_mmr(UT), pos_inf(UT))         #[1, ∞] + (mr, ∞) == (mr, ∞]
@@ -123,7 +123,7 @@ right_zero_exact = zero(UT)
 @test left_zero_exact * left_zero_ulp_u == Ubound(UT(0), sss(UT))               #[0, 1] * (0, ssn) == [0, ssn)
 @test left_zero_exact * left_pos_exact  == Ubound(UT(0), UT(2))                 #[0, 1] * [1, 2]   == [0, 2]
 @test left_zero_exact * left_pos_ulp    == Ubound(UT(0), UT(2))                 #[0, 1] * (1, 2]   == [0, 2]
-@test isequal(left_zero_exact * left_posinf, nan(UT))                           #[0, 1] * ∞        == NaN
+@test isnan(left_zero_exact * left_posinf)                                      #[0, 1] * ∞        == NaN
 #second row (ubound), left to right.
 @test left_zero_ulp_b * left_zero_exact == Ubound(UT(0), UT(1))                 #(0, 1] * [0, 1]   == [0, 1]
 @test left_zero_ulp_b * left_zero_ulp_b == Ubound(sss(UT), UT(1))               #(0, 1] * (0, 1]   == (0, 1]

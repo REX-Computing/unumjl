@@ -11,7 +11,7 @@ Warlpiri = Unum{0,0}
 warlpiri(exp::UInt64, frac::UInt64, flags::UInt16) = Warlpiri(exp, frac, flags, z16, z16)
 
 #create english words for each of the warlpiri unums
-stop_ = nan(Warlpiri, Unums.UNUM_SIGN_MASK)
+stop_ = Unums.nan(Warlpiri, Unums.UNUM_SIGN_MASK)
 n_all = neg_inf(Warlpiri)
 nmany = warlpiri(o64, z64, 0x0003)
 n_two = warlpiri(o64, z64, 0x0002)
@@ -26,7 +26,7 @@ psome = warlpiri(z64, t64, 0x0001)
 ptwo_ = warlpiri(o64, z64, 0x0000)
 pmany = warlpiri(o64, z64, 0x0001)
 pall_ = pos_inf(Warlpiri)
-junk_ = nan(Warlpiri)
+junk_ = Warlpiri(NaN)
 #check the bits on all of the warpiri unums
 @test "1111" == bits(stop_)
 @test "1110" == bits(n_all)

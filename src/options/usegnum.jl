@@ -14,8 +14,8 @@ doc"""
   otherwise, mapping + to the simple "add" function
 """
 macro bind_operation(op, fsymbol)
-  gsymbol = symbol(fsymbol, "!")
-  gcreate = symbol(fsymbol, "_create")
+  gsymbol = Symbol(fsymbol, "!")
+  gcreate = Symbol(fsymbol, "_create")
   if options[:usegnum]
     esc(quote
       @universal $op(a::Unum,   b::Unum)   = $gcreate(a, b)

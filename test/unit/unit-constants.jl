@@ -18,6 +18,9 @@ macro uctest(T, f, ex, fr, fl, es, fs)
   end
 end
 
+nan(T) = T(NaN)
+inf(T) = Unums.inf(T)
+
 @uctest Unum{0,0} zero z64 z64 z16 z16 z16
 @uctest Unum{1,1} zero z64 z64 z16 z16 z16
 @uctest Unum{4,6} zero z64 z64 z16 z16 z16

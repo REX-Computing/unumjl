@@ -215,8 +215,8 @@ macro ccreate()
         flags::UInt16 = (i & signbit) >> (signshift)
         exponent = (i & exponentbits) >> (exponentshift)
         fraction = (i & fractionbits) << (fractionshift)
-        isnan(x) && return nan(Unum{props.ESS,props.FSS})
-        isinf(x) && return inf(Unum{props.ESS,props.FSS}, flags)
+        isnan(x) && return nan(UnumSmall{props.ESS,props.FSS})
+        isinf(x) && return inf(UnumSmall{props.ESS,props.FSS}, flags)
         UnumSmall{props.ESS,props.FSS}(exponent, fraction, flags, props.esize, props.fsize)
       end
     end

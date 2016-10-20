@@ -73,13 +73,16 @@ doc"""
   the `nan!` function forcibly turns a unum variable into nan.
 """
 @universal nan!(x::Unum, signmask::UInt16 = z16) = __infnanset!(x, UNUM_UBIT_MASK | signmask)
-Base.nan{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16) = (FSS < 7) ? nan!(zero(UnumSmall{ESS,FSS}), signmask) : nan!(zero(UnumLarge{ESS,FSS}), signmask)
-@universal Base.nan(T::Type{Unum}, signmask::UInt16 = z16) = nan!(zero(U), signmask)
+doc"""
+  Unums.nan(::Type{Unum})
 
+  the internal nan function for generating typed nans.
+"""
+@universal nan(T::Type{Unum}, signmask::UInt16 = z16) = nan!(zero(T), signmask)
 ################################################################################
 
-Base.inf{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16) = (FSS < 7) ? __infnanset!(zero(UnumSmall{ESS,FSS}), signmask) : __infnanset!(zero(UnumLarge{ESS,FSS}), signmask)
-@universal Base.inf(T::Type{Unum}, signmask::UInt16 = z16) = __infnanset!(zero(U), signmask)
+inf{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16) = (FSS < 7) ? __infnanset!(zero(UnumSmall{ESS,FSS}), signmask) : __infnanset!(zero(UnumLarge{ESS,FSS}), signmask)
+@universal inf(T::Type{Unum}, signmask::UInt16 = z16) = __infnanset!(zero(U), signmask)
 doc"""
   `pos_inf` generates an explicitly positive infinite value of the chosen type.
 """

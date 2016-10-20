@@ -46,7 +46,7 @@ function Base.show(io::IO, T::Type{Unum})
   print(io, "Unum")
 end
 
-@universal function Base.bits(x::Unum, space::ASCIIString = "")
+@universal function Base.bits(x::Unum, space::String = "")
   res = string((x.flags & 0b10) >> 1,       space,
          bits(x.exponent)[64 - x.esize:64], space,
          bits(x.fraction)[1:(x.fsize + 1)], space,
@@ -133,7 +133,7 @@ doc"""
 type ℜ⁻; end
 type ∘; end
 
-(::Type{ℜ}) (::Type{∘}) = :_rextended
+(::Type{ℜ})(::Type{∘}) = :_rextended
 (::Type{ℜ⁺})(f::Function) = (f == (*)) ? :_rposstar : nothing
 (::Type{ℜ⁻})(f::Function) = (f == (*)) ? :_rnegstar : nothing
 (::Type{ℜ⁺})(::Type{∘}) = :_rposext

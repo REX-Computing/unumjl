@@ -170,8 +170,8 @@ end
   _shift_a = to16(_rexp - _aexp) + a.fsize
   _shift_b = to16(_rexp - _bexp) + b.fsize
 
-  add_fsize::UInt16
-  ulp_fsize::UInt16
+  local add_fsize::UInt16
+  local ulp_fsize::UInt16
 
   if (is_ulp(a) && is_ulp(b))
     #figure out which one has a bigger ulp delta.
