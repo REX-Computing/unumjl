@@ -1,3 +1,8 @@
+#i64o-helpers.jl
+#various utility functions that operate on ArrayNums as well as metaprogramming
+#macros to help duplicate functions for both standard 64-bit integers and
+#arraynums.
+
 doc"""
 `Unums.max_fsize(::Int64)` retrieves the maximum possible fsize value based on
 the FSS value.
@@ -6,7 +11,7 @@ max_fsize(FSS::Int64) = to16((1 << FSS) - 1)
 
 #two helper functions to enable fracproc.
 function __ffcall(s::Symbol, inner_block, tname, p...)
-  fracname = symbol("frac_", s, "!")
+  fracname = Symbol("frac_", s, "!")
   #outer_curly is the curly variadic notation for the function name.
   outer_curly = Expr(:curly)
   append!(outer_curly.args, [fracname, :ESS, :FSS])
@@ -31,7 +36,7 @@ function __smallexpr(s::Symbol, p...)
 end
 
 function __largeexpr(s::Symbol, p...)
-  bangsym = symbol(s, "!")
+  bangsym = Symbol(s, "!")
   inner_call = Expr(:call)
   inner_call.args = [bangsym, :(x.fraction), p...]
   :($inner_call; x)
@@ -43,8 +48,8 @@ fn on the fraction part of the unum, if FSS < 7.  if FSS >= 7 then it executes
 fn! on the fraction part of the unum.
 """
 macro fracproc(name, params...)
-  fracname = symbol("frac_", name, "!")
-  bangname = symbol(name, "!")
+  fracname = Symbol("frac_", name, "!")
+  bangname = Symbol(name, "!")
   smallexpr = __smallexpr(name, params...)
   largeexpr = __largeexpr(name, params...)
   smallcall = __ffcall(name, smallexpr, :UnumSmall, params...)

@@ -73,7 +73,7 @@ else
 end
 
 #to make Ubound construction easier, you don't have to specify the {ESS,FSS} pair when calling it.
-(::Type{Ubound})(lower::Unum{ESS,FSS}, upper::Unum{ESS,FSS}) = Ubound{ESS,FSS}(lower, upper)
+(::Type{Ubound}){ESS,FSS}(lower::Unum{ESS,FSS}, upper::Unum{ESS,FSS}) = Ubound{ESS,FSS}(lower, upper)
 
 doc"""
   `ubound(::Unum, ::Unum)`

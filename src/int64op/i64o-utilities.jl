@@ -122,7 +122,7 @@ function contract_outer_fsize{FSS}(n::ArrayNum{FSS}, s::UInt16)
   middle_cell = div(s, 0x0040) + o16
   middle_size = s % 0x0040
 
-  contracted_size::UInt16
+  local contracted_size::UInt16
   #do our middle cell thing.
   @inbounds contracted_size = contract_outer_fsize(n.a[middle_cell], middle_size)
 
@@ -141,7 +141,7 @@ function contract_inner_fsize{FSS}(n::ArrayNum{FSS}, s::UInt16)
   middle_cell = div(s, 0x0040) + o16
   middle_size = s % 0x0040
 
-  contracted_size::UInt16
+  local contracted_size::UInt16
   #do our middle cell thing.
   @inbounds contracted_size = contract_inner_fsize(n.a[middle_cell], middle_size)
 

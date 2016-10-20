@@ -5,12 +5,12 @@
 
 lsh(a::UInt64, b::Int64) = a << b
 lsh(a::UInt64, b::UInt16) = a << b
-lsh!{FSS}(a::ArrayNum{FSS}, b::UInt16) = lsh!(a, Int64(b))
+
 function lsh!{FSS}(a::ArrayNum{FSS}, b::Int64)
   (b < 0) && return rsh!(a, -b)
   lsh!(a, to16(b))
 end
-#destructive version which clobbers the existing verion
+#destructive version which clobbers the existing array
 function lsh!{FSS}(a::ArrayNum{FSS}, b::UInt16)
   #kick it back to right shift if it's negative
   l = __cell_length(FSS)

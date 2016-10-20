@@ -2,7 +2,7 @@
 
 #various superint constants and ways of generating them
 Base.zero{FSS}(::Type{ArrayNum{FSS}}) = ArrayNum{FSS}(zeros(UInt64, __cell_length(FSS)))
-Base.zero{FSS}(a::Type{ArrayNum{FSS}}) = ArrayNum{FSS}(zeros(UInt64, __cell_length(FSS)))
+Base.zero{FSS}(a::ArrayNum{FSS}) = ArrayNum{FSS}(zeros(UInt64, __cell_length(FSS)))
 
 doc"""
 `zero!` sets an `ArrayNum` to zero.
@@ -27,11 +27,8 @@ function Base.one{FSS}(::Type{ArrayNum{FSS}})
   ArrayNum{FSS}(arr)
 end
 
-function Base.one{FSS}(a::Type{ArrayNum{FSS}})
-  l = __cell_length(FSS)
-  arr = zeros(UInt64, l)
-  @inbounds arr[l] = 1
-  ArrayNum{FSS}(arr)
+function Base.one{FSS}(a::ArrayNum{FSS})
+  one(ArrayNum{FSS})
 end
 
 function top{FSS}(::Type{ArrayNum{FSS}})
@@ -42,11 +39,8 @@ function top{FSS}(::Type{ArrayNum{FSS}})
 end
 
 top(n::UInt64) = t64
-function top{FSS}(a::Type{ArrayNum{FSS}})
-  l = __cell_length(FSS)
-  arr = zeros(UInt64, l)
-  @inbounds arr[1] = t64
-  ArrayNum{FSS}(arr)
+function top{FSS}(a::ArrayNum{FSS})
+  top(ArrayNum{FSS})
 end
 function top!{FSS}(a::Type{ArrayNum{FSS}})
   zero!(a)
