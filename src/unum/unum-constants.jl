@@ -79,6 +79,7 @@ doc"""
   the internal nan function for generating typed nans.
 """
 @universal nan(T::Type{Unum}, signmask::UInt16 = z16) = nan!(zero(T), signmask)
+nan{ESS,FSS}(T::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16) = nan!(zero(T), signmask)
 ################################################################################
 
 inf{ESS,FSS}(::Type{Unum{ESS,FSS}}, signmask::UInt16 = z16) = (FSS < 7) ? __infnanset!(zero(UnumSmall{ESS,FSS}), signmask) : __infnanset!(zero(UnumLarge{ESS,FSS}), signmask)
