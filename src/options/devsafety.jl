@@ -132,7 +132,7 @@ macro dev_check(expr)
     append!(callexp.args, typemembers)
 
     #assemble the call to the check function
-    checkname = symbol("__check_", typename)
+    checkname = Symbol("__check_", typename)
     checkcall = Expr(:call)
     push!(checkcall.args, checkname)
     append!(checkcall.args, varparams)  #first add the variadic parameters

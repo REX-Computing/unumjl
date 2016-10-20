@@ -37,9 +37,12 @@ const options = Dict{Symbol, Any}(
   :env_FSS => 6,
   :longform => false)
 
-#attempt to load defaults from a .unums.jl file
-@linux_only isfile("$(homedir)/.unums.jl") && include("$(homedir)/.unums.jl")
-@osx_only   isfile("$(homedir)/.unums.jl") && include("$(homedir)/.unums.jl")
+#unixey operating systems should look for a .unums.jl file in the home directary
+#and use that as a way to set preferences.
+if (is_linux() || is_apple() || is_bsd())
+  isfile("$(homedir)/.unums.jl") && include("$(homedir)/.unums.jl")
+  isfile("$(homedir)/.unums.jl") && include("$(homedir)/.unums.jl")
+end
 
 function argparse(s)
   (s == "true") && return true

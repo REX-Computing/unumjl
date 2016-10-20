@@ -133,10 +133,10 @@ doc"""
 type ℜ⁻; end
 type ∘; end
 
-Base.call(::Type{ℜ}, ::Type{∘}) = :_rextended
-Base.call(::Type{ℜ⁺}, f::Function) = (f == (*)) ? :_rposstar : nothing
-Base.call(::Type{ℜ⁻}, f::Function) = (f == (*)) ? :_rnegstar : nothing
-Base.call(::Type{ℜ⁺}, ::Type{∘}) = :_rposext
-Base.call(::Type{ℜ⁻}, ::Type{∘}) = :_rnegext
+(::ℜ) (::Type{∘}) = :_rextended
+(::ℜ⁺)(f::Function) = (f == (*)) ? :_rposstar : nothing
+(::ℜ⁻)(f::Function) = (f == (*)) ? :_rnegstar : nothing
+(::ℜ⁺)(::Type{∘}) = :_rposext
+(::ℜ⁻)(::Type{∘}) = :_rnegext
 
 export ℜ, ℜ⁺, ℜ⁻, ∘
