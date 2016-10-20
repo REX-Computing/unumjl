@@ -3,6 +3,7 @@ How to use the Julia Unum library (0.2):
 
 1. install julia.
   * instructions for download and files are available at: http://julialang.org/downloads/
+  * requires julia 0.5 or higher
 2. run julia.
 3. at the julia command line, run: `Pkg.clone("git://github.com/REX-computing/unumjl.git", "Unums")`
 3. at the prompt, type:
