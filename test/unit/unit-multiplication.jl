@@ -51,6 +51,11 @@ x = Unums.inner_exact!(mmr(Unum{3,5}))
 y = Unum{3,5}(0x0000000000000001, 0xFFFFFFFF00000000, 0x0001, 0x0001, 0x001F)
 @test Unums.mul_exact(x, y, z16) == mmr(Unum{3,5})
 
+#do another heuristic multiplication.  lub((1 - 1.5) ^ 2) == 2.25
+println("=====")
+x = Unum{3,5}(0x0000000000000001, 0x0000000000000000, 0x0001, 0x0001, 0x0000)
+@test Unums.lub(x * x) == Unum{3,5}(0x0000000000000001, 0x2000000000000000, 0x0000, 0x0000, 0x001F)
+
 #=
 uft1 = unum_easy(Unum{4,6}, zero(UInt16), frac1, 1)
 uft2 = unum_easy(Unum{4,6}, zero(UInt16), frac2, 1)

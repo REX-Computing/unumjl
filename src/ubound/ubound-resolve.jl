@@ -61,9 +61,15 @@ doc"""
   if cfsize == 0
     lower.fsize = 0
     upper.fsize = 0
+    
+    if is_negative(upper)
+      frac_top!(lower)
+    else
+      frac_top!(upper)
+    end
+
     return B(lower, upper)
   end
-
   lower.fsize = cfsize - o16
   frac_trim!(lower, lower.fsize)
   return lower

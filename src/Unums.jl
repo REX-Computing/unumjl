@@ -39,6 +39,7 @@ include("./ubound/ubound.jl")
 #include("./gnum/gnum.jl")
 
 #utility files
+include("./ubox/ubox.jl")
 #include("unum-bitwalk.jl")
 #include("unum-promote.jl")
 #include("unum-expwalk.jl")

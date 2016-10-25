@@ -104,7 +104,8 @@ end
     for idx = __cell_length(FSS):-1:(middle_cell + 1)
       @inbounds (num.a[idx] == 0) || return UNUM_UBIT_MASK
     end
-    return @inbounds ((num.a[middle_cell] & mask_bot(middle_mask)) != z64) * UNUM_UBIT_MASK
+    @inbounds res = ((num.a[middle_cell] & mask_bot(middle_mask)) != z64) * UNUM_UBIT_MASK
+    return res
   end
 end
 

@@ -54,3 +54,10 @@ Unums.__resolve_subnormal!(x)
 @test Unums.inner_ulp(Unum{0,0}(2)) == Unums.make_ulp!(Unum{0,0}(1))
 @test Unums.inner_ulp(Unum{2,2}(o64, z64, z16, z16, z16)) == Unum{2,2}(o64, 0xF000_0000_0000_0000, o16, o16, 0x0003)
 @test Unums.inner_ulp(Unum{2,4}(o64, z64, z16, z16, z16)) == Unum{2,4}(o64, 0xFFFF_0000_0000_0000, o16, o16, 0x000F)
+@test Unums.inner_ulp(Unum{2,4}(o64, z64, z16, 0x0003, z16)) == Unum{2,4}(z64, 0xFFFF_0000_0000_0000, o16, 0x0003, 0x000F)
+
+#error discovered 24 oct 2016
+x = Unum{4,7}(0x0000000000000001, UInt64[0x0000000000000000,0x0000000000000000], 0x0003, 0x0000, 0x007F)
+z = Unums.outer_exact(x)
+@test z == Unum{4,7}(0x0000000000000001, UInt64[0x0000000000000000,0x0000000000000001], 0x0002, 0x0000, 0x007F)
+@test z.fsize == 0x007F

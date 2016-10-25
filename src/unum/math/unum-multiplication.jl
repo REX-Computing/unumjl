@@ -26,6 +26,7 @@ doc"""
 """
 @universal function mul(a::Unum, b::Unum)
   #some basic checks out of the gate.
+
   (is_nan(a) || is_nan(b)) && return nan(U)
   is_zero(a) && return is_inf(b) ? nan(U) : zero(b)
   is_zero(b) && return is_inf(a) ? nan(U) : zero(a)
@@ -137,7 +138,7 @@ end
 
   if is_exact(a)
     #why - 2 ?  Because, empirically trying this out.  It feels like it *should* be one,
-    #so that should be a topic of further exploration. 
+    #so that should be a topic of further exploration.
     outer_result = sum_exact(inner_result, a, result_exponent, result_exponent - b.fsize - 2)
   elseif is_exact(b)
     outer_result = sum_exact(inner_result, b, result_exponent, result_exponent - a.fsize - 2)
@@ -156,6 +157,11 @@ end
     # look at the two numbers, a and b, and decide which one is more precise and
     # which one is fuzzy.  Assign these respectively to the _precise and _fuzzy
     # temporary variables.
+
+    outer_result = mul_exact(outer_exact(a), outer_exact(b), result_sign)
+    is_exact(outer_result) && inner_ulp!(outer_result)
+
+    #=
     (_precise, _fuzzy) = (a.fsize < b.fsize) ? (b , a) : (a, b)
 
     #copy the precise one and make it the "outer_result, temporarily"
@@ -189,7 +195,7 @@ end
     resolve_carry!(carry, outer_result, result_exponent)
 
     trim_and_set_ubit!(outer_result)
-    make_ulp!(outer_result)
+    make_ulp!(outer_result) =#
   end
 
   #check to make sure we haven't done the inf hack, where the result exactly

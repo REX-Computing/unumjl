@@ -179,3 +179,20 @@ doc"""
 @universal mag_greater_than_one(a::Unum) = decode_exp(a) >= 0
 mag_greater_than_one{FSS}(a::UnumSmall{0,FSS}) = (a.exponent != z64) | frac_top_bit(a)
 mag_greater_than_one{FSS}(a::UnumLarge{0,FSS}) = (a.exponent != z64) | frac_top_bit(a)
+
+@universal function ≊(a::Unum, b::Unum)
+  !(a < b) && !(b < a)
+end
+
+#simless
+@universal function simless(a::Unum, b::Unum)
+  !(b < a)
+end
+⪝ = simless
+#simgtr
+@universal function simgtr(a::Unum, b::Unum)
+  !(b > a)
+end
+⪞ = simgtr
+
+export ≊,⪝,⪞

@@ -36,7 +36,7 @@ doc"""
   if FSS < 7
     x.fsize = (tz == 64) ? 0 : (0x003f - tz)
   else
-    x.fsize = (tz == 2 ^ FSS) ? 0 : (2 ^ FSS - tz)
+    x.fsize = (tz == 2 ^ FSS) ? 0 : (2 ^ FSS - 1 - tz)
   end
   return x
 end

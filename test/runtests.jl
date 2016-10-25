@@ -7,41 +7,11 @@ include("./test-operations.jl")
 include("./test-warlpiri.jl")
 
 #=
-U = Unum{0,0}
-y = U(2)
-x = U(2)
-describe(x)
-describe(y)
-describe(x / y)
-=#
-#=
-import Unums: inner_exact!, inner_ulp!, outer_exact!, outer_ulp!
+x = Unum{4,7}(0x0000000000000001, UInt64[0x0000000000000000,0x0000000000000000], 0x0003, 0x0000, 0x007F)
 
-UT = Unum{3, 4}
+z = Unums.outer_exact(x)
 
-left_neginf =   Ubound(neg_inf(UT), UT(-1))
-left_negmmr_b = Ubound(neg_mmr(UT), UT(-1))
-left_negmmr_u = neg_mmr(UT)
-left_exact =    Ubound(UT(-2), UT(-1))
-left_ulp =      Ubound(inner_ulp!(UT(-2)), UT(-1))
-left_posinf =   inf(UT)
+println(z)
 
-right_neginf =   neg_inf(UT)
-right_ulp =      Ubound(UT(1), inner_ulp!(UT(2)))
-right_exact =    Ubound(UT(1), UT(2))
-right_posmmr_u = mmr(UT)
-right_posmmr_b = Ubound(UT(1), mmr(UT))
-right_posinf =   Ubound(UT(1), inf(UT))
-
-#testing special ubound multiplication (NB: p. 130, TEoE)
-left_zero_exact = Ubound(UT(0), UT(1))
-left_zero_ulp_b = Ubound(sss(UT), UT(1))
-left_zero_ulp_u = sss(UT)
-left_pos_exact  = Ubound(UT(1), UT(2))
-left_pos_ulp    = Ubound(outer_ulp!(UT(1)), UT(2))
-
-r = left_zero_ulp_u * left_pos_exact
-
-println(r)
-describe(r)
+x * x
 =#

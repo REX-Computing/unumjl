@@ -22,7 +22,7 @@ doc"""
 abstract Ubound{ESS,FSS} <: Real
 
 function __check_UboundSmall{ESS, FSS}(_ESS, _FSS, lower::UnumSmall{ESS,FSS}, upper::UnumSmall{ESS,FSS})
-  (lower < upper) || throw(ArgumentError("in a Ubound, lower must be smaller than upper"))
+  (lower < upper) || throw(ArgumentError("in a Ubound, lower must be smaller than upper, $lower not smaller than $upper"))
 end
 
 @dev_check type UboundSmall{ESS,FSS} <: Ubound{ESS,FSS}

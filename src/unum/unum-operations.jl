@@ -155,6 +155,8 @@ doc"""
 
   borrowed = frac_sub_ubit!(x, max_fsize(FSS))
 
+  x.fsize = max_fsize(FSS)
+
   #if we borrowed, then fraction must have been zero.
   if borrowed
     #there is no ulp inward of x.  Consider replacing this with "Throw an error"
@@ -163,7 +165,6 @@ doc"""
     (_xexp == min_exponent(ESS)) && (x.exponent = 0; return x)
     (x.esize, x.exponent) = encode_exp(_xexp - 1)
   end
-  x.fsize = max_fsize(FSS)
 
   return x
 end
@@ -268,7 +269,7 @@ doc"""
   leftzeroes = clz(carry)
   if (leftzeroes < 0x003F) #less than 63 zeroes
     shift = 0x003F - leftzeroes
-    rsh_and_set_ubit!(x, shift)    
+    rsh_and_set_ubit!(x, shift)
     #now copy the bits over from the carried segment.
     frac_copy_top!(x, (((o64 << shift) - o64) & carry) << (leftzeroes + o16))
     exponent += shift
