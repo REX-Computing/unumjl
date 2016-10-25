@@ -42,7 +42,7 @@ top(n::UInt64) = t64
 function top{FSS}(a::ArrayNum{FSS})
   top(ArrayNum{FSS})
 end
-function top!{FSS}(a::Type{ArrayNum{FSS}})
+function top!{FSS}(a::ArrayNum{FSS})
   zero!(a)
   @inbounds a[1] = t64
 end

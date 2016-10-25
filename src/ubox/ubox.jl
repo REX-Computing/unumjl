@@ -47,7 +47,7 @@ function count_same(a::UInt64, b::UInt64)
 end
 
 function count_same{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
-  total = 0
+  total::UInt16 = 0
   for idx = 1:__cell_length(FSS)
     read = leading_zeros(a.a[idx] $ b.a[idx])
     total += read
@@ -55,10 +55,10 @@ function count_same{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
   end
 end
 
-function maskout(a::UInt64, count)
+function maskout(a::UInt64, count::UInt16)
   mask_top(count) & a
 end
-function maskout!{FSS}(a::ArrayNum{FSS}, count)
+function maskout!{FSS}(a::ArrayNum{FSS}, count::UInt16)
   t = zero(ArrayNum{FSS})
   mask_top!(t, count)
   for idx = 1:__cell_length(FSS)
@@ -67,10 +67,10 @@ function maskout!{FSS}(a::ArrayNum{FSS}, count)
 end
 @fracproc maskout count
 
-function bitin(a::UInt64, count)
+function bitin(a::UInt64, count::UInt16)
   bottom_bit(count) | a
 end
-function bitin!{FSS}(a::ArrayNum{FSS}, count)
+function bitin!{FSS}(a::ArrayNum{FSS}, count::UInt16)
   t = zero(ArrayNum{FSS})
   bottom_bit!(t, count)
   for idx = 1:__cell_length(FSS)
