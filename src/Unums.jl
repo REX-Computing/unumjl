@@ -23,10 +23,6 @@ include("./ubound/ubound-typedefs.jl")
 #type definition of gnum.
 include("./gnum/gnum-typedefs.jl")
 
-#create the abstract Utype which encompasses all possibilities of Unum/Ubound/Gnum
-typealias Utype{ESS,FSS} Union{Unum{ESS,FSS}, Ubound{ESS,FSS}, Gnum{ESS,FSS}}
-export Utype
-
 ################################################################################
 #IMPLEMENTATION FILES
 #implementation of int64 and int64 array utility code.
@@ -35,8 +31,12 @@ include("./int64op/int64ops.jl")
 include("./unum/unum.jl")
 #ubound-related code
 include("./ubound/ubound.jl")
+#utype - the type wrapper that is better than Union{Unum, Ubound}
+include("./utype/utype.jl")
 #gnums-related code
 #include("./gnum/gnum.jl")
+
+
 
 #utility files
 include("./ubox/ubox.jl")

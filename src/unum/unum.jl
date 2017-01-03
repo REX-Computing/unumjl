@@ -7,7 +7,6 @@ include("./unum-constants.jl")
 include("./unum-properties.jl")
 include("./unum-operations.jl")
 include("./unum-convert.jl")
-include("./unum-promote.jl")
 
 #h-layer stuff
 
