@@ -43,7 +43,7 @@ upper_avg(x, y) = ((x + y) ÷ 2) + ((x + y < 0) ? 0 : 1) * isodd(x + y)
 end
 
 function count_same(a::UInt64, b::UInt64)
-  leading_zeros(a $ b)
+  UInt16(leading_zeros(a $ b))
 end
 
 function count_same{FSS}(a::ArrayNum{FSS}, b::ArrayNum{FSS})
@@ -110,7 +110,7 @@ end
   if same_exp(x.lower, x.upper)
     #each exponential range cleaves over two single ubounds.  First, check to
     #see if they are in the upper half or the lower half.
-    count = count_same(x.lower.fraction, x.upper.fraction)
+    count::UInt16 = count_same(x.lower.fraction, x.upper.fraction)
 
     middle_value = copy(x.lower)
     middle_value.flags = x.lower.flags & (~UNUM_UBIT_MASK)

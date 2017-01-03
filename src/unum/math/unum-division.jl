@@ -44,7 +44,14 @@ end
 
 __frac_bits(FSS::Int64) = max_fsize(FSS) + 1
 
+global verbose_div = false
+function set_verbose()
+  global verbose_div = true
+  nothing
+end
+
 @universal function div_exact(a::Unum, b::Unum, result_sign::UInt16)
+
   #first, calculate the exponents.
   _asubnormal = is_subnormal(a)
   _bsubnormal = is_subnormal(b)
@@ -160,6 +167,9 @@ doc"""
   traversals = 0  #how many times have we traversed a boundary?
 
   for idx = 1:(FSS)
+
+    verbose_div && println(d_result)
+
     (carry != o64) && begin
       d_result = frac_rsh!(d_result, 0x0001)
       traversals = 1
