@@ -56,6 +56,7 @@ doc"""
   unum for chaining purposes.
 """
 @universal abs!(x::Unum) = ((x.flags &= ~UNUM_SIGN_MASK); return x)
+@universal Base.abs(x::Unum) = abs!(copy(x))
 export abs!
 
 @universal function Base.copy!(dest::Unum, src::Unum)

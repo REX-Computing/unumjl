@@ -36,7 +36,8 @@ include("./utype/utype.jl")
 #gnums-related code
 #include("./gnum/gnum.jl")
 
-
+#we may need to patch julia in certain places to make this work smoothly.
+include("./julia-patches.jl")
 
 #utility files
 include("./ubox/ubox.jl")

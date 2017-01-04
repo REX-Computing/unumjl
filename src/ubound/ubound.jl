@@ -6,6 +6,7 @@ include("./math/ubound-comparison.jl")
 include("./math/ubound-addition.jl")
 include("./math/ubound-subtraction.jl")
 include("./math/ubound-multiplication.jl")
+include("./math/ubound-operations.jl")
 include("./math/ubound-division.jl")
 include("./math/ubound-sqrs.jl")
 

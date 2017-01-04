@@ -23,7 +23,7 @@ Base.convert{ESS,FSS}(::Type{Utype}, x::Ubound{ESS,FSS}) = Utype{ESS,FSS}(x)
 (::Utype){ESS,FSS}(x::Ubound{ESS,FSS}) = Utype{ESS,FSS}(x)
 
 #setting promotions.
-promote_rule{ESS,FSS, T <: Integer}(::Type{Utype{ESS,FSS}}, ::Type{T})      = Utype{ESS,FSS}
+promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{Int64})                = Utype{ESS,FSS}
 promote_rule{ESS,FSS, T <: IEEEFloat}(::Type{Utype{ESS,FSS}}, ::Type{T})    = Utype{ESS,FSS}
 promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{UnumSmall{ESS,FSS}})   = Utype{ESS,FSS}
 promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{UnumLarge{ESS,FSS}})   = Utype{ESS,FSS}
@@ -42,6 +42,8 @@ promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{UboundLarge{ESS,FSS}}) = Ut
 >={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val >= rhs.val)
 =={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val == rhs.val)
 
+Base.abs{ESS,FSS}(lhs::Utype{ESS,FSS}) = Utype{ESS,FSS}(abs(lhs.val))
+
 Base.isequal{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS})  = isequal(lhs.val, rhs.val)
 Base.isequal{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Unum{ESS,FSS})   = isequal(lhs.val, rhs)
 Base.isequal{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Ubound{ESS,FSS}) = isequal(lhs.val, rhs)
@@ -56,6 +58,7 @@ Base.zero{ESS,FSS}(::Type{Utype{ESS,FSS}}) = Utype{ESS,FSS}(zero(Unum{ESS,FSS}))
 
 describe{ESS,FSS}(x::Utype{ESS,FSS}) = describe(x.val)
 
-Base.show{ESS,FSS}(io::IO, T::Type{Utype{ESS,FSS}}) = print(io, "Utype")
+Base.show{ESS,FSS}(io::IO, T::Type{Utype{ESS,FSS}}) = print(io, "Utype{$ESS, $FSS}")
+Base.show{ESS,FSS}(io::IO, x::Utype{ESS,FSS}) = print(io, "Utype(", x.val ,")")
 
 export Utype
