@@ -125,6 +125,9 @@ end
 end
 
 @universal function mul_inexact(a::Unum, b::Unum, result_sign::UInt16)
+
+  #println("hi, I'm in mul_inexact")
+
   is_inf_ulp(a) && (return inf_ulp_mult(a, b, result_sign))
   is_inf_ulp(b) && (return inf_ulp_mult(b, a, result_sign))
 
@@ -136,9 +139,14 @@ end
   is_exact(inner_result) && outer_ulp!(inner_result)
   result_exponent = decode_exp(inner_result) + is_subnormal(inner_result) * 1
 
+  outer_a = is_ulp(a) ? outer_exact(a) : a
+  outer_b = is_ulp(b) ? outer_exact(b) : b
+
+  outer_result = mul_exact(outer_a, outer_b, result_sign)
+  is_exact(outer_result) && inner_ulp!(outer_result)
+
+  #=
   if is_exact(a)
-    #why - 2 ?  Because, empirically trying this out.  It feels like it *should* be one,
-    #so that should be a topic of further exploration.
     outer_result = sum_exact(inner_result, a, result_exponent, result_exponent - b.fsize - 2)
   elseif is_exact(b)
     outer_result = sum_exact(inner_result, b, result_exponent, result_exponent - a.fsize - 2)
@@ -158,10 +166,6 @@ end
     # which one is fuzzy.  Assign these respectively to the _precise and _fuzzy
     # temporary variables.
 
-    outer_result = mul_exact(outer_exact(a), outer_exact(b), result_sign)
-    is_exact(outer_result) && inner_ulp!(outer_result)
-
-    #=
     (_precise, _fuzzy) = (a.fsize < b.fsize) ? (b , a) : (a, b)
 
     #copy the precise one and make it the "outer_result, temporarily"
@@ -195,12 +199,16 @@ end
     resolve_carry!(carry, outer_result, result_exponent)
 
     trim_and_set_ubit!(outer_result)
-    make_ulp!(outer_result) =#
+    make_ulp!(outer_result)
   end
+  =#
 
   #check to make sure we haven't done the inf hack, where the result exactly
   #equals inf.
   __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
+
+  #println("inner_result:", inner_result)
+  #println("outer_result:", outer_result)
 
   if is_ulp(inner_result) && is_ulp(outer_result)
     return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)

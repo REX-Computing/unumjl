@@ -17,6 +17,14 @@
   outer_result = a.upper / b
   inner_result = a.lower / b
 
+  if is_negative(resolve_lower(outer_result))
+    outer_result = resolve_lower(outer_result)
+    inner_result = resolve_upper(inner_result)
+  else
+    outer_result = resolve_upper(outer_result)
+    inner_result = resolve_lower(inner_result)
+  end
+
   if is_ulp(inner_result) && is_ulp(outer_result)
     bn ? resolve_as_utype!(outer_result, inner_result) : resolve_as_utype!(inner_result, outer_result)
   else
@@ -32,7 +40,7 @@ end
   is_zero(a) && return zero(U)
   if is_inf(a)
     is_inf(b.lower) && return nan(U)
-    is_inf(b.upper) && return nan(U) 
+    is_inf(b.upper) && return nan(U)
     return inf(U, @signof(a) $ @signof(b.lower))
   end
 

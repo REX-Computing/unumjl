@@ -38,7 +38,16 @@ UT = Unum{3,4}
 
 right_exact = UT(2)
 right_ulp   = Unums.inner_ulp!(UT(2))
+
 @test Unums.outer_exact!(right_exact * right_ulp) == UT(4)
+
+#single ulp that behaves differently.
+
+lhs = Unum{3,5}(0x0000000000000001, 0x5555555500000000, 0x0001, 0x0002, 0x001F)
+rhs = Unum{3,5}(0x000000000000000C, 0x3800000000000000, 0x0000, 0x0003, 0x001F)
+
+@test lhs * rhs ≊ Unum{3,5}(13)
+
 
 #double ulp.
 x = UT(2)

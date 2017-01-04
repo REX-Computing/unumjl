@@ -67,7 +67,6 @@ ___textual{ESS,FSS}(v::UnumLarge{ESS,FSS}) = calculate(v)
 end
 
 @universal function describe(v::Unum)
-  print("Unum{$ESS,$FSS}(")
   if isnan(v)
     print("NaN")
   elseif is_exact(v)
@@ -79,7 +78,6 @@ end
     print(__textual(lub(v)))
     print(" op")
   end
-  print(")")
   println()
 end
 

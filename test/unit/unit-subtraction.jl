@@ -39,6 +39,16 @@ x = Unum{4,7}(0x00000000000000F9, UInt64[0x7d31ee79ca44b643,0x91bb985960000000],
 y = Unum{4,7}(0x00000000000000F9, UInt64[0x7d31ee79ca44b643,0x91bb985960000080], 0x0000, 0x0007, 0x0079)
 @test y - x == Unum{4,7}(2)
 
+x = Unum{3,5}(0x0000000000000007, 0x1000000000000000, 0x0000, 0x0002, 0x001F)
+y = Unum{3,5}(0x0000000000000006, 0xA000000000000000, 0x0001, 0x0002, 0x001F)
+res = x - y
+@test Unums.lub(res) == Unum{3,5}(4)
+
+x = Unum{3,5}(0x0000000000000007, 0x1000000000000000, 0x0000, 0x0002, 0x001F)
+y = Ubound(Unum{3,5}(0x0000000000000006, 0x9FFFFFFF00000000, 0x0001, 0x0002, 0x001F), Unum{3,5}(0x0000000000000006, 0xA000000000000000, 0x0001, 0x0002, 0x001F))
+res = x - y
+@test res > Unum{3,5}(3.75)
+
 #=
 #11 September 2015 - identified through continuous testing.  The problem here is
 #that the two normal floats share their exponent factor, and clears a huge swath

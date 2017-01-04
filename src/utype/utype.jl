@@ -41,6 +41,7 @@ promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{UboundLarge{ESS,FSS}}) = Ut
 <={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val <= rhs.val)
 >={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val >= rhs.val)
 =={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val == rhs.val)
+≊{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val ≊ rhs.val)
 
 Base.abs{ESS,FSS}(lhs::Utype{ESS,FSS}) = Utype{ESS,FSS}(abs(lhs.val))
 
@@ -57,8 +58,9 @@ Base.zero{ESS,FSS}(::Utype{ESS,FSS})       = Utype{ESS,FSS}(zero(Unum{ESS,FSS}))
 Base.zero{ESS,FSS}(::Type{Utype{ESS,FSS}}) = Utype{ESS,FSS}(zero(Unum{ESS,FSS}))
 
 describe{ESS,FSS}(x::Utype{ESS,FSS}) = describe(x.val)
+Base.bits{ESS,FSS}(x::Utype{ESS,FSS}) = bits(x.val)
 
-Base.show{ESS,FSS}(io::IO, T::Type{Utype{ESS,FSS}}) = print(io, "Utype{$ESS, $FSS}")
+Base.show{ESS,FSS}(io::IO, T::Type{Utype{ESS,FSS}}) = print(io, "Utype{$ESS,$FSS}")
 Base.show{ESS,FSS}(io::IO, x::Utype{ESS,FSS}) = print(io, "Utype(", x.val ,")")
 
 export Utype

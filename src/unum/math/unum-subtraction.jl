@@ -134,8 +134,30 @@ end
   #do a second is_inward check.  If this is_inward check fails, then the result
   #can have an opposite sign, because it's an ulp that goes wierdly.
   is_inward(b, a) || return diff_overlap(a, b, _aexp, _bexp)
-  base_value = diff_exact(a, b, _aexp, _bexp)
 
+  #print("lhs:", a, " "); describe(a)
+  #print("rhs:", b, " "); describe(b)
+
+  a_out = is_exact(a) ? a : outer_exact(a)
+  b_out = is_exact(b) ? b : outer_exact(b)
+  outer_value = diff_exact(a_out, b, decode_exp(a_out), _bexp)
+  inner_value = diff_exact(a, b_out, _aexp, decode_exp(b_out))
+
+  #make sure that a zero inner value "points" in the correct direction.
+  if is_zero(inner_value)
+    inner_value.flags = (inner_value.flags & (~UNUM_SIGN_MASK)) | (outer_value.flags & UNUM_SIGN_MASK)
+  end
+
+  #println("inner_value:", inner_value)
+  #println("outer_value:", outer_value)
+
+  is_exact(inner_value) && outer_ulp!(inner_value)
+  is_exact(outer_value) && inner_ulp!(outer_value)
+
+  #println("inner_value:", inner_value)
+  #println("outer_value:", outer_value)
+
+  #=
   if is_exact(b)
     #then we do the simplest subtraction.
     return make_ulp!(coerce_sign!(base_value, a))
@@ -155,6 +177,8 @@ end
     inner_value = subtract_ubit!(copy(base_value), b.fsize)         #set me here.
     is_positive(a) ? resolve_as_utype!(inner_value, base_value) : resolve_as_utype!(base_value, inner_value)
   end
+  =#
+  is_positive(a) ? resolve_as_utype!(inner_value, outer_value) : resolve_as_utype!(outer_value, inner_value)
 end
 
 @universal function inf_ulp_sub(a::Unum, b::Unum)
