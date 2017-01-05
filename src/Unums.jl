@@ -41,6 +41,7 @@ include("./julia-patches.jl")
 
 #utility files
 include("./ubox/ubox.jl")
+include("./ubox/uslice.jl")
 #include("unum-bitwalk.jl")
 #include("unum-promote.jl")
 #include("unum-expwalk.jl")

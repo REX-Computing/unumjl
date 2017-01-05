@@ -37,7 +37,7 @@ doc"""
 
   #check to see if the signs on a and b are mismatched.
   if ((a.flags $ b.flags) & UNUM_SIGN_MASK) != z16
-    (_aexp >= _bexp) ? unum_sum(a, b, _aexp, _bexp) : unum_sum(b, a, _bexp, _aexp)
+    (_aexp >= _bexp) ? unum_sum(a, b, _aexp, _bexp) : additiveinverse!(unum_sum(b, a, _bexp, _aexp))
   else
     is_inward(b, a) ? unum_diff(a, b, _aexp, _bexp) : additiveinverse!(unum_diff(b, a, _bexp, _aexp))
   end
@@ -135,9 +135,6 @@ end
   #can have an opposite sign, because it's an ulp that goes wierdly.
   is_inward(b, a) || return diff_overlap(a, b, _aexp, _bexp)
 
-  #print("lhs:", a, " "); describe(a)
-  #print("rhs:", b, " "); describe(b)
-
   a_out = is_exact(a) ? a : outer_exact(a)
   b_out = is_exact(b) ? b : outer_exact(b)
   outer_value = diff_exact(a_out, b, decode_exp(a_out), _bexp)
@@ -148,14 +145,8 @@ end
     inner_value.flags = (inner_value.flags & (~UNUM_SIGN_MASK)) | (outer_value.flags & UNUM_SIGN_MASK)
   end
 
-  #println("inner_value:", inner_value)
-  #println("outer_value:", outer_value)
-
   is_exact(inner_value) && outer_ulp!(inner_value)
   is_exact(outer_value) && inner_ulp!(outer_value)
-
-  #println("inner_value:", inner_value)
-  #println("outer_value:", outer_value)
 
   #=
   if is_exact(b)

@@ -5,18 +5,22 @@
   (decode_exp(x) - (x.exponent == z64)) == (decode_exp(y) - (y.exponent == z64))
 end
 
+function isterminal{ESS,FSS}(x::Utype{ESS,FSS})
+  isterminal(x.val)
+end
+function isterminal{ESS,FSS}(a::Vector{Utype{ESS,FSS}})
+  for element in a
+    isterminal(element) || return false
+  end
+  return true
+end
 @universal function isterminal(x::Unum)
   is_exact(x) && return true
   (x.fsize == max_fsize(FSS)) && return true
   return false
 end
-@universal isterminal(x::Ubound) = false
-
-function isterminal(array)
-  for element in array
-    isterminal(element) || return false
-  end
-  return true
+@universal function isterminal(x::Ubound)
+  return false
 end
 
 upper_avg(x, y) = ((x + y) ÷ 2) + ((x + y < 0) ? 0 : 1) * isodd(x + y)
@@ -130,19 +134,31 @@ end
   end
 end
 
-doc"""
-  ufilter(function, uarray)
+udivide(x::Utype) = map(Utype, udivide(x.val))
 
-  passes an array of unums and ubounds and does a binary search to whittle down
-  the results to single array of unums.
+doc"""
+  ufilter(f::Function, uvalue::Utype)
+  ufilter(f::Function, uarray::Vector{Utype,1})
+
+  passes an array of utype boxed objects and does a binary search to whittle down
+  the results to a minimal array of solutions.  Function f should be a predicate
+  fuction, aka, returns a boolean value.
 """
-function ufilter(f::Function, v::Array{Utype, 1})
-  println("testing $v")
+function ufilter{ESS,FSS}(f::Function, u::Utype{ESS,FSS})
+  #first create an anonymous function g which takes an array of Utypes and passes
+  #the first member to f.
+  g = (a::Vector{Utype{ESS, FSS}}) -> f(a[1])
+  #then execute the g function on the array ufilter method.
+  ufilter(g, [u])
+end
+
+function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Type{Val{verbose}} = Val{false})
+
   l = length(v)
-  result = Array{Any}(l, 0)
+  result = Array{Utype,2}(l, 0)
 
   #trigger a terminal check.
-  isterminal(v) && return f(v) ? v : Array{Any}(l,0)
+  isterminal(v) && return f(v) ? v : Matrix{Utype{ESS,FSS}}(l,0)
 
   #pick a random index that isn't terminal.
   validindices = filter((idx)->(!isterminal(v[idx])), 1:l)
@@ -156,13 +172,23 @@ function ufilter(f::Function, v::Array{Utype, 1})
   vl[ridx] = lower_u
   vm[ridx] = middle_u
 
-  f(vl) && (result = hcat(result, ufilter(f, vl)))
-  f(vm) && (result = hcat(result, ufilter(f, vm)))
+  if f(vl)
+    verbose && println("searching $vl")
+    result = hcat(result, ufilter(f, vl, Val{verbose}))
+  end
+
+  if f(vm)
+    verbose && println("searching $vm")
+    (result = hcat(result, ufilter(f, vm, Val{verbose})))
+  end
 
   if (upper_u != nothing)
     vu = copy(v)
     vu[ridx] = upper_u
-    f(vu) && (result = hcat(result, ufilter(f, vu)))
+    if f(vu)
+      verbose && println("searching $vu")
+      (result = hcat(result, ufilter(f, vu, Val{verbose})))
+    end
   end
 
   result

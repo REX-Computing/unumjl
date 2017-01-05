@@ -53,9 +53,9 @@ end
 for arg in ARGS
   arglist = split(arg,"=")
   if length(arglist) == 1
-    options[symbol(arglist[1])] = true
+    options[Symbol(arglist[1])] = true
   else
-    options[symbol(arglist[1])] = argparse(arglist[2])
+    options[Symbol(arglist[1])] = argparse(arglist[2])
   end
 end
 

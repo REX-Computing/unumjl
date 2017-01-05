@@ -33,24 +33,38 @@
 end
 
 @universal function udiv(a::Unum, b::Ubound)
-  blp = is_pos_def(b.upper)
-  #if the dividend straddles, then we have nan.
-  (blp != is_pos_def(b.lower)) && return nan(U)
+  #throw nans for division by zero on either side.
+  is_zero(b.lower) && return nan(U)
+  is_zero(b.upper) && return nan(U)
 
+  blp = is_pos_def(b.lower)
+  bup = is_pos_def(b.upper)
+  #if the dividend straddles, then we have nan.
+  (blp != bup) && return nan(U)
+  #check for zero values in the upper part.
   is_zero(a) && return zero(U)
+
   if is_inf(a)
+    #double infs are no fun.
     is_inf(b.lower) && return nan(U)
     is_inf(b.upper) && return nan(U)
+
+    #match the inf with the sign of the product.
     return inf(U, @signof(a) $ @signof(b.lower))
   end
 
-  if (is_negative(a) != bln)
-    lower_result = resolve_lower(a / b.lower)
-    upper_result = resolve_upper(a / b.upper)
+  (b_inner, b_outer) = blp ? (b.lower, b.upper) : (b.upper, b.lower)
+
+
+  if (is_negative(a) != blp)
+    #result should resolve to a positive number.
+    lower_result = resolve_lower(a / b_outer)
+    upper_result = resolve_upper(a / b_inner)
     (is_ulp(lower_result) && is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   else
-    lower_result = resolve_lower(a / b.upper)
-    upper_result = resolve_upper(a / b.lower)
+    #result should resolve to a negative number.
+    lower_result = resolve_lower(a / b_inner)
+    upper_result = resolve_upper(a / b_outer)
     (is_ulp(lower_result) && is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   end
 end
@@ -59,22 +73,8 @@ end
   signcode::UInt16 = 0
 
   #check some divisions by exact zero, which gives exact infinite bounds.
-  if is_zero(b.lower)
-    #dividing by positive bounds.
-    is_positive(a.lower) && return B(a.lower / b.upper, pos_inf(U))
-    is_negative(a.upper) && return B(neg_inf(U), a.upper / b.upper)
-    is_zero(a.lower) && return B(zero(U), pos_inf(U))
-    is_zero(a.upper) && return B(neg_inf(U), zero(U))
-    return B(neg_inf(U), pos_inf(U))
-  end
-  if is_zero(b.upper)
-    #dividing by negative bounds
-    is_pos_def(a.lower) && return B(neg_inf(U), a.lower / b.lower)
-    is_neg_def(a.upper) && return B(a.upper / b.lower, pos_inf(U))
-    is_zero(a.lower) && return B(neg_inf(U), zero(U))
-    is_zero(a.upper) && return B(zero(U), pos_inf(U))
-    return B(neg_inf(U), pos_inf(U))
-  end
+  is_zero(b.lower) && return nan(U)
+  is_zero(b.upper) && return nan(U)
 
   is_negative(a.lower) && (signcode += 1)
   is_negative(a.upper) && (signcode += 2)
@@ -114,8 +114,8 @@ end
     B(a.upper / b.upper, a.lower / b.upper)
   #signcode 14 is not possible
   elseif (signcode == 15) #everything is negative
-    lower_result = resolve_lower(a.lower / b.upper)
-    upper_result = resolve_upper(a.upper / b.lower)
+    lower_result = resolve_lower(a.upper / b.lower)
+    upper_result = resolve_upper(a.lower / b.upper)
 
     (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   else

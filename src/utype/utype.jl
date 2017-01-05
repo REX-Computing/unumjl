@@ -8,10 +8,10 @@ end
 typealias IEEEFloat Union{Float16, Float32, Float64}
 
 #convert and constructor types
-(::Utype{ESS,FSS}){ESS,FSS}(x::IEEEFloat)                   = (FSS < 7) ? Utype{ESS,FSS}(UnumSmall{ESS,FSS}(x)) : Utype{ESS,FSS}(UnumLarge{ESS,FSS}(x))
-Base.convert{ESS,FSS}(::Type{Utype{ESS,FSS}}, x::IEEEFloat) = (FSS < 7) ? Utype{ESS,FSS}(UnumSmall{ESS,FSS}(x)) : Utype{ESS,FSS}(UnumLarge{ESS,FSS}(x))
-(::Utype{ESS,FSS}){ESS,FSS}(x::Integer)                     = (FSS < 7) ? Utype{ESS,FSS}(UnumSmall{ESS,FSS}(x)) : Utype{ESS,FSS}(UnumLarge{ESS,FSS}(x))
-Base.convert{ESS,FSS}(::Type{Utype{ESS,FSS}}, x::Integer)   = (FSS < 7) ? Utype{ESS,FSS}(UnumSmall{ESS,FSS}(x)) : Utype{ESS,FSS}(UnumLarge{ESS,FSS}(x))
+Base.convert{ESS,FSS}(::Type{Utype{ESS,FSS}}, x::IEEEFloat) = Utype{ESS,FSS}((FSS < 7) ? UnumSmall{ESS,FSS}(x) : UnumLarge{ESS,FSS}(x))
+Base.convert{ESS,FSS}(::Type{Utype{ESS,FSS}}, x::Integer)   = Utype{ESS,FSS}((FSS < 7) ? UnumSmall{ESS,FSS}(x) : UnumLarge{ESS,FSS}(x))
+(::Type{Utype{ESS,FSS}}){ESS,FSS}(x::IEEEFloat) = convert(Utype{ESS,FSS}, x)
+(::Type{Utype{ESS,FSS}}){ESS,FSS}(x::Integer)   = convert(Utype{ESS,FSS}, x)
 
 #specifically wrapping Unum and Ubound types
 Base.convert{ESS,FSS}(::Type{Utype{ESS,FSS}}, x::Unum{ESS,FSS})   = Utype{ESS,FSS}(x)
@@ -19,8 +19,6 @@ Base.convert{ESS,FSS}(::Type{Utype{ESS,FSS}}, x::Ubound{ESS,FSS}) = Utype{ESS,FS
 #specifically calling the naked Utype constructor for existing thingamabobs.
 Base.convert{ESS,FSS}(::Type{Utype}, x::Unum{ESS,FSS})   = Utype{ESS,FSS}(x)
 Base.convert{ESS,FSS}(::Type{Utype}, x::Ubound{ESS,FSS}) = Utype{ESS,FSS}(x)
-(::Utype){ESS,FSS}(x::Unum{ESS,FSS})   = Utype{ESS,FSS}(x)
-(::Utype){ESS,FSS}(x::Ubound{ESS,FSS}) = Utype{ESS,FSS}(x)
 
 #setting promotions.
 promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{Int64})                = Utype{ESS,FSS}

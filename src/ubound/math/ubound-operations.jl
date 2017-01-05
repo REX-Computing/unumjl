@@ -12,6 +12,7 @@
     x.lower.flags $= UNUM_SIGN_MASK
     x.upper.flags $= UNUM_SIGN_MASK
   end  #otherwise do nothing
+  x
 end
 
 @universal Base.abs(x::Ubound) = abs!(deepcopy(x))

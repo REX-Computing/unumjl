@@ -164,7 +164,7 @@ end
 
 function same_till_fsize(n1::UInt64, n2::UInt64, s::UInt16)
   (s == z16) && return true
-  
+
   fsize_mask = mask_top(s - o16)
 
   (n1 & fsize_mask) == (n2 & fsize_mask)
@@ -176,4 +176,17 @@ function same_till_fsize{FSS}(n1::ArrayNum{FSS}, n2::ArrayNum{FSS}, s::UInt16)
     @inbounds (n1.a[idx] != n2.a[idx]) && return false
   end
   @inbounds return same_till_fsize(n1.a[middle_cell], n2.a[middle_cell], middle_size)
+end
+
+function common_fsize(n1::UInt64, n2::UInt64)
+  clz(n1 $ n2) - o16
+end
+function common_fsize{FSS}(n1::ArrayNum{FSS}, n2::ArrayNum{FSS})
+  done = false
+  sumsofar = z16
+  for idx = 1:__cell_length(FSS)
+    @inbounds current_count = clz(n1[idx] $ n2[idx])
+    sumsofar += current_count
+    current_count == 64 || return (sumsofar - o16)
+  end
 end

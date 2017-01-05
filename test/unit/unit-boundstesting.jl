@@ -212,7 +212,8 @@ ssn2 = Unum{3,5}(z64, z64, o16, 0x0007, 0x001e)
 #clear.
 
 #special case:
-@test left_zero_exact / left_zero_exact      == Ubound(UT(0), pos_inf(UT))      #[0, 1] / [0, 1]  == [0, ∞]
+@test isequal(left_zero_exact / left_zero_exact, UT(NaN))                       #[0, 1] / [0, 1]  == NaN
+#if you want ops to throw infinities, do it by intercepting your function (eg pow(x, [even int]))
 #CHART ONE
 #top row.
 @test isequal(left_zero_exact / right_zero_exact, UT(NaN))                      #[0, 1] / 0       == NaN
