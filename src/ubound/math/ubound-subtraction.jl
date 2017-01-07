@@ -1,7 +1,5 @@
 ###############################################################################
 #subtraction
-
-
 @universal function sub(a::Ubound, b::Unum)
   lb = resolve_lower(a.lower - b)
   hb = resolve_upper(a.upper - b)

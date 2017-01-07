@@ -31,6 +31,7 @@ function Base.one{FSS}(a::ArrayNum{FSS})
   one(ArrayNum{FSS})
 end
 
+top(::Type{UInt64}) = t64
 function top{FSS}(::Type{ArrayNum{FSS}})
   l = __cell_length(FSS)
   arr = zeros(UInt64, l)

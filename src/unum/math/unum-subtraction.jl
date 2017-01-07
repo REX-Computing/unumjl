@@ -169,6 +169,7 @@ end
     is_positive(a) ? resolve_as_utype!(inner_value, base_value) : resolve_as_utype!(base_value, inner_value)
   end
   =#
+
   is_positive(a) ? resolve_as_utype!(inner_value, outer_value) : resolve_as_utype!(outer_value, inner_value)
 end
 

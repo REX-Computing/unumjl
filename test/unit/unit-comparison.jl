@@ -55,3 +55,8 @@ y = Unum{4,6}(0x0000000000000001, 0x1000000000000000, 0x0003, 0x0001, 0x0003)
 
 @test !(zero(Unum{4,6}) < zero(Unum{4,6}))
 @test Unum{4,6}(6) < Unum{4,6}(7)
+
+#unit test discovered 6 jan 2017 - make sure that strange subnormal ulps behave
+#correctly.
+
+@test Unum{3,5}(0x0000000000000000, 0x0000000000000000, 0x0001, 0x0000, 0x001F) < Unum{3,5}(0x0000000000000003, 0xFFFFFFFF00000000, 0x0001, 0x0005, 0x001F)

@@ -62,6 +62,16 @@ res = x - y
 @test res == Ubound(Unum{3,5}(0x000000000000000C, 0x91664E9800000000, 0x0003, 0x0003, 0x001F), Unum{3,5}(0x000000000000000C, 0x91664E5C00000000, 0x0003, 0x0003, 0x001F))
 #problem is that the sign is not properly handled.
 
+#tests discovered Jan 6 2017:  Various problems stemming form size comparison of strange subnormals.
+x = Unum{3,5}(0x000000000000000C, 0x37FFFFFF00000000, 0x0001, 0x0003, 0x001F)
+y = Unum{3,5}(0x000000000000000C, 0x3800000000000000, 0x0000, 0x0003, 0x001F)
+res = x - y
+@test(res == Ubound(Unum{3,5}(0x0000000000000003, 0xFFFFFFFF00000000, 0x0003, 0x0005, 0x001F), Unum{3,5}(0x0000000000000000, 0x0000000000000000, 0x0003, 0x0000, 0x001F)))
+
+x = Ubound(Unum{3,5}(0x0000000000000007, 0xD800000000000000, 0x0001, 0x0002, 0x001F), Unum{3,5}(0x000000000000000C, 0x37FFFFFF00000000, 0x0001, 0x0003, 0x001F))
+y = Unum{3,5}(0x000000000000000C, 0x3800000000000000, 0x0000, 0x0003, 0x001F)
+res = x - y
+@test res ==  Ubound(Unum{3,5}(0x0000000000000006, 0x2FFFFFFE00000000, 0x0003, 0x0002, 0x001E), Unum{3,5}(0x0000000000000000, 0x0000000000000000, 0x0003, 0x0000, 0x001F))
 
 #=
 #11 September 2015 - identified through continuous testing.  The problem here is

@@ -1,1 +1,11 @@
 #test-slice.jl - testing slicing and slicing operations.
+
+
+@test Unums.outer_exp_ulp(Unum{3,5}, 0, z16) == Unum{3,5}(0x0000000000000001, 0x8000000000000000, 0x0001, 0x0001, 0x0000)
+@test Unums.inner_exp_ulp(Unum{3,5}, 0, z16) == Unum{3,5}(0x0000000000000001, 0x0000000000000000, 0x0001, 0x0001, 0x0000)
+@test Unums.outer_exp_ulp(Unum{3,5}, 0, Unums.UNUM_SIGN_MASK) == Unum{3,5}(0x0000000000000001, 0x8000000000000000, 0x0003, 0x0001, 0x0000)
+@test Unums.inner_exp_ulp(Unum{3,5}, 0, Unums.UNUM_SIGN_MASK) == Unum{3,5}(0x0000000000000001, 0x0000000000000000, 0x0003, 0x0001, 0x0000)
+
+@test Unums.exp_bound(Ubound{3,5}, 0, z16) == Ubound(Unum{3,5}(0x0000000000000001, 0x0000000000000000, 0x0001, 0x0001, 0x0000), Unum{3,5}(0x0000000000000001, 0x8000000000000000, 0x0001, 0x0001, 0x0000))
+
+@test Unums.bounding_ulp(Unum{3,5}(0x0000000000000003, 0x3FFFFFF400000000, 0x0001, 0x0001, 0x001D), Unum{3,5}(0x0000000000000003, 0x4000000800000000, 0x0001, 0x0001, 0x001)) == Unum{3,5}(0x0000000000000003, 0x0000000800000000, 0x0001, 0x0001, 0x000)

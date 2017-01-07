@@ -68,16 +68,28 @@ doc"""
 """
 @universal function is_inward(a::Unum, b::Unum)
   #resolve degeneracies to make comparison much much easier..
+
   resolve_degenerates!(a)
   resolve_degenerates!(b)
+
+  _as = is_subnormal(a)
+  _bs = is_subnormal(b)
 
   _aexp = decode_exp(a)
   _bexp = decode_exp(b)
 
   #so now we know that these two have the same sign.
   (_aexp < _bexp) && return true
+
+  #check for the strange subnormal ulps.
+  if is_ulp(a) && is_strange_subnormal(a)
+    is_ulp(b) && is_strange_subnormal(b) && return false
+    #redo _aexp
+    _aexp -= a.fsize + 1
+    return _aexp < _bexp
+  end
+
   (_aexp > _bexp) && return false
-  #check fractions.
 
   is_exact(a) & is_exact(b) && return (a.fraction < b.fraction)
 
@@ -88,6 +100,8 @@ doc"""
   lessthanwithubit(a.fraction, b.fraction, a.fsize, orequal)
 end
 
+
+#TODO:  reimplement this as isless.
 @universal function >(a::Unum, b::Unum)
   (is_nan(a) || is_nan(b)) && return false
   _b_pos::Bool = (is_positive(b))

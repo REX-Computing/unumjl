@@ -41,7 +41,11 @@ promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{UboundLarge{ESS,FSS}}) = Ut
 =={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val == rhs.val)
 ≊{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val ≊ rhs.val)
 
-Base.abs{ESS,FSS}(lhs::Utype{ESS,FSS}) = Utype{ESS,FSS}(abs(lhs.val))
+Base.abs{ESS,FSS}(tgt::Utype{ESS,FSS}) = Utype{ESS,FSS}(abs(tgt.val))
+sqr{ESS,FSS}(tgt::Utype{ESS,FSS}) = Utype{ESS,FSS}(sqr(tgt.val))
+glb{ESS,FSS}(tgt::Utype{ESS,FSS}) = Utype{ESS,FSS}(glb(tgt.val))
+lub{ESS,FSS}(tgt::Utype{ESS,FSS}) = Utype{ESS,FSS}(lub(tgt.val))
+
 
 Base.isequal{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS})  = isequal(lhs.val, rhs.val)
 Base.isequal{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Unum{ESS,FSS})   = isequal(lhs.val, rhs)

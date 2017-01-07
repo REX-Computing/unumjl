@@ -83,7 +83,7 @@ end
 #NB:  The difference between "is_exp_zero" and "issubnormal" - is_exp_zero admits
 #zero as a solution; issubnormal is in compliance with the standard julia
 #issubnormal function and does not admit zero as a true result.
-@universal is_subnormal(x::Unum) = (x.exponent == z64) && is_not_zero(x.fraction)
+@universal is_subnormal(x::Unum) = (x.exponent == z64) && (is_ulp(x) || is_not_zero(x.fraction))
 @universal is_exp_zero(x::Unum) = x.exponent == z64
 
 doc"""
