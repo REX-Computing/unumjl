@@ -69,19 +69,23 @@ function uslice{ESS,FSS}(x::Ubound{ESS,FSS})
   if (is_positive(lower_value) != is_positive(upper_value))
     #figure out the exponents on both and expand to the bigger one.
     new_exponent = max(lower_exp, upper_exp)
+
     lower_slice = Ubound(outer_exp_ulp(U, new_exponent, UNUM_SIGN_MASK), neg_sss(U))
     upper_slice = Ubound(pos_sss(U), outer_exp_ulp(U, new_exponent, z16))
+
     return Utype[lower_slice, upper_slice]
   end
 
   #if they are not in the same exponent range.
   if (lower_exp != upper_exp)
     if (is_positive(lower_value))
-      lower_slice = Ubound(pos_sss(U), outer_exp_ulp(U, upper_exp - 1, z16))
+      lower_exp_limit = max(min_exponent(ESS), upper_exp - 1)
+      lower_slice = Ubound(pos_sss(U), outer_exp_ulp(U, lower_exp_limit, z16))
       upper_slice = exp_bound(B, upper_exp, z16)
     else
       lower_slice = exp_bound(B, lower_exp, UNUM_SIGN_MASK)
-      upper_slice = Ubound(pos_sss(U), outer_exp_ulp(U, upper_exp - 1, UNUM_SIGN_MASK))
+      upper_exp_limit = max(min_exponent(ESS), lower_exp - 1)
+      upper_slice = Ubound(outer_exp_ulp(U, upper_exp_limit, UNUM_SIGN_MASK), neg_sss(U))
     end
     return Utype[lower_slice, upper_slice]
   end
