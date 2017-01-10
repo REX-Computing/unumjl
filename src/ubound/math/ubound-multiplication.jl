@@ -8,19 +8,23 @@
 end
 
 @universal function mul(a::Ubound, b::Unum)
-    lower_result = resolve_lower(a.lower * b)
-    upper_result = resolve_upper(a.upper * b)
 
-    @ejectsolutions
+  neg_b = is_negative(b)
 
-    if is_ulp(lower_result) && is_ulp(upper_result)
-      is_negative(b) ? resolve_as_utype!(upper_result, lower_result) : resolve_as_utype!(lower_result, upper_result)
-    else
-      is_negative(b) ? B(upper_result, lower_result) : B(lower_result, upper_result)
-    end
+  lower_result = resolve_lower((neg_b ? a.upper : a.lower) * b)
+  upper_result = resolve_upper((neg_b ? a.lower : a.upper) * b)
+
+  @ejectsolutions
+
+  if is_ulp(lower_result) && is_ulp(upper_result)
+    resolve_as_utype!(lower_result, upper_result)
+  else
+    B(lower_result, upper_result)
+  end
 end
 
 @universal function mul(a::Ubound, b::Ubound)
+
   signcode::UInt16 = 0
 
   is_negative(a.lower) && (signcode += 1)
@@ -44,8 +48,8 @@ end
     B(lower_result, upper_result)
   #signcode 2 is not possible
   elseif (signcode == 3) #a is negative and b is positive
-    lower_result = resolve_lower(a.lower * b.lower)
-    upper_result = resolve_upper(a.upper * b.upper)
+    lower_result = resolve_lower(a.lower * b.upper)
+    upper_result = resolve_upper(a.upper * b.lower)
 
     @ejectsolutions
 

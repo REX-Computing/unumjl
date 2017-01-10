@@ -12,7 +12,13 @@
 
   is_zero(b) && return nan(U)
 
-  (aln != ahn) && return (bn ? B(a.upper / b, a.lower / b) : B(a.lower / b, a.upper / b))
+  if (aln != ahn)
+    if bn
+      return B(resolve_lower(a.upper / b), resolve_upper(a.lower / b))
+    else
+      return B(resolve_lower(a.lower / b), resolve_upper(a.upper / b))
+    end
+  end
 
   outer_result = a.upper / b
   inner_result = a.lower / b
@@ -87,11 +93,12 @@ end
 
     (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif (signcode == 1) #only a.lowbound is negative
-    B(a.lower / b.lower, a.upper / b.lower)
+    B(resolve_lower(a.lower / b.lower), resolve_upper(a.upper / b.lower))
   #signcode 2 is not possible
   elseif (signcode == 3) #a is negative and b is positive
-    lower_result = resolve_lower(a.upper / b.lower)
-    upper_result = resolve_upper(a.lower / b.upper)
+
+    lower_result = resolve_lower(a.lower / b.lower)
+    upper_result = resolve_upper(a.upper / b.upper)
 
     (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif (signcode == 4) #only b.lowbound is negative
@@ -111,7 +118,7 @@ end
 
     (is_ulp(lower_result) & is_ulp(upper_result)) ? resolve_as_utype!(lower_result, upper_result) : B(lower_result, upper_result)
   elseif (signcode == 13) #b is negative, a straddles
-    B(a.upper / b.upper, a.lower / b.upper)
+    B(resolve_lower(a.upper / b.upper), resolve_upper(a.lower / b.upper))
   #signcode 14 is not possible
   elseif (signcode == 15) #everything is negative
     lower_result = resolve_lower(a.upper / b.lower)

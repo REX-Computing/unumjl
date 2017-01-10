@@ -34,7 +34,6 @@ doc"""
     (_lexp < _uexp) && return upper
     return lower
   end
-
   #check to make sure the exponents are the same.
   (decode_exp(lower) == decode_exp(upper)) || return B(lower, upper)
 

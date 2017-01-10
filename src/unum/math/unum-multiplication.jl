@@ -126,8 +126,6 @@ end
 
 @universal function mul_inexact(a::Unum, b::Unum, result_sign::UInt16)
 
-  #println("hi, I'm in mul_inexact")
-
   is_inf_ulp(a) && (return inf_ulp_mult(a, b, result_sign))
   is_inf_ulp(b) && (return inf_ulp_mult(b, a, result_sign))
 

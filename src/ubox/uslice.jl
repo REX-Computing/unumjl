@@ -56,6 +56,7 @@ is_top_half(x::Unum) = (x.fraction[1] & t64) != 0
 
 function uslice{ESS,FSS}(x::Ubound{ESS,FSS})
   U = Unum{ESS,FSS}
+  B = Ubound{ESS,FSS}
   #first strip exact values from the slice.
   #NB: consider changing this to encapsulation.
   lower_value = is_exact(x.lower) ? upper_ulp(x.lower) : x.lower

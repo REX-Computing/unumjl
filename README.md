@@ -97,6 +97,10 @@ julia> bits(Unum{4,7}(1) / Unum{4,7}(3), " ")
 ```
 
 
-unumjl was created by Isaac Yonemoto on behalf of [REX Computing Inc.](http://rexcomputing.com)
+unumjl was created by Isaac Yonemoto on behalf of
+  [REX Computing Inc.](http://rexcomputing.com) and maintained on behalf of
+  [Etaphase, Inc.](http://etaphase.com)
 
-this work was supported in part by DARPA Contract D15PC00135 awarded to REX Computing, Inc.
+Support for this work came in part from the following sources:
+  DARPA Contract D15PC00135 awarded to REX Computing, Inc,
+  DARPA Contract HR0011-17-9-0007 awarded to Etaphase, Inc.
