@@ -146,41 +146,32 @@ x = Unum{4,6}(1) / Unum{4,6}(3)
 z = x + x + x
 @test Unums.lub(z) > one(Unum{4,6})
 
-#=
 ##############################################
 ## tests discovered by continuous testing.
 
-#25 august 2015:  Both of these unums seem to add up to "almostinf" despite
-#being nowhere near the maximum size limit.
-ctt1 = Unum{4,6}(UInt64(0b1100101), UInt64(0b01101001000011110001110011101100100101000000111000101100110_00000000000), z16, UInt16(0b0110), UInt16(0b110011))
-ctt2 = Unum{4,6}(UInt64(0b11111),   UInt64(0b1011101011010111000000101000101011010000100111100010_000000000000),       z16, UInt16(0b0100), UInt16(0b110010))
-@test !is_mmr(Unums.sum_exact(ctt1, ctt1, decode_exp(ctt1), decode_exp(ctt1)))
-@test !is_mmr(Unums.sum_exact(ctt2, ctt2, decode_exp(ctt2), decode_exp(ctt2)))
-#result:  This was due to poorly constructed test for the maximum exponent value
-=#
-#=
 #9 september 2015:  Having problems with some ubound addition. (throws error)
-ctub1 = Unum{4,6}(0x003f,0x0009,0x0003,0xb282a906ed2d8f0c,0x0000000000000376)
-ctub2 = Unum{4,6}(0x003f,0x0009,0x0003,0x3282a906ed2d8f01,0x0000000000000376)
-ctu1 = ubound(ctub1, ctub2)
-ctu2 = Unum{4,6}(0x0032,0x0008,0x0001,0x6beb9d225f1e6000,0x00000000000001cc)
-@test ctu1 + ctu2 == Ubound{4,6}(Unum{4,6}(0x003f,0x0009,0x0003,0xb282a906ed2d8f0c,0x0000000000000376),Unum{4,6}(0x003f,0x0009,0x0003,0x3282a906ed2d8f00,0x0000000000000376))
+ctub1 = Unum{4,6}(0x0000000000000376,0xb282a906ed2d8f0c,0x0003,0x0009,0x003f)
+ctub2 = Unum{4,6}(0x0000000000000376,0x3282a906ed2d8f01,0x0003,0x0009,0x003f)
+ctu1 = Ubound(ctub1, ctub2)
+ctu2 = Unum{4,6}(0x00000000000001cc,0x6beb9d225f1e6000,0x0001,0x0008,0x0032)
+@test ctu1 + ctu2 == Ubound{4,6}(Unum{4,6}(0x0000000000000376,0xb282a906ed2d8f0c,0x0003,0x0009,0x003f),Unum{4,6}(0x0000000000000376,0x3282a906ed2d8f00,0x0003,0x0009,0x003f))
+
 #resolved when an coding error was discovered:  UNUM_UBIT_MASK instead of UNUM_SIGN_MASK
 #10 september 2015: (throws error)
-ctub3 = Unum{4,6}(0x003f,0x0004,0x0003,0xde044b871cc5f67f,0x000000000000001d)
-ctub4 = Unum{4,6}(0x003f,0x0004,0x0003,0xde044b871cc5f67d,0x000000000000001d)
+ctub3 = Unum{4,6}(0x000000000000001d,0xde044b871cc5f67f,0x0003,0x0004,0x003f)
+ctub4 = Unum{4,6}(0x000000000000001d,0xde044b871cc5f67d,0x0003,0x0004,0x003f)
 ctu3 = Ubound{4,6}(ctub3,ctub4)
-ctu4 = Unum{4,6}(0x0032,0x0008,0x0000,0x1a757044fa76a000,0x00000000000001b8)
-@test ctu3 + ctu4 == Unum{4,6}(0x003f,0x0008,0x0001,0x1a757044fa769fff,0x00000000000001b8)
+ctu4 = Unum{4,6}(0x00000000000001b8,0x1a757044fa76a000,0x0000,0x0008,0x0032)
+@test ctu3 + ctu4 == Unum{4,6}(0x00000000000001b8,0x1a757044fa769fff,0x0001,0x0008,0x003f)
 #resolved by adding a test to see if the two added values were very far apart.
 #at the ubound level in addition to at the unum level. caused a revision in the
 #previous test as well.
+
 #11 september 2015: (throws error)
-ctub5 = Unum{4,6}(0x003f,0x0007,0x0001,0x3db8d7e07e3733ee,0x00000000000000f1)
-ctub6 = Unum{4,6}(0x003f,0x0007,0x0001,0xbdb8d7e07e3733f3,0x00000000000000f1)
+ctub5 = Unum{4,6}(0x00000000000000f1,0x3db8d7e07e3733ee,0x0001,0x0007,0x003f)
+ctub6 = Unum{4,6}(0x00000000000000f1,0xbdb8d7e07e3733f3,0x0001,0x0007,0x003f)
 ctu5 = Ubound(ctub5, ctub6)
-ctu6 = Unum{4,6}(0x0032,0x0007,0x0002,0x4410e89562546000,0x00000000000000f2)
-@test ctu5 + ctu6 == Ubound{4,6}(Unum{4,6}(0x003f,0x0007,0x0003,0x4a68f94a46718c11,0x00000000000000f1),Unum{4,6}(0x003f,0x0007,0x0003,0x94d1f2948ce31818,0x00000000000000f0))
+ctu6 = Unum{4,6}(0x00000000000000f2,0x4410e89562546000,0x0002,0x0007,0x0032)
+@test ctu5 + ctu6 == Ubound{4,6}(Unum{4,6}(0x00000000000000f1,0x4a68f94a46718c11,0x0003,0x0007,0x003f), Unum{4,6}(0x00000000000000f0,0x94d1f2948ce31818,0x0003,0x0007,0x003f))
 #problem occurs due to an incorrect handling of trailing bits after shift in
 #__diff_exact.
-=#

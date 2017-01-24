@@ -19,6 +19,12 @@ Base.convert{ESS,FSS}(::Type{Utype{ESS,FSS}}, x::Ubound{ESS,FSS}) = Utype{ESS,FS
 #specifically calling the naked Utype constructor for existing thingamabobs.
 Base.convert{ESS,FSS}(::Type{Utype}, x::Unum{ESS,FSS})   = Utype{ESS,FSS}(x)
 Base.convert{ESS,FSS}(::Type{Utype}, x::Ubound{ESS,FSS}) = Utype{ESS,FSS}(x)
+#highjack the Ubound constructor.
+function (::Type{Ubound}){ESS,FSS}(lower::Utype{ESS,FSS}, upper::Utype{ESS,FSS})
+  lower_proxy = isa(lower.val, Unum) ? lower.val : lower.val.lower
+  upper_proxy = isa(upper.val, Unum) ? upper.val : upper.val.upper
+  Utype{ESS,FSS}(Ubound{ESS,FSS}(lower_proxy, upper_proxy))
+end
 
 #setting promotions.
 promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{Int64})                = Utype{ESS,FSS}
@@ -39,13 +45,21 @@ promote_rule{ESS,FSS}(::Type{Utype{ESS,FSS}}, ::Type{UboundLarge{ESS,FSS}}) = Ut
 <={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val <= rhs.val)
 >={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val >= rhs.val)
 =={ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val == rhs.val)
-≊{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val ≊ rhs.val)
+≹{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val ≹ rhs.val)
+≸{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS}) = (lhs.val ≸ rhs.val)
+
+.≹{T<:Utype}(a1::Array{T}, a2::Array{T}) = *(map(≹, a1, a2)...)
+.≸{T<:Utype}(a1::Array{T}, a2::Array{T}) = *(map(≹, a1, a2)...)
+
+function is_exact(x::Utype)
+  isa(x.val, Ubound) && return false
+  return is_exact(x.val)
+end
 
 Base.abs{ESS,FSS}(tgt::Utype{ESS,FSS}) = Utype{ESS,FSS}(abs(tgt.val))
 sqr{ESS,FSS}(tgt::Utype{ESS,FSS}) = Utype{ESS,FSS}(sqr(tgt.val))
 glb{ESS,FSS}(tgt::Utype{ESS,FSS}) = Utype{ESS,FSS}(glb(tgt.val))
 lub{ESS,FSS}(tgt::Utype{ESS,FSS}) = Utype{ESS,FSS}(lub(tgt.val))
-
 
 Base.isequal{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Utype{ESS,FSS})  = isequal(lhs.val, rhs.val)
 Base.isequal{ESS,FSS}(lhs::Utype{ESS,FSS}, rhs::Unum{ESS,FSS})   = isequal(lhs.val, rhs)
@@ -66,3 +80,4 @@ Base.show{ESS,FSS}(io::IO, T::Type{Utype{ESS,FSS}}) = print(io, "Utype{$ESS,$FSS
 Base.show{ESS,FSS}(io::IO, x::Utype{ESS,FSS}) = print(io, "Utype(", x.val ,")")
 
 export Utype
+export .≹, .≸

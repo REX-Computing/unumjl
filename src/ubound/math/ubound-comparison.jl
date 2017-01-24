@@ -104,12 +104,16 @@ Base.isequal{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = isequal(b, a)
 >{ESS,FSS}(a::Unum{ESS,FSS}, b::Ubound{ESS,FSS}) = a > b.upper
 >{ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS}) = a.lower > b
 
-@universal ≊(a::Ubound, b::Unum) = simless(a.lower, b) && simless(b, a.upper)
-@universal ≊(a::Unum, b::Ubound) = b ≊ a
-@universal function ≊(a::Ubound, b::Ubound)
-  (simless(b.lower, a.lower) && simless(a.lower, b.upper)) && return true
-  (simless(a.lower, b.lower) && simless(b.lower, a.upper)) && return true
-  (simless(a.lower, b.lower) && simless(b.upper, a.upper)) && return true
-  (simless(b.lower, a.lower) && simless(a.upper, b.upper)) && return true
+@universal ≸(a::Ubound, b::Unum) = notgtr(a.lower, b) && notless(a.upper, b)
+@universal ≸(a::Unum, b::Ubound) = b ≸ a
+@universal function ≸(a::Ubound, b::Ubound)
+  (notgtr(b.lower, a.lower) && notgtr(a.lower, b.upper)) && return true
+  (notgtr(a.lower, b.lower) && notgtr(b.lower, a.upper)) && return true
+  (notgtr(a.lower, b.lower) && notgtr(b.upper, a.upper)) && return true
+  (notgtr(b.lower, a.lower) && notgtr(a.upper, b.upper)) && return true
   return false
 end
+
+≹(a::Ubound, b::Unum) = ≸(a, b)
+≹(a::Unum, b::Ubound) = ≸(a, b)
+≹(a::Ubound, b::Ubound) = ≸(a, b)

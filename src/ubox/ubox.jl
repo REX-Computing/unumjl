@@ -85,6 +85,7 @@ end
 
 @universal function udivide(x::Ubound)
   #special case where the bounds are exact.
+
   if is_exact(x.lower)
     if is_exact(x.upper)
       middlebound = Ubound(is_zero(x.lower) ? pos_sss(U) : upper_ulp(x.lower), is_zero(x.upper) ? neg_sss(U) : lower_ulp(x.upper))
@@ -95,16 +96,17 @@ end
     return (Ubound(x.lower, is_zero(x.upper) ? neg_sss(U) : lower_ulp(x.upper)), x.upper, nothing)
   end
 
-  if (is_subnormal(x.lower) && is_all_zero(x.lower.fraction))
-    udivide(Ubound(pos_sss(U), x.upper))
+  if (is_strange_subnormal(x.lower) && is_all_zero(x.lower.fraction))
+    return udivide(Ubound(pos_sss(U), x.upper))
   end
 
-  if (is_subnormal(x.upper) && is_all_zero(x.upper.fraction))
-    udivide(Ubound(x.lower, neg_sss(U)))
+  if (is_strange_subnormal(x.upper) && is_all_zero(x.upper.fraction))
+    return udivide(Ubound(x.lower, neg_sss(U)))
   end
 
   #if the ubound straddles zero, then naturally cleave across zero.
   if (is_negative(x.lower) && is_positive(x.upper))
+
     return (resolve_as_utype!(copy(x.lower), neg_sss(Unum{ESS,FSS})),
             zero(Unum{ESS,FSS}),
             resolve_as_utype!(pos_sss(Unum{ESS,FSS}), copy(x.upper)))
@@ -144,15 +146,20 @@ doc"""
   the results to a minimal array of solutions.  Function f should be a predicate
   fuction, aka, returns a boolean value.
 """
-function ufilter{ESS,FSS}(f::Function, u::Utype{ESS,FSS})
+function ufilter{ESS,FSS, verbose}(f::Function, u::Utype{ESS,FSS}, ::Type{Val{verbose}} = Val{false})
   #first create an anonymous function g which takes an array of Utypes and passes
   #the first member to f.
   g = (a::Vector{Utype{ESS, FSS}}) -> f(a[1])
   #then execute the g function on the array ufilter method.
-  ufilter(g, [u])
+  ufilter(g, [u], Val{verbose})
 end
 
+const max_iters = 2
+iters = 0
+
 function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Type{Val{verbose}} = Val{false})
+
+  global iters
 
   l = length(v)
   result = Array{Utype,2}(l, 0)
@@ -173,12 +180,14 @@ function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Typ
   vm[ridx] = middle_u
 
   if f(vl)
-    verbose && println("searching $vl")
+    verbose && (print("searching "); describe.(vl))
+    iters == max_iters && exit()
     result = hcat(result, ufilter(f, vl, Val{verbose}))
   end
 
   if f(vm)
-    verbose && println("searching $vm")
+    verbose && (print("searching "); describe.(vm))
+    iters == max_iters && exit()
     (result = hcat(result, ufilter(f, vm, Val{verbose})))
   end
 
@@ -186,7 +195,8 @@ function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Typ
     vu = copy(v)
     vu[ridx] = upper_u
     if f(vu)
-      verbose && println("searching $vu")
+      verbose && (print("searching "); describe.(vu))
+      iters == max_iters && exit()
       (result = hcat(result, ufilter(f, vu, Val{verbose})))
     end
   end

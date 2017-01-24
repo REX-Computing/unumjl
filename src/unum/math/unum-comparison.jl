@@ -194,19 +194,21 @@ doc"""
 mag_greater_than_one{FSS}(a::UnumSmall{0,FSS}) = (a.exponent != z64) | frac_top_bit(a)
 mag_greater_than_one{FSS}(a::UnumLarge{0,FSS}) = (a.exponent != z64) | frac_top_bit(a)
 
-@universal function ≊(a::Unum, b::Unum)
+@universal function ≸(a::Unum, b::Unum)
   !(a < b) && !(b < a)
 end
 
-#simless
-@universal function simless(a::Unum, b::Unum)
-  !(b < a)
-end
-⪝ = simless
-#simgtr
-@universal function simgtr(a::Unum, b::Unum)
-  !(b > a)
-end
-⪞ = simgtr
+≹(a::Unum, b::Unum) = ≸(a, b)
 
-export ≊,⪝,⪞
+#simless
+@universal function notless(a::Unum, b::Unum)
+  !(a < b)
+end
+≮ = notless
+#simgtr
+@universal function notgtr(a::Unum, b::Unum)
+  !(a > b)
+end
+≯ = notgtr
+
+export ≸,≹,≯,≮

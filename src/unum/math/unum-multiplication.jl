@@ -133,8 +133,10 @@ end
   is_zero_ulp(b) && return zero_ulp_mult(b, a, result_sign)
 
   inner_result = mul_exact(a, b, result_sign)
+  inner_result.fsize = max_fsize(FSS)
 
   is_exact(inner_result) && outer_ulp!(inner_result)
+
   result_exponent = decode_exp(inner_result) + is_subnormal(inner_result) * 1
 
   outer_a = is_ulp(a) ? outer_exact(a) : a
@@ -204,9 +206,6 @@ end
   #check to make sure we haven't done the inf hack, where the result exactly
   #equals inf.
   __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
-
-  #println("inner_result:", inner_result)
-  #println("outer_result:", outer_result)
 
   if is_ulp(inner_result) && is_ulp(outer_result)
     return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)
