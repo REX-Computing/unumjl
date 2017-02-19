@@ -84,29 +84,49 @@ end
 @fracproc bitin count
 
 @universal function udivide(x::Ubound)
-  #special case where the bounds are exact.
-
-  if is_exact(x.lower)
-    if is_exact(x.upper)
-      middlebound = Ubound(is_zero(x.lower) ? pos_sss(U) : upper_ulp(x.lower), is_zero(x.upper) ? neg_sss(U) : lower_ulp(x.upper))
+  #special case for infinite bounds.
+  if is_inf(x.lower)
+    if is_inf(x.upper)
+      middlebound = Ubound(neg_mmr(U), pos_mmr(U))
       return (x.lower, middlebound, x.upper)
     end
-    return (x.lower, Ubound(is_zero(x.lower) ? pos_sss(U) : upper_ulp(x.lower), x.upper), nothing)
+
+    return (x.lower, Ubound(neg_mmr(U), x.upper), nothing)
+  elseif is_inf(x.upper)
+    return (Ubound(x.lower, neg_mmr(U)), x.upper, nothing)
+  end
+
+  #similar special case for nearly infinite bounds.
+  if is_neg_mmr(x.lower)
+    if is_pos_mmr(x.upper)
+      middlebound = Ubound(neg_big_exact(U), pos_big_exact(U))
+      return (x.lower, middlebound, x.upper)
+    end
+
+    return (x.lower, Ubound(neg_big_exact(U), x.upper), nothing)
+  elseif is_pos_mmr(x.upper)
+    return (Ubound(x.lower, pos_big_exact(U)), x.upper, nothing)
+  end
+
+  #cases where zero is one of the bounds.
+  if is_zero(x.lower)
+    return (x.lower, Ubound(pos_sss(U), x.upper), nothing)
+  elseif is_zero(x.upper)
+    return (Ubound(x.lower, neg_sss(U)), x.upper, nothing)
+  end
+
+  #cases where we have exact values.
+  if is_exact(x.lower)
+    if is_exact(x.upper)
+      return (x.lower, Ubound(upper_ulp(x.lower), lower_ulp(x.upper)), x.upper)
+    end
+    return (x.lower, Ubound(upper_ulp(x.lower), x.upper), nothing)
   elseif is_exact(x.upper)
-    return (Ubound(x.lower, is_zero(x.upper) ? neg_sss(U) : lower_ulp(x.upper)), x.upper, nothing)
-  end
-
-  if (is_strange_subnormal(x.lower) && is_all_zero(x.lower.fraction))
-    return udivide(Ubound(pos_sss(U), x.upper))
-  end
-
-  if (is_strange_subnormal(x.upper) && is_all_zero(x.upper.fraction))
-    return udivide(Ubound(x.lower, neg_sss(U)))
+    return (Ubound(x.lower, lower_ulp(x.upper)), x.upper, nothing)
   end
 
   #if the ubound straddles zero, then naturally cleave across zero.
   if (is_negative(x.lower) && is_positive(x.upper))
-
     return (resolve_as_utype!(copy(x.lower), neg_sss(Unum{ESS,FSS})),
             zero(Unum{ESS,FSS}),
             resolve_as_utype!(pos_sss(Unum{ESS,FSS}), copy(x.upper)))
@@ -114,6 +134,8 @@ end
 
   #if the bounds are not exact...  First check if the exponents are the same
   if same_exp(x.lower, x.upper)
+    println("done.")
+    #=
     #each exponential range cleaves over two single ubounds.  First, check to
     #see if they are in the upper half or the lower half.
     count::UInt16 = count_same(x.lower.fraction, x.upper.fraction)
@@ -125,14 +147,19 @@ end
 
     #set the middle_value to look like
     return (resolve_as_utype!(copy(x.lower), lower_ulp(middle_value)), middle_value, resolve_as_utype!(upper_ulp(middle_value), x.upper))
+    =#
   else
     #if they're not, then do a binary search on the exponents.
     middle_exp = upper_avg(decode_exp(x.lower), decode_exp(x.upper))
+    println("middle exp:", middle_exp)
     middle_value = zero(U)
     middle_value.flags = x.lower.flags & UNUM_SIGN_MASK
     (middle_value.esize, middle_value.exponent) = encode_exp(middle_exp)
 
-    return (resolve_as_utype!(copy(x.lower), lower_ulp(middle_value)), middle_value, resolve_as_utype!(upper_ulp(middle_value), copy(x.upper)))
+    lhs = Ubound(copy(x.lower), lower_ulp(middle_value))
+    rhs = Ubound(upper_ulp(middle_value), copy(x.upper))
+
+    return (lhs, middle_value, rhs)
   end
 end
 
@@ -159,6 +186,8 @@ iters = 0
 
 function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Type{Val{verbose}} = Val{false})
 
+  println("=====")
+
   global iters
 
   l = length(v)
@@ -171,13 +200,22 @@ function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Typ
   validindices = filter((idx)->(!isterminal(v[idx])), 1:l)
   ridx = rand(validindices)
 
+  println(v[ridx])
+
   (lower_u, middle_u, upper_u) = udivide(v[ridx])
+
+  println("l", lower_u)
+  println("m", middle_u)
+  println("u", upper_u)
+
+  println("---")
 
   vl = copy(v)
   vm = copy(v)
 
   vl[ridx] = lower_u
   vm[ridx] = middle_u
+
 
   if f(vl)
     verbose && (print("searching "); describe.(vl))
@@ -190,6 +228,7 @@ function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Typ
     iters == max_iters && exit()
     (result = hcat(result, ufilter(f, vm, Val{verbose})))
   end
+
 
   if (upper_u != nothing)
     vu = copy(v)

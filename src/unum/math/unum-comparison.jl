@@ -20,6 +20,8 @@ import Base:  ==, <, >, <=, >=  #this statement is necessary to redefine these f
 
   (is_exp_zero(a) != is_exp_zero(b)) && return false
 
+  (is_exp_zero(a) && is_exp_zero(b) && is_frac_zero(a) && is_frac_zero(b)) && return true
+
   (_aexp != _bexp) && return false
   #now that we know that the exponents are the same,
   #the fractions must also be identical

@@ -21,6 +21,7 @@ ethr = Unums.decode_exp(wthr)
 
 @test Unums.diff_exact(wone, -wone, eone, eone) == zero(Unum{4,6})   #one plus one is two
 @test Unums.diff_exact(wtwo, -wone, etwo, eone) == wone              #two minus one is one
+println("===========")
 @test Unums.diff_exact(wthr, -wone, ethr, eone) == wtwo
 
 #test that the sign things seem to work.
@@ -59,19 +60,24 @@ res = x - y
 x = Ubound(Unum{3,5}(0x0000000000000007, 0x197E680000000000, 0x0003, 0x0002, 0x0019), Unum{3,5}(0x0000000000000007, 0x197E67E000000000, 0x0003, 0x0002, 0x001A))
 y = Ubound(Unum{3,5}(0x000000000000000C, 0x04A71A6C00000000, 0x0001, 0x0003, 0x001F), Unum{3,5}(0x000000000000000C, 0x04A71A7800000000, 0x0001, 0x0003, 0x001C))
 res = x - y
-@test res == Ubound(Unum{3,5}(0x000000000000000C, 0x91664E9800000000, 0x0003, 0x0003, 0x001F), Unum{3,5}(0x000000000000000C, 0x91664E5C00000000, 0x0003, 0x0003, 0x001F))
+@test res == Ubound(Unum{3,5}(0x000000000000000C, 0x91664E9F00000000, 0x0003, 0x0003, 0x001F), Unum{3,5}(0x000000000000000C, 0x91664E5C00000000, 0x0003, 0x0003, 0x001F))
 #problem is that the sign is not properly handled.
 
 #tests discovered Jan 6 2017:  Various problems stemming form size comparison of strange subnormals.
 x = Unum{3,5}(0x000000000000000C, 0x37FFFFFF00000000, 0x0001, 0x0003, 0x001F)
 y = Unum{3,5}(0x000000000000000C, 0x3800000000000000, 0x0000, 0x0003, 0x001F)
 res = x - y
-@test(res == Ubound(Unum{3,5}(0x0000000000000003, 0xFFFFFFFF00000000, 0x0003, 0x0005, 0x001F), Unum{3,5}(0x0000000000000000, 0x0000000000000000, 0x0003, 0x0000, 0x001F)))
+@test(res == Unum{3,5}(0x0000000000000000, 0x0000000000000000, 0x0003, 0x0004, 0x000C))
 
 x = Ubound(Unum{3,5}(0x0000000000000007, 0xD800000000000000, 0x0001, 0x0002, 0x001F), Unum{3,5}(0x000000000000000C, 0x37FFFFFF00000000, 0x0001, 0x0003, 0x001F))
 y = Unum{3,5}(0x000000000000000C, 0x3800000000000000, 0x0000, 0x0003, 0x001F)
 res = x - y
 @test res ==  Ubound(Unum{3,5}(0x0000000000000006, 0x2FFFFFFE00000000, 0x0003, 0x0002, 0x001E), Unum{3,5}(0x0000000000000000, 0x0000000000000000, 0x0003, 0x0000, 0x001F))
+
+x = Unum{3,5}(0x0000000000000001, 0x0000000000000000, 0x0001, 0x0000, 0x001F)
+y = Unum{3,5}(0x0000000000000001, 0x0000000000000000, 0x0000, 0x0000, 0x0000)
+res = x - y
+
 
 #=
 #11 September 2015 - identified through continuous testing.  The problem here is

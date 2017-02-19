@@ -172,6 +172,7 @@ ctub5 = Unum{4,6}(0x00000000000000f1,0x3db8d7e07e3733ee,0x0001,0x0007,0x003f)
 ctub6 = Unum{4,6}(0x00000000000000f1,0xbdb8d7e07e3733f3,0x0001,0x0007,0x003f)
 ctu5 = Ubound(ctub5, ctub6)
 ctu6 = Unum{4,6}(0x00000000000000f2,0x4410e89562546000,0x0002,0x0007,0x0032)
+
 @test ctu5 + ctu6 == Ubound{4,6}(Unum{4,6}(0x00000000000000f1,0x4a68f94a46718c11,0x0003,0x0007,0x003f), Unum{4,6}(0x00000000000000f0,0x94d1f2948ce31818,0x0003,0x0007,0x003f))
 #problem occurs due to an incorrect handling of trailing bits after shift in
 #__diff_exact.

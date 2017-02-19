@@ -33,6 +33,7 @@ end
   is_negative(b.upper) && (signcode += 8)
 
   if (signcode == 0) #everything is positive
+
     lower_result = resolve_lower(a.lower * b.lower)
     upper_result = resolve_upper(a.upper * b.upper)
 

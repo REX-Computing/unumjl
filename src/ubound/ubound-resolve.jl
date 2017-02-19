@@ -11,6 +11,22 @@ else
   macro check_resolve(); :(); end
 end
 
+@universal function set_zero_exp!(value::Unum, to_match::Unum)
+  if (decode_exp(to_match) >= 0)
+    value.esize = z16
+    value.fsize = z16
+  else
+    test_exponent = decode_exp(to_match.esize - o16, z64)
+    if (test_exponent - max_fsize(FSS)) > decode_exp(to_match)
+      value.esize = to_match.esize
+      value.fsize = to_match.fsize
+    else
+      value.esize = to_match.esize - o16
+      value.fsize = test_exponent - decode_exp(to_match)
+    end
+  end
+end
+
 doc"""
   `Unums.resolve_as_utype!(::Unum, ::Unum)`
   checks to see if the two unums, which must both be ulps, can be resolved to a
@@ -24,6 +40,8 @@ doc"""
   @ensure_ulp(lower)
   @ensure_ulp(upper)
 
+  (lower == upper) && return lower
+
   #check to make sure the signs are the same.
   (@signof(lower) == @signof(upper)) || return B(lower, upper)
 
@@ -34,11 +52,33 @@ doc"""
     (_lexp < _uexp) && return upper
     return lower
   end
+
+  #if only one is a zero_ulp.
+  if is_zero_ulp(lower) && (decode_exp(upper) < 0)
+    #check to see if we can subsume.
+    lubu = lub(upper)
+    test_exponent = decode_exp(lubu.esize - o16, z64)
+    if (lubu.fraction == z64)
+      if (test_exponent - max_fsize(FSS) <= decode_exp(lubu))
+        lower.esize = lubu.esize - o16
+        lower.fsize = test_exponent - decode_exp(lubu)
+        return lower
+      end
+    end
+  end
+
+  if is_zero_ulp(upper) && (decode_exp(lower) < 0)
+    glbl = glb(lower)
+    test_exponent = decode_exp(glbl.esize - o16, z64)
+    if (glbl.fraction == z64) && (test_exponent - max_fsize(FSS) <= decode_exp(glbl))
+      upper.esize = glbl.esize - o16
+      upper.fsize = test_exponent - decode_exp(glbl)
+      return upper
+    end
+  end
+
   #check to make sure the exponents are the same.
   (decode_exp(lower) == decode_exp(upper)) || return B(lower, upper)
-
-  is_sss(lower) && is_sss(upper) && return sss(U, @signof(lower))
-  is_mmr(lower) && is_mmr(upper) && return mmr(U, @signof(lower))
 
   (lower.fraction == upper.fraction) && return lower
 

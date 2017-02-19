@@ -125,7 +125,6 @@ end
 end
 
 @universal function mul_inexact(a::Unum, b::Unum, result_sign::UInt16)
-
   is_inf_ulp(a) && (return inf_ulp_mult(a, b, result_sign))
   is_inf_ulp(b) && (return inf_ulp_mult(b, a, result_sign))
 
@@ -145,67 +144,6 @@ end
   outer_result = mul_exact(outer_a, outer_b, result_sign)
   is_exact(outer_result) && inner_ulp!(outer_result)
 
-  #=
-  if is_exact(a)
-    outer_result = sum_exact(inner_result, a, result_exponent, result_exponent - b.fsize - 2)
-  elseif is_exact(b)
-    outer_result = sum_exact(inner_result, b, result_exponent, result_exponent - a.fsize - 2)
-  else
-    ############################################################################
-    # consider the representation of an ulp:
-    # (2^p) * F (+) 2^(p - fs)
-    # where p is the power, F is the fraction, and fs is fsize + 1, and (+) is
-    # the ulp-range generating operator.
-    #
-    # 2^(p1)(F1)(+)2^(p1 - fs1) * 2^(p2)(F2)(+)2^(p2 - fs2)
-    # gives 2^(p1p2)(F1F2)(+)2^(p1p2)(2^(-fs1)(F2) + 2^(-fs2)(F1) + 2^(-fs1-fs2))
-    #
-    # note that 2^(p1p2)(F1F2) is the exact product.
-
-    # look at the two numbers, a and b, and decide which one is more precise and
-    # which one is fuzzy.  Assign these respectively to the _precise and _fuzzy
-    # temporary variables.
-
-    (_precise, _fuzzy) = (a.fsize < b.fsize) ? (b , a) : (a, b)
-
-    #copy the precise one and make it the "outer_result, temporarily"
-    outer_result = zero(U)
-    coerce_sign!(outer_result, inner_result)
-    #first set the bit corresponding to the double product.
-    frac_set_bit!(outer_result, _fuzzy.fsize + o16)
-
-    #next, add in the precise fraction.
-    carry = frac_add!(o64, outer_result, _fuzzy.fraction)
-
-    if (_precise.fsize == _fuzzy.fsize)
-      carry = frac_add!(carry, outer_result, _precise.fraction)
-    else #move over by the size
-      shift = _precise.fsize - _fuzzy.fsize
-      frac_rsh!(shift, outer_result)
-      #do carry things.
-      carry = frac_shift_with_carry!(carry, outer_result, shift) + o64
-      carry = frac_add!(carry, outer_result, _precise.fraction)
-    end
-    #next calculate the exponent deviation.
-    expected_exponent = decode_exp(a) + decode_exp(b)
-    result_exponent = decode_exp(inner_result)
-    dev = to16(result_exponent - expected_exponent)
-
-    #shift the remainders to match
-    carry = frac_shift_with_carry!(carry, outer_result, _fuzzy.fsize + o16 + dev)
-
-    carry = frac_add!(carry + o16, outer_result, inner_result.fraction)
-
-    resolve_carry!(carry, outer_result, result_exponent)
-
-    trim_and_set_ubit!(outer_result)
-    make_ulp!(outer_result)
-  end
-  =#
-
-  #check to make sure we haven't done the inf hack, where the result exactly
-  #equals inf.
-  __is_nan_or_inf(outer_result) && mmr!(outer_result, result_sign)
 
   if is_ulp(inner_result) && is_ulp(outer_result)
     return (result_sign == z16) ? resolve_as_utype!(inner_result, outer_result) : resolve_as_utype!(outer_result, inner_result)
@@ -233,9 +171,9 @@ end
 end
 
 @universal function zero_ulp_mult(zero_ulp::Unum, b::Unum, result_sign::UInt16)
+
   _ulp_exact = outer_exact(zero_ulp)
   _val_exact = is_exact(b) ? b : outer_exact(b)
-
   res_exp = decode_exp(_ulp_exact) + 1 * is_subnormal(_ulp_exact) + decode_exp(_val_exact) + 1 * is_subnormal(_val_exact)
 
   (res_exp < min_exponent(ESS, FSS)) && return sss(U, result_sign)
@@ -244,8 +182,7 @@ end
   outer_value = mul_exact(_ulp_exact, _val_exact, result_sign)
 
   is_exact(outer_value) && inner_ulp!(outer_value)
-  is_sss(outer_value) && return outer_value
-
+  is_zero_ulp(outer_value) && return outer_value
   (result_sign == z16) ? resolve_as_utype!(sss(U, result_sign), outer_value) : resolve_as_utype!(outer_value, sss(U, result_sign))
 end
 

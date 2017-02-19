@@ -2,20 +2,21 @@ using Unums
 using Base.Test
 
 @unumbers
+#=
+W = Unum{0,0}
 
-x = Unum{3,6}(0x000000000000000E, 0xE800000000000000, 0x0002, 0x0003, 0x0004)
-y = Unum{3,6}(0x0000000000000003, 0x3FFFFFC000000000, 0x0003, 0x0001, 0x0019)
+@test Unums.sum_exact(W(2), W(1), 1, 0) == mmr(W)
 
-z = x * y
+x = Unums.lower_ulp(W(2))
+y = sss(W)
 
 describe(x)
 describe(y)
-describe(z)
 
-println(y)
-println(z)
+describe(x + y)
 
 @test 0 == 1
+=#
 
 include("./test-infrastructure.jl")
 include("./test-operations.jl")

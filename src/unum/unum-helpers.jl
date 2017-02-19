@@ -46,6 +46,7 @@ end
 # desired fsize.
 
 needs_ubit(frac::UInt64, fsize::UInt16) = (frac & mask_bot(fsize)) != 0
+
 function needs_ubit{FSS}(frac::ArrayNum{FSS}, fsize::UInt16)
   accum::UInt64 = zero(UInt64)
   middle_cell = div(fsize, 0x0040) + 1
@@ -79,7 +80,7 @@ doc"""
 """
 @universal function rsh_and_set_ubit!(x::Unum, shift::UInt16, needs_guard::Bool = false)
   mfsize::UInt16 = max_fsize(FSS)
-  x.flags |= (needs_ubit(x.fraction, mfsize - shift - (needs_guard * o16)) * UNUM_UBIT_MASK)
+  x.flags |= (needs_ubit(x.fraction, mfsize - shift + (needs_guard * o16)) * UNUM_UBIT_MASK)
   x.fsize = min(x.fsize + shift, mfsize)
   frac_rsh!(x, shift)
   return x

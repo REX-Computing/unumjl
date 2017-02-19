@@ -58,13 +58,13 @@ end
   if low_exact
     (a.lower != b.lower) && return false
   else
-    cmp_lower_bound(a.lower, b.lower) || return false
+    glb(a.lower) == glb(b.lower) || return false
   end
 
   if high_exact
     (a.upper != b.upper) && return false
   else
-    cmp_upper_bound(a.upper, b.upper) || return false
+    lub(a.upper) == lub(b.upper) || return false
   end
 
   return true
@@ -80,8 +80,8 @@ function =={ESS,FSS}(a::Ubound{ESS,FSS}, b::Unum{ESS,FSS})
   @signof(a.lower) == @signof(b) || return false
   @signof(a.upper) == @signof(b) || return false
 
-  cmp_lower_bound(a.lower, b) || return false
-  cmp_upper_bound(a.upper, b) || return false
+  glb(a.lower) == glb(b) || return false
+  lub(a.upper) == lub(b) || return false
 end
 
 #just flip the previous function to make things easier.

@@ -49,7 +49,7 @@ doc"""
   UInt16 or a Unum.
 """
 @universal coerce_sign!(a::Unum, b::Unum) = coerce_sign!(a, b.flags)
-@universal coerce_sign!(a::Unum, sgn::UInt16) = (a.flags = (a.flags & ~UNUM_SIGN_MASK) | sgn; return a)
+@universal coerce_sign!(a::Unum, sgn::UInt16) = (a.flags = (a.flags & ~UNUM_SIGN_MASK) | (sgn & UNUM_SIGN_MASK); return a)
 
 doc"""
   `abs!(::Unum)` forces the value of the unum to be positive.  Returns the

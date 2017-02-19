@@ -123,109 +123,42 @@ end
   return result
 end
 
-doc"""
-  Unums.add_bit_and_set_ulp!(::Unum, ulpsize1, ulpsize2) takes two ulps values.
-  The first ulp value will be added into the unum.  The second ulp value will
-  be converted into an fsize.
-"""
-@universal function add_bit_and_set_ulp!(a::Unum, big_ulp::UInt16, little_ulp::UInt16)
-  #note that this adds to the zero-indexed bit.
-  carried = frac_add_ubit!(a, big_ulp)
-  if (carried)
-    #rightshift by one.
-    frac_rsh!(a, o16)
-    #increment little_ulp
-    little_ulp += 1
-    #re-encode exponent
-    exponent = decode_exp(a) + 1
-    (exponent > max_exponent(ESS)) && return mmr!(a)
-    (a.esize, a.exponent) = encode_exp(exponent)
-  end
-  a.fsize = min(little_ulp, max_fsize(FSS))
-  is_nan(a) && return mmr!(a)
-  return a
-end
-
-macro __eject_outward_ulp()
-  esc(quote
-    base_value.fsize = _mfsize
-    make_ulp!(base_value)
-    return base_value
-  end)
-end
 
 @universal function sum_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #first, do the exact sum, to calculate the "base value" of the resulting sum.
-  base_value = sum_exact(a, b, _aexp, _bexp)
+
+  #println("add----")
+
+  b = copy(b)
+  coerce_sign!(b, a)
 
   if is_inf_ulp(a)
+    base_value = sum_exact(a, b, _aexp, _bexp)
+
     make_ulp!(base_value)
     is_inf_ulp(base_value) && return base_value
     return is_positive(a) ? resolve_as_utype!(base_value, mmr(U, @signof(a))) : resolve_as_utype!(mmr(U, @signof(a)), base_value)
   end
 
-  _mfsize = max_fsize(FSS)
+  glba = glb(a)
+  glbb = glb(b)
+  luba = lub(a)
+  lubb = lub(b)
 
-  _rexp = decode_exp(base_value)
-  _shift_a = to16(_rexp - _aexp) + a.fsize
-  _shift_b = to16(_rexp - _bexp) + b.fsize
+  glbs = is_inward(glbb, glba) ?
+    sum_exact(glba, glbb, decode_exp(glba), decode_exp(glbb)) :
+    sum_exact(glbb, glba, decode_exp(glbb), decode_exp(glba))
 
-  local add_fsize::UInt16
-  local ulp_fsize::UInt16
+  lubs = is_inward(lubb, luba) ?
+    sum_exact(luba, lubb, decode_exp(luba), decode_exp(lubb)) :
+    sum_exact(lubb, luba, decode_exp(lubb), decode_exp(luba))
 
-  if (is_ulp(a) && is_ulp(b))
-    #figure out which one has a bigger ulp delta.
-    #case one:  shift_a is bigger than max_fsize.  This only happens if it was
-    #already the smallest ulp, and there was an exponent augmentation.
-    if (_shift_a > _mfsize)
-      #check to see if the exponent on b is farther away than the exponent on a plus the fraction size.
-      if (_aexp - _bexp > _mfsize + 1)
-        #then the base value on the guard location is zero, and two ulps coalesce into one.
-        @__eject_outward_ulp
-      elseif (_aexp - _bexp == _mfsize + 1)
-        #in this case, the hidden bit of b aligns with guard bit.
-        (is_subnormal(b) == bool_bottom_bit(a)) || @__eject_outward_ulp
 
-        add_fsize = _mfsize
-        ulp_fsize = _mfsize
-        #in the remaining cases, the fractions must overlap.
-      elseif _shift_b > _mfsize
-        _b_bit::UInt16 = (_mfsize) - to16(_aexp - _bexp)
-        (bool_indexed_bit(b.fraction, _b_bit) == bool_bottom_bit(a)) && @__eject_outward_ulp
+  lower_sum = is_exact(glbs) ? (is_zero(glbs) ? pos_sss(U) : upper_ulp(glbs)) : glbs
+  upper_sum = is_exact(lubs) ? (is_zero(lubs) ? neg_sss(U) : lower_ulp(lubs)) : lubs
 
-        add_fsize = _mfsize
-        ulp_fsize = _mfsize
-      else
-        add_fsize = _shift_b
-        ulp_fsize = _mfsize
-      end
-    else
-      #the bigger ulp data gets added in
-      add_fsize = min(_shift_a, _shift_b)
-      ulp_fsize = max(_shift_a, _shift_b)
-      #scale down ulp_fsize in case it's too big.
-      ulp_fsize = min(ulp_fsize, _mfsize)
-    end
+  #describe(lower_sum)
+  #describe(upper_sum)
 
-    augmented_value = add_bit_and_set_ulp!(copy(base_value), add_fsize, ulp_fsize)
-    trim_and_set_ubit!(augmented_value)
-    #create a ubound (of the correct type) with the base_value and augmented_value.
-    return is_positive(a) ? resolve_as_utype!(base_value, augmented_value) : resolve_as_utype!(augmented_value, base_value)
-  else
-    #check to see if we're adding a very insignificant number.
-    if is_ulp(a) && (_aexp > _bexp + _mfsize)
-      augmented_value = outer_exact(a)
-      augmented_value.fsize = _mfsize
-      make_ulp!(augmented_value)
-
-      return is_positive(a) ? resolve_as_utype!(base_value, augmented_value) : resolve_as_utype!(augmented_value, base_value)
-    end
-
-    ulp_shift = is_ulp(a) * _shift_a + is_ulp(b) * _shift_b
-    base_value.fsize = min(ulp_shift, _mfsize)
-    make_ulp!(base_value)
-    #just in case this "hacks" to mmr.
-    is_nan(base_value) && return mmr(U, @signof(a))
-    return base_value
-  end
+  return resolve_as_utype!(lower_sum, upper_sum)
 end
