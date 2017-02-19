@@ -234,7 +234,7 @@ end
   carried = frac_add_ubit!(x, max_fsize(FSS))
   if carried
     exponent = decode_exp(x)
-    (exponent > max_exponent(ESS)) && return inf(x)
+    (exponent > max_exponent(ESS)) && return U(Inf)
     (x.esize, x.exponent) = encode_exp(exponent + 1)
   end
   exact_trim!(x)
