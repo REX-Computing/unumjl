@@ -2,21 +2,18 @@ using Unums
 using Base.Test
 
 @unumbers
-#=
-W = Unum{0,0}
 
-@test Unums.sum_exact(W(2), W(1), 1, 0) == mmr(W)
+a = Unum{3,5}(0x0000000000000040, 0xFFFFFFFE00000000, 0x0002, 0x0007, 0x001E)
+b = zero(Unum{3,5})
+Unums.sum_inexact(a, b, -63, -63)
 
-x = Unums.lower_ulp(W(2))
-y = sss(W)
 
-describe(x)
-describe(y)
 
-describe(x + y)
+a = Unum{3,5}(0x0000000000000000, 0x0000000000000000, 0x0003, 0x0006, 0x001E)
+b = Unum{3,5}(0x0000000000000040, 0xFFFFFFFE00000000, 0x0001, 0x0007, 0x001E)
+a + b
 
-@test 0 == 1
-=#
+@test 1 == 0
 
 include("./test-infrastructure.jl")
 include("./test-operations.jl")

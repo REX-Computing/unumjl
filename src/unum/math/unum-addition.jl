@@ -79,7 +79,7 @@ end
 
   shift = to16(_aexp - _bexp) #this is the a exponent minus the b exponent.
   #if the two numbers are very divergent in magnitude, only need to flip the ulp.
-  if (shift > (max_fsize(FSS) + 1))
+  if (shift > (max_fsize(FSS) + o16))
     res = make_ulp!(copy(a))
     res.fsize = max_fsize(FSS)
     return res
@@ -127,8 +127,6 @@ end
 @universal function sum_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #first, do the exact sum, to calculate the "base value" of the resulting sum.
 
-  #println("add----")
-
   b = copy(b)
   coerce_sign!(b, a)
 
@@ -145,14 +143,33 @@ end
   luba = lub(a)
   lubb = lub(b)
 
-  glbs = is_inward(glbb, glba) ?
-    sum_exact(glba, glbb, decode_exp(glba), decode_exp(glbb)) :
-    sum_exact(glbb, glba, decode_exp(glbb), decode_exp(glba))
+  if is_zero(glbb)
+    glbs = glba
+  elseif is_zero(glba)
+    glbs = glbb
+  elseif is_inf(glba)
+    glbs = glba
+  elseif is_inf(glbb)
+    glbs = glbb
+  else
+    glbs = is_inward(glbb, glba) ?
+      sum_exact(glba, glbb, decode_exp(glba), decode_exp(glbb)) :
+      sum_exact(glbb, glba, decode_exp(glbb), decode_exp(glba))
+  end
 
-  lubs = is_inward(lubb, luba) ?
-    sum_exact(luba, lubb, decode_exp(luba), decode_exp(lubb)) :
-    sum_exact(lubb, luba, decode_exp(lubb), decode_exp(luba))
-
+  if is_zero(lubb)
+    lubs = luba
+  elseif is_zero(luba)
+    lubs = lubb
+  elseif is_inf(luba)
+    lubs = luba
+  elseif is_inf(lubb)
+    lubs = lubb
+  else
+    lubs = is_inward(lubb, luba) ?
+      sum_exact(luba, lubb, decode_exp(luba), decode_exp(lubb)) :
+      sum_exact(lubb, luba, decode_exp(lubb), decode_exp(luba))
+  end
 
   lower_sum = is_exact(glbs) ? (is_zero(glbs) ? pos_sss(U) : upper_ulp(glbs)) : glbs
   upper_sum = is_exact(lubs) ? (is_zero(lubs) ? neg_sss(U) : lower_ulp(lubs)) : lubs

@@ -131,6 +131,8 @@ end
     (result.esize, result.exponent) = encode_exp(_aexp)
   end
 
+  is_exact(result) && exact_trim!(result)
+  trim_and_set_ubit!(result)
 
   return result
 end
@@ -138,10 +140,6 @@ end
 @universal function diff_inexact(a::Unum, b::Unum, _aexp::Int64, _bexp::Int64)
   #do a second is_inward check.  If this is_inward check fails, then the result
   #can have an opposite sign, because it's an ulp that goes wierdly.
-
-  #println("sub----")
-  #describe(a)
-  #describe(b)
 
   a_out, a_in = is_exact(a) ? (a, a) : (outer_exact(a), inner_exact(a))
   b_out, b_in = is_exact(b) ? (b, b) : (outer_exact(b), inner_exact(b))
@@ -153,7 +151,9 @@ end
   #print("out:"); describe(b_out)
   #print("in:");  describe(b_in)
 
-  if is_zero(a_out)
+  if is_inf(a_out)
+    first_value = a_out
+  elseif is_zero(a_out)
     first_value = b_in
   elseif is_zero(b_in)
     first_value = a_out
@@ -163,7 +163,9 @@ end
       diff_exact(b_in, a_out, decode_exp(b_in), decode_exp(a_out))
   end
 
-  if is_zero(a_in)
+  if is_inf(b_out)
+    second_value = b_out
+  elseif is_zero(a_in)
     second_value = b_out
   elseif is_zero(b_out)
     second_value = a_in
@@ -172,9 +174,6 @@ end
       diff_exact(a_in, b_out, decode_exp(a_in), decode_exp(b_out)) :
       diff_exact(b_out, a_in, decode_exp(b_out), decode_exp(a_in))
   end
-
-  #print("first_value:");  describe(first_value)
-  #print("second_value:"); describe(second_value)
 
   outer_hull_lub = lub(first_value) > lub(second_value) ? lub(first_value) : lub(second_value)
   outer_hull_glb = glb(first_value) < glb(second_value) ? glb(first_value) : glb(second_value)

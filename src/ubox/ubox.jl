@@ -134,8 +134,6 @@ end
 
   #if the bounds are not exact...  First check if the exponents are the same
   if same_exp(x.lower, x.upper)
-    println("done.")
-    #=
     #each exponential range cleaves over two single ubounds.  First, check to
     #see if they are in the upper half or the lower half.
     count::UInt16 = count_same(x.lower.fraction, x.upper.fraction)
@@ -147,11 +145,9 @@ end
 
     #set the middle_value to look like
     return (resolve_as_utype!(copy(x.lower), lower_ulp(middle_value)), middle_value, resolve_as_utype!(upper_ulp(middle_value), x.upper))
-    =#
   else
     #if they're not, then do a binary search on the exponents.
     middle_exp = upper_avg(decode_exp(x.lower), decode_exp(x.upper))
-    println("middle exp:", middle_exp)
     middle_value = zero(U)
     middle_value.flags = x.lower.flags & UNUM_SIGN_MASK
     (middle_value.esize, middle_value.exponent) = encode_exp(middle_exp)
@@ -186,8 +182,6 @@ iters = 0
 
 function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Type{Val{verbose}} = Val{false})
 
-  println("=====")
-
   global iters
 
   l = length(v)
@@ -200,15 +194,7 @@ function ufilter{ESS,FSS, verbose}(f::Function, v::Vector{Utype{ESS,FSS}}, ::Typ
   validindices = filter((idx)->(!isterminal(v[idx])), 1:l)
   ridx = rand(validindices)
 
-  println(v[ridx])
-
   (lower_u, middle_u, upper_u) = udivide(v[ridx])
-
-  println("l", lower_u)
-  println("m", middle_u)
-  println("u", upper_u)
-
-  println("---")
 
   vl = copy(v)
   vm = copy(v)
